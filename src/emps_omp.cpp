@@ -45,33 +45,37 @@
 #define OTR -1				// Other particle BC
 #define NUM_TYP 2			// Number of particle types	
 // Physical
-#define DNS_FLD 1500		// Fluid particle density (kg/m3)
-#define DNS_WLL 1500		// Wall particle density (kg/m3)
+#define DNS_FLD 1000		// Fluid particle density (kg/m3)
+#define DNS_WLL 1000		// Wall particle density (kg/m3)
 #define KNM_VS1 0.000001			// Kinematic viscosity phase 1 (m2/s)
-#define KNM_VS2 0.000001		// Kinematic viscosity phase 1 (m2/s)
+#define KNM_VS2 0.0001		// Kinematic viscosity phase 2 (m2/s)
 #define DNS_FL1 1000.0		// Fluid particle density phase 1 (kg/m3)
-#define DNS_FL2 1000.0		// Fluid particle density phase 2 (kg/m3)
+#define DNS_FL2 2000.0		// bulk particle density phase 2 (kg/m3)
+#define DNS_SDT	2000.0		// sediment density (kg/m3)
 #define G_X 0.0				// Gravity acceleration x component (m/s2)
 #define G_Y 0.0				// Gravity acceleration y component (m/s2)
 #define G_Z -9.81			// Gravity acceleration z component (m/s2)
 // Rheological parameters
-#define Fluid2_type 1		// Newtonian:0  , H-B fluid:1 
+#define Fluid2_type 1		// Newtonian:0  , Non Newtonian:1 
 #define N 1.0				// flow behaviour (power law) index
 #define MEU0 0.03			// consistency index
-#define PHI 0.71			// friction angle (RAD)
+#define PHI 0.05			// friction angle (RAD)
 #define PHI_WAL 0.005		// friction angle (RAD)
 #define PHI_BED 0.005		// friction angle (RAD)
-#define PHI_2 0.95			// second friction angle Values are based on  Minatti &  Paris (2015)
-#define cohes 0				// cohesiveness coefficient
+#define PHI_2 0.2			// second friction angle Values are based on  Minatti & Paris (2015)
+#define cohes 0.0				// cohesiveness coefficient
 #define Fraction_method 2   // Method of calculation of volume of fraction. 1: Linear dist across the interface, 2: smoothed value
 //#define visc_max 20			// maximum viscosity uses to avoid singularity
-#define dg 0.013			// grain size
+#define dg 0.01			// grain size
 #define I0 0.75				// I0 value in Meu9I0 rheology     Values are based on  Minatti &  Paris (2015)
 #define mm 200.0
 #define stress_cal_method 1	// Method 1; viscosity is directly used in momentum equation. Method 2: first the stress tensor is calculated then it is used in momentum equation
 #define visc_itr_num 1
 #define visc_error 0.0
 #define visc_ave 0.0
+#define Cd 0.47			// Drag coefficient
+#define VF_min 0.25		// Minimum volume fraction
+#define VF_max 0.65		// Maximum volume fraction
 // Numerical
 #define DT 0.00025				// Time step (s) (0.02/0.01) (0.00025)
 #define FIN_TIM 1.0		// Time of simulation (s)
@@ -81,7 +85,7 @@
 #define RLX_PRS 1.0			// Relaxation factor for pressure correction
 #define SND 10.00			// Sound speed (m/s) (10)
 #define GAM 7.0				// Gamma weakly compressible MPS
-#define ARF 1000000.0			// Wall coefficent repulsive force (10000/100000) (500000)
+#define ARF 5000000.0			// Wall coefficent repulsive force (10000/100000) (500000)
 #define SLP 1				// No-slip = 0 ; Slip = 1 
 #define CRT_NUM 0.2			// Courant (CFL) condition number
 #define PND_TRS 0.93			// Surface threshold PND
@@ -119,7 +123,7 @@ double *F1, *F2;
 
 // Non-Newtonian
 double A1_M, NEU;
-double *C, *II, *MEU, *MEU_Y, *Inertia, *pnew, *p_rheo_new, *RHO, *p_smooth;
+double *C, *II, *MEU, *MEU_Y, *Inertia, *pnew, *p_rheo_new, *RHO, *p_smooth, *VF;
 int *PTYPE;
 
 // Vector with ID of particles near to mesh
@@ -180,6 +184,7 @@ void RdDat(void) {
 	p_rheo_new = (double*)malloc(sizeof(double)*nP);	//
 	RHO = (double*)malloc(sizeof(double)*nP);			// Fluid density
 	p_smooth = (double*)malloc(sizeof(double)*nP);	//
+	VF = (double*)malloc(sizeof(double)*nP);	//
 
 	for(int i=0;i<nP;i++) {
 		int a[2];
@@ -199,10 +204,10 @@ void RdDat(void) {
 	for(int i=0;i<nP*3;i++) {wallPos[i]=0.0;mirrorPos[i]=0.0;F1[i]=0.0;F2[i]=0.0;}
 	for(int i=0;i<nP;i++) {
 		niw[i]=0.0;numNeigh[i]=0.0;pndi[i]=0.0;Bc[i]=0;Nw[i]=0;
-		C[i]=0.0;II[i]=0.0;PTYPE[i]=0;MEU[i]=0.0;MEU_Y[i]=0.0;Inertia[i]=0.0;pnew[i]=0.0;p_rheo_new[i]=0.0;p_smooth[i]=0.0;
+		C[i]=0.0;II[i]=0.0;PTYPE[i]=0;MEU[i]=0.0;MEU_Y[i]=0.0;Inertia[i]=0.0;pnew[i]=0.0;p_rheo_new[i]=0.0;p_smooth[i]=0.0;VF[i]=0.0;
 
 		// Assign type and density
-		if(Pos[i*3+2] >= 0.3) {
+		if(Pos[i*3+2] <= 0.3) {
 			PTYPE[i]=2;
 			RHO[i] = DNS_FL2;
 			// CHANGED Only for the first time step
@@ -309,7 +314,10 @@ void WrtVtu(void) {
  	fprintf(fp,"<DataArray NumberOfComponents='1' type='Int32' Name='PTYPE' format='ascii'>\n");
 		for(int i=0;i<nP;i++){	fprintf(fp,"%d ",PTYPE[i]);}
  		fprintf(fp,"\n</DataArray>\n");
- 	
+ 	fprintf(fp,"<DataArray NumberOfComponents='1' type='Float32' Name='p_smooth' format='ascii'>\n");
+	for(int i=0;i<nP;i++){	fprintf(fp,"%f ",(float)p_smooth[i]);}
+	fprintf(fp,"\n</DataArray>\n");
+
   	if(OUTAUX){
  		fprintf(fp,"<DataArray NumberOfComponents='1' type='Int32' Name='ParticleType' format='ascii'>\n");
 		for(int i=0;i<nP;i++){fprintf(fp,"%d ",Typ[i]);}
@@ -436,369 +444,6 @@ void MkBkt(void) {
 	}
 }
 
-void VscTrm_omp(){
-#pragma omp parallel for schedule(dynamic,64)
-	for(int i=0;i<nP;i++){
-	if(Typ[i] == FLD){
-		double meu_i = MEU[i];
-		double Acc_x = 0.0;			double Acc_y = 0.0;			double Acc_z = 0.0;
-		double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
-		double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
-		int ix = (int)((pos_ix - MIN_X)*DBinv) +1;
-		int iy = (int)((pos_iy - MIN_Y)*DBinv) +1;
-		int iz = (int)((pos_iz - MIN_Z)*DBinv) +1;
-		for(int jz=iz-1;jz<=iz+1;jz++){
-		for(int jy=iy-1;jy<=iy+1;jy++){
-		for(int jx=ix-1;jx<=ix+1;jx++){
-			int jb = jz*nBxy + jy*nBx + jx;
-			int j = bfst[jb];
-			if(j == -1) continue;
-			for(;;){
-				double v0 = Pos[j*3  ] - pos_ix;
-				double v1 = Pos[j*3+1] - pos_iy;
-				double v2 = Pos[j*3+2] - pos_iz;
-				double dst2 = v0*v0+v1*v1+v2*v2;
-				if(dst2<r2){
-				if(j!=i && Typ[j]!=GST){
-					double dst = sqrt(dst2);
-					double w = WEI(dst, r);
-
-					NEU = 2 * meu_i * MEU[j] / (meu_i + MEU[j]);
-
-NEU = KNM_VS2 * DNS_FL2;
-
-					if (PTYPE[i] == 1) NEU = NEU/DNS_FL1;
-					else NEU = NEU/DNS_FL2;
-//					NEU = NEU/RHO[i];
-					
-					//if ((NEUt[i] + NEUt[j])>0) NEU = NEU + (2 * NEUt[i] * RHO[j] * NEUt[j] * RHO[j] / (NEUt[i] * RHO[i] + NEUt[j] * RHO[j])) / RHO[i];
-
-					// Original
-//					Acc_x +=(Vel[j*3  ]-vec_ix)*w;
-//					Acc_y +=(Vel[j*3+1]-vec_iy)*w;
-//					Acc_z +=(Vel[j*3+2]-vec_iz)*w;
-					// Modified
-					Acc_x +=(Vel[j*3  ]-vec_ix)*w*NEU;
-					Acc_y +=(Vel[j*3+1]-vec_iy)*w*NEU;
-					Acc_z +=(Vel[j*3+2]-vec_iz)*w*NEU;
-				}}
-				j = nxt[j];
-				if(j==-1) break;
-			}
-		}}}
-		// Original
-//		Acc[i*3  ]=Acc_x*A1 + G_X;
-//		Acc[i*3+1]=Acc_y*A1 + G_Y;
-//		Acc[i*3+2]=Acc_z*A1 + G_Z;
-		// Modified
-		Acc[i*3  ]=Acc_x*A1_M + G_X;
-		Acc[i*3+1]=Acc_y*A1_M + G_Y;
-		Acc[i*3+2]=Acc_z*A1_M + G_Z;
-	}}
-}
-
-//void NonNwtVscTrm_omp(double *x_vel, double *y_vel, double *z_vel){
-void VscIntVal_omp(){
-
-	double  *S12, *S13, *S23, *S11, *S22, *S33, d, phi = 0.0, phi2 = 0.0, grain_VF, meu0, normal_stress;//, *p_smooth;
-	double **BL, **WL, **PS;
-
-	// Changed !!!
-	// Be carefull to assign all domain
-	double Xmin, Xmax, Ymin, Ymax, Zmin; // Minimum and maximum of searching grid
-	// dam1610
-	Xmin = 0.0 - PCL_DST*3; Xmax = 1.65 + PCL_DST*3;
-	Ymin = 0.0 - PCL_DST*3; Ymax = 0.15 + PCL_DST*3;
-	Zmin = 0.0 - PCL_DST*3; //Zmax = 0.7 + PCL_DST*30;
-	// Changed !!!
-
-	// Search free-surface particles for each interval of aa = 2 particles in wall
-	int aa = 2, kx, ky;
-	int kx_max = int((Xmax - Xmin) / aa / PCL_DST) + 1;
-	int ky_max = int((Ymax - Ymin) / aa / PCL_DST) + 1;
-
-	double Uxx, Uxy, Uxz, Uyx, Uyy, Uyz, Uzx, Uzy, Uzz;
-
-	S11 = new double[nP + 1];
-	S22 = new double[nP + 1];
-	S33 = new double[nP + 1];
-	S12 = new double[nP + 1];
-	S13 = new double[nP + 1];
-	S23 = new double[nP + 1];
-	//p_smooth = new double[nP + 1];
-	BL = new double*[kx_max + 1];
-	WL = new double*[kx_max + 1];
-	PS = new double*[kx_max + 1];
-
-//#pragma omp parallel for
-	for (int m = 1; m <= kx_max; m++)
-	{
-		BL[m] = new double[ky_max + 1];
-		WL[m] = new double[ky_max + 1];
-		PS[m] = new double[ky_max + 1];
-	}
-
-	// Determining the bed level
-//#pragma omp parallel for schedule(dynamic,64)
-	for (kx = 1; kx <= kx_max; kx++)
-	{
-		for (ky = 1; ky <= ky_max; ky++)
-		{
-			BL[kx][ky] = Zmin;
-			WL[kx][ky] = Zmin;
-		}
-	}
-
-//#pragma omp parallel for
-	for(int i=0;i<nP;i++){
-		if(Typ[i] == FLD){
-			double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
-		
-			kx = int((pos_ix - Xmin) / aa / PCL_DST) + 1;
-			ky = int((pos_iy - Ymin) / aa / PCL_DST) + 1;
-
-			//if (pos_iz>BL[kx][ky] && C[i]>0.5) { BL[kx][ky] = pos_iy; PS[kx][ky] = pnew[i]; }
-			if (pos_iz>BL[kx][ky] && C[i]>0.5) { BL[kx][ky] = pos_iy; PS[kx][ky] = Prs[i]; }
-			if (pos_iz>WL[kx][ky] && PTYPE[i] == 1) { WL[kx][ky] = pos_iy; }
-		}
-	}
-
-	// Strain rate calculation
-//#pragma omp parallel for schedule(dynamic,64)
-	for(int i=0;i<nP;i++){
-	if(Typ[i] == FLD){
-		double sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sum5 = 0, sum6 = 0, sum7 = 0, sum8 = 0, sum9 = 0, sum10 = 0;
-
-//		double Acc_x = 0.0;			double Acc_y = 0.0;			double Acc_z = 0.0;
-		double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
-		double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
-		int ix = (int)((pos_ix - MIN_X)*DBinv) +1;
-		int iy = (int)((pos_iy - MIN_Y)*DBinv) +1;
-		int iz = (int)((pos_iz - MIN_Z)*DBinv) +1;
-		for(int jz=iz-1;jz<=iz+1;jz++){
-		for(int jy=iy-1;jy<=iy+1;jy++){
-		for(int jx=ix-1;jx<=ix+1;jx++){
-			int jb = jz*nBxy + jy*nBx + jx;
-			int j = bfst[jb];
-			if(j == -1) continue;
-			for(;;){
-				double v0 = Pos[j*3  ] - pos_ix;
-				double v1 = Pos[j*3+1] - pos_iy;
-				double v2 = Pos[j*3+2] - pos_iz;
-				double dst2 = v0*v0+v1*v1+v2*v2;
-				if(dst2<r2){
-				if(j!=i && Typ[j]!=GST){
-					double dst = sqrt(dst2);
-					double w = WEI(dst, r);
-					double vec_ijx = Vel[j*3  ]-vec_ix;	
-					double vec_ijy = Vel[j*3+1]-vec_iy;	
-					double vec_ijz = Vel[j*3+2]-vec_iz;
-
-					sum1 += vec_ijx*v0*w/dst2;
-					sum2 += vec_ijx*v1*w/dst2;
-					sum3 += vec_ijx*v2*w/dst2;
-					
-					sum4 += vec_ijy*v0*w/dst2;
-					sum5 += vec_ijy*v1*w/dst2;
-					sum6 += vec_ijy*v2*w/dst2;
-					
-					sum7 += vec_ijz*v0*w/dst2;
-					sum8 += vec_ijz*v1*w/dst2;
-					sum9 += vec_ijz*v2*w/dst2;
-					
-					//sum10 += sum10 + pnew[j]*w;
-					sum10 += sum10 + Prs[j]*w;
-				}}
-				j = nxt[j];
-				if(j==-1) break;
-			}
-		}}}
-
-		// A3 is a negative cte (-DIM/n0Grad)
-		Uxx = -A3*sum1; Uxy = -A3*sum2; Uxz = -A3*sum3;
-		Uyx = -A3*sum4; Uyy = -A3*sum5; Uyz = -A3*sum6;
-		Uzx = -A3*sum7; Uzy = -A3*sum8; Uzz = -A3*sum9;
-
-		p_smooth[i] = sum10 / n0Grad;
-		if (p_smooth[i]<0) p_smooth[i] = 0;
-
-		S11[i] = 0.5*(Uxx + Uxx);
-		S12[i] = 0.5*(Uxy + Uyx);
-		S13[i] = 0.5*(Uxz + Uzx);
-		S22[i] = 0.5*(Uyy + Uyy);
-		S23[i] = 0.5*(Uyz + Uzy);
-		S33[i] = 0.5*(Uzz + Uzz);
-
-		//II[i] = 0.5*Uxx*Uxx + 0.5*Uyy*Uyy + 0.25*(Uxy + Uyx)*(Uxy + Uyx);
-		II[i] = 0.5*(S11[i] * S11[i] + S12[i] * S12[i] + S13[i] * S13[i] + S12[i] * S12[i] + S22[i] * S22[i] + S23[i] * S23[i] + S13[i] * S13[i] + S23[i] * S23[i] + S33[i] * S33[i]);
-		//II[i]= S11[i]*S22[i] +S22[i]*S33[i]+ S11[i]*S33[i] - S12[i]*S12[i] -S13[i]*S13[i]- S23[i]*S23[i] ;
-		if (II[i]<0 || II[i] * 0 != 0) II[i] = 0;
-		//II=fabs(S11[i]*S22[i]-S12[i]*S12[i]);
-		
-		//std::cout << " II: " << II[i] << std::endl;
-	}}
-
-	// Newtonian viscosity
-	if (Fluid2_type == 0)
-	{
-//#pragma omp parallel for
-		for(int i=0;i<nP;i++){
-		if(Typ[i] == FLD){
-			if (PTYPE[i] <= 1)MEU[i] = KNM_VS1 * DNS_FL1;
-			if (PTYPE[i] != 1)MEU[i] = KNM_VS2 * DNS_FL2;
-		}}
-
-//		if (TURB>0)
-//		{
-//			NEUt[i] = Cs*DL*Cs*DL*2*sqrt(II[i]);
-
-//			if (NEUt[i] * 0 != 0)  NEUt[i] = 0;
-//			if (NEUt[i]>1)     NEUt[i] = 1;
-//		}
-	}
-
-	// Granular Fluid
-	if (Fluid2_type == 1)
-	{
-	// PROBLEMS TO USE OPENMP HERE. MAYBE THE ACCESS TO BL, WL
-//#pragma omp parallel for
-		for(int i=0;i<nP;i++){
-		if(Typ[i] == FLD){
-
-//			double Acc_x = 0.0;			double Acc_y = 0.0;			double Acc_z = 0.0;
-			double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
-			double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
-
-			if(PTYPE[i] == 1) 
-				MEU[i] = KNM_VS1 * DNS_FL1;
-			else if(PTYPE[i] == 2){
-				phi = (C[i] - 0.25)*PHI / (1 - 0.25);
-				phi2 = (C[i] - 0.25)*PHI_2 / (1 - 0.25);
-				if (C[i] <= 0.25) { phi = 0.00001; phi2 = 0.00001; }
-				if (PTYPE[i] <= 0) phi = PHI_BED;
-
-				// Normal stress calculation
-				p_rheo_new[i] = p_smooth[i];
-
-				kx = int((pos_ix - Xmin) / aa / PCL_DST) + 1;
-				ky = int((pos_iy - Ymin) / aa / PCL_DST) + 1;
-
-				//normal_stress=(BL[k]-pos_iy+DL/2)*(DNS_FL2)*9.81;	// normal_stress= Gama.H
-				normal_stress = (BL[kx][ky] - pos_iz + PCL_DST / 2)*(DNS_FL2 - DNS_FL1)*9.81 - (vec_ix*vec_ix + vec_iy*vec_iy + vec_iz*vec_iz)*(DNS_FL2 - DNS_FL1) / 2.0;	// normal_stress= Gama.H
-
-				if (p_smooth[i] - (WL[kx][ky] - pos_iz)*DNS_FL1*9.8<0) p_smooth[i] = (WL[kx][ky] - pos_iz)*DNS_FL1*9.8;
-				if (TIM <= 1) normal_stress = 1.0*(1 - TIM)*(p_smooth[i] - (WL[kx][ky] - pos_iz)*DNS_FL1*9.8) + 1.0*(TIM)*normal_stress;
-
-				//normal_stress=normal_stress*0.61*1500/DNS_FL2;
-				if (normal_stress < 1 || C[i] < 0.5) normal_stress = 1;
-
-				p_rheo_new[i] = normal_stress;
-
-				// Yield stress calculation
-				//Inertia[i] = sqrt(II[i])* dg / sqrt(normal_stress / DNS_FL2);		// Free-fall regime
-				Inertia[i] = sqrt(II[i])*dg / sqrt(normal_stress/(DNS_FL1*0.47));	// Grain inertia regime
-				//Inertia[i] = sqrt(II[i])* (KNM_VS1*DNS_FL1) / normal_stress ;			//viscous regime
-
-//				Inertia[i] = 1.0;
-				grain_VF = 0.65 - (0.65 - 0.25)*Inertia[i];
-				phi = phi * grain_VF / 0.65;
-
-				double yield_stress = cohes * cos(phi) + normal_stress * sin(phi);
-
-				if (yield_stress < 0) yield_stress = 0;
-
-				double visc_max = (yield_stress*mm + MEU0);
-
-				if (II[i]>0)
-					MEU_Y[i] = yield_stress * (1 - exp(-mm * sqrt(II[i]))) / 2.0 / sqrt(II[i]);
-				else
-					MEU_Y[i] = visc_max;
-
-				// H-B rheology
-
-				//meu0 = MEU0;
-
-				// Non-linear Meu(I) rheology
-				//meu0 =  0.5* 0.36 *normal_stress* dg/ (I0* sqrt(normal_stress/ DNS_FL2)+ sqrt(II[i])*dg);	//free fall
-				meu0 = 0.5*(sin(phi2) - sin(phi)) *normal_stress* dg / (I0* sqrt(normal_stress / (DNS_FL1*0.47)) + sqrt(II[i])*dg);	//grain inertia
-			   	//meu0 = 0.5*0.36*normal_stress* (KNM_VS1*DNS_FL1)/ (I0* normal_stress+ sqrt(II[i])*(KNM_VS1*DNS_FL1));	//viscous
-			   	
-			   	//meu0 = MEU0;
-			   	// Linear Meu(I) rheology
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi)) * dg* sqrt(normal_stress * DNS_FL2)      / I0;		//free fall
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi)) * dg* sqrt(normal_stress * DNS_FL1*0.47) / I0;		//grain inertia
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi)) * (KNM_VS1*DNS_FL1)                         / I0;		//viscous
-
-				if (II[i] <= 0 || (meu0 * 0) != 0) meu0 = MEU0;
-
-				visc_max = (yield_stress*mm + meu0);
-
-				//if(isnan(II[i]) || isinf(II[i])){
-					//std::cout << " viscmax: " << II[i] << std::endl;
-				//	assert(visc_max >= 0 || visc_max <= 0);
-				//}
-				
-				MEU[i] = MEU_Y[i] + MEU0 * pow(4 * II[i], (N - 1) / 2);
-				
-				if (II[i] == 0 || MEU[i]>visc_max) MEU[i] = visc_max;
-				if (PTYPE[i] <= 0) MEU[i] = MEU[i] * C[i] + 0.001*(1 - C[i]);
-			}
-			
-			if(PTYPE[i] >= 2) {
-				if (C[i] > 0.5) RHO[i] = DNS_FL2;
-				else RHO[i] = C[i] * DNS_FL2 + (1 - C[i]) * 2650;
-			}
-		}}
-
-		//---------------------------------- Direct stress calculation method -----------------------------------------
-//		if (stress_cal_method == 2)
-//		{
-//			for (i = 1; i <= NUM; i++)
-//			{
-//				double sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sum5 = 0, sum6 = 0, sum7 = 0, sum8 = 0, sum9 = 0, sum10 = 0;
-//				for (l = 2; l <= neighb[i][1]; l++)
-//				{
-//					j = neighb[i][l];
-//					d = DIST(i, j);
-//					if (i != j && d <= re)
-//					{
-//						w = W(d, KTYPE, 2);
-
-//						double meuij = 2 * MEU[i] * MEU[j] / (MEU[i] + MEU[j]);
-//						if ((NEUt[i] + NEUt[j])>0) meuij = meuij + 2 * NEUt[i] * RHO[i] * NEUt[j] * RHO[j] / (NEUt[i] * RHO[i] + NEUt[j] * RHO[j]);
-
-//						sum1 = sum1 + meuij * (x_vel[j] - x_vel[i])*DX(i, j)*w / d / d;
-//						sum2 = sum2 + meuij * (x_vel[j] - x_vel[i])*DY(i, j)*w / d / d;
-//						sum3 = sum3 + meuij * (x_vel[j] - x_vel[i])*DZ(i, j)*w / d / d;
-
-//						sum4 = sum4 + meuij * (y_vel[j] - y_vel[i])*DX(i, j)*w / d / d;
-//						sum5 = sum5 + meuij * (y_vel[j] - y_vel[i])*DY(i, j)*w / d / d;
-//						sum6 = sum6 + meuij * (y_vel[j] - y_vel[i])*DZ(i, j)*w / d / d;
-
-//						sum7 = sum7 + meuij * (z_vel[j] - z_vel[i])*DX(i, j)*w / d / d;
-//						sum8 = sum8 + meuij * (z_vel[j] - z_vel[i])*DY(i, j)*w / d / d;
-//						sum9 = sum9 + meuij * (z_vel[j] - z_vel[i])*DZ(i, j)*w / d / d;
-//					}
-//				}
-
-//				Tau_xx[i] = (DIM / n0) * 2 * sum1;
-//				Tau_yy[i] = (DIM / n0) * 2 * sum5;
-//				Tau_zz[i] = (DIM / n0) * 2 * sum9;
-
-//				Tau_xy[i] = (DIM / n0)*(sum2 + sum4);
-//				Tau_xz[i] = (DIM / n0)*(sum3 + sum7);
-//				Tau_yz[i] = (DIM / n0)*(sum6 + sum8);
-//			}
-//		}
-
-	} // if (Fluid2_type == 1)
-
-	//---------------------------------------------------------------
-
-	delete[]S11; delete[]S12; delete[]S13; delete[]S22; delete[]S23; delete[]S33; delete[]BL; delete[]WL; delete[]PS; //delete[]p_smooth;
-	S11 = NULL; S12 = NULL; S13 = NULL; S22 = NULL; S23 = NULL; S33 = NULL; BL = NULL; WL = NULL; PS = NULL; //p_smooth = NULL;
-}
-
 // Calculation of the volume of fraction if phase II in the mixture
 void VolFract_omp()
 {
@@ -874,6 +519,1155 @@ void VolFract_omp()
 				C[i] = sum2 / sum1;
 		}}
 	}
+}
+
+//void NonNwtVscTrm_omp(double *x_vel, double *y_vel, double *z_vel){
+// Viscosity interaction values for "real" fluid particles
+void VscIntVal_omp(){
+
+	double  *S12, *S13, *S23, *S11, *S22, *S33, d, phi = 0.0, phi2 = 0.0, meu0, normal_stress;//,grain_VF, *p_smooth;
+	double **BL, **WL, **PS;
+
+	// Changed !!!
+	// Be carefull to assign all domain
+	double Xmin, Xmax, Ymin, Ymax, Zmin; // Minimum and maximum of searching grid
+	// dam1610
+	Xmin = 0.0 - PCL_DST*3; Xmax = 1.65 + PCL_DST*3;
+	Ymin = 0.0 - PCL_DST*3; Ymax = 0.15 + PCL_DST*3;
+	Zmin = 0.0 - PCL_DST*3; //Zmax = 0.7 + PCL_DST*30;
+	// Changed !!!
+
+	// Search free-surface particles for each interval of aa = 2 particles in wall
+	int aa = 2, kx, ky;
+	int kx_max = int((Xmax - Xmin) / aa / PCL_DST) + 1;
+	int ky_max = int((Ymax - Ymin) / aa / PCL_DST) + 1;
+
+	double Uxx, Uxy, Uxz, Uyx, Uyy, Uyz, Uzx, Uzy, Uzz;
+
+	S11 = new double[nP + 1];
+	S22 = new double[nP + 1];
+	S33 = new double[nP + 1];
+	S12 = new double[nP + 1];
+	S13 = new double[nP + 1];
+	S23 = new double[nP + 1];
+	//p_smooth = new double[nP + 1];
+	BL = new double*[kx_max + 1];  // bed level
+	WL = new double*[kx_max + 1];  // water level
+	PS = new double*[kx_max + 1];  // pressure sediment
+
+#pragma omp parallel for
+	for (int m = 1; m <= kx_max; m++)
+	{
+		BL[m] = new double[ky_max + 1];
+		WL[m] = new double[ky_max + 1];
+		PS[m] = new double[ky_max + 1];
+	}
+
+	// Determining the bed level
+#pragma omp parallel for schedule(dynamic,64)
+	for (kx = 1; kx <= kx_max; kx++)
+	{
+		for (ky = 1; ky <= ky_max; ky++)
+		{
+			BL[kx][ky] = Zmin;
+			WL[kx][ky] = Zmin;
+		}
+	}
+
+#pragma omp parallel for
+	for(int i=0;i<nP;i++){
+		if(Typ[i] == FLD){
+			double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
+		
+			kx = int((pos_ix - Xmin) / aa / PCL_DST) + 1;
+			ky = int((pos_iy - Ymin) / aa / PCL_DST) + 1;
+
+
+			//if (pos_iz>BL[kx][ky] && C[i]>0.5) { BL[kx][ky] = pos_iz; PS[kx][ky] = pnew[i]; }
+			if (pos_iz>BL[kx][ky] && C[i]>0.5) { BL[kx][ky] = pos_iz; PS[kx][ky] = Prs[i]; }
+			if (pos_iz>WL[kx][ky] && PTYPE[i] == 1) { WL[kx][ky] = pos_iz; }
+		}
+	}
+
+	// Strain rate calculation
+#pragma omp parallel for schedule(dynamic,64)
+	for(int i=0;i<nP;i++){
+	if(Typ[i] == FLD){
+		double sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sum5 = 0, sum6 = 0, sum7 = 0, sum8 = 0, sum9 = 0, sum10 = 0;
+
+//		double Acc_x = 0.0;			double Acc_y = 0.0;			double Acc_z = 0.0;
+		double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
+		double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
+		int ix = (int)((pos_ix - MIN_X)*DBinv) +1;
+		int iy = (int)((pos_iy - MIN_Y)*DBinv) +1;
+		int iz = (int)((pos_iz - MIN_Z)*DBinv) +1;
+		for(int jz=iz-1;jz<=iz+1;jz++){
+		for(int jy=iy-1;jy<=iy+1;jy++){
+		for(int jx=ix-1;jx<=ix+1;jx++){
+			int jb = jz*nBxy + jy*nBx + jx;
+			int j = bfst[jb];
+			if(j == -1) continue;
+			for(;;){
+				double v0 = Pos[j*3  ] - pos_ix;
+				double v1 = Pos[j*3+1] - pos_iy;
+				double v2 = Pos[j*3+2] - pos_iz;
+				double dst2 = v0*v0+v1*v1+v2*v2;
+				if(dst2<r2){
+				if(j!=i && Typ[j]!=GST){
+					double dst = sqrt(dst2);
+					double w = WEI(dst, r);
+					double vec_ijx = Vel[j*3  ]-vec_ix;	
+					double vec_ijy = Vel[j*3+1]-vec_iy;	
+					double vec_ijz = Vel[j*3+2]-vec_iz;
+
+					sum1 += vec_ijx*v0*w/dst2;
+					sum2 += vec_ijx*v1*w/dst2;
+					sum3 += vec_ijx*v2*w/dst2;
+					
+					sum4 += vec_ijy*v0*w/dst2;
+					sum5 += vec_ijy*v1*w/dst2;
+					sum6 += vec_ijy*v2*w/dst2;
+					
+					sum7 += vec_ijz*v0*w/dst2;
+					sum8 += vec_ijz*v1*w/dst2;
+					sum9 += vec_ijz*v2*w/dst2;
+					
+					sum10 += Prs[j]*w;
+				}}
+				j = nxt[j];
+				if(j==-1) break;
+			}
+		}}}
+
+		// A3 is a negative cte (-DIM/n0Grad)
+		Uxx = -A3*sum1; Uxy = -A3*sum2; Uxz = -A3*sum3;
+		Uyx = -A3*sum4; Uyy = -A3*sum5; Uyz = -A3*sum6;
+		Uzx = -A3*sum7; Uzy = -A3*sum8; Uzz = -A3*sum9;
+
+		p_smooth[i] = sum10 / n0Grad;
+		if (p_smooth[i]<0) p_smooth[i] = 0;
+
+		S11[i] = 0.5*(Uxx + Uxx);
+		S12[i] = 0.5*(Uxy + Uyx);
+		S13[i] = 0.5*(Uxz + Uzx);
+		S22[i] = 0.5*(Uyy + Uyy);
+		S23[i] = 0.5*(Uyz + Uzy);
+		S33[i] = 0.5*(Uzz + Uzz);
+
+		//II[i] = 0.5*Uxx*Uxx + 0.5*Uyy*Uyy + 0.25*(Uxy + Uyx)*(Uxy + Uyx);
+		//II[i] = 0.5*(S11[i] * S11[i] + S12[i] * S12[i] + S13[i] * S13[i] + S12[i] * S12[i] + S22[i] * S22[i] + S23[i] * S23[i] + S13[i] * S13[i] + S23[i] * S23[i] + S33[i] * S33[i]);
+		II[i] = 0.5*(S11[i] * S11[i] + 2 * S12[i] * S12[i] + 2 * S13[i] * S13[i] + S22[i] * S22[i] + 2 * S23[i] * S23[i] + S33[i] * S33[i]);
+		//II[i]= S11[i]*S22[i] +S22[i]*S33[i]+ S11[i]*S33[i] - S12[i]*S12[i] -S13[i]*S13[i]- S23[i]*S23[i];
+		if (II[i]<0 || II[i] * 0 != 0) II[i] = 0;
+		//II=fabs(S11[i]*S22[i]-S12[i]*S12[i]);
+		
+		//std::cout << " II: " << II[i] << std::endl;
+	}}
+
+	// Newtonian viscosity
+	if (Fluid2_type == 0)
+	{
+#pragma omp parallel for
+		for(int i=0;i<nP;i++){
+		if(Typ[i] == FLD){
+			if (PTYPE[i] <= 1)MEU[i] = KNM_VS1 * DNS_FL1;
+			if (PTYPE[i] != 1)MEU[i] = KNM_VS2 * DNS_FL2;
+		}}
+
+//		if (TURB>0)
+//		{
+//			NEUt[i] = Cs*DL*Cs*DL*2*sqrt(II[i]);
+
+//			if (NEUt[i] * 0 != 0)  NEUt[i] = 0;
+//			if (NEUt[i]>1)     NEUt[i] = 1;
+//		}
+	}
+
+	// Granular Fluid
+	if (Fluid2_type == 1)
+	{
+	// PROBLEMS TO USE OPENMP HERE. MAYBE THE ACCESS TO BL, WL
+//#pragma omp parallel for
+		for(int i=0;i<nP;i++){
+		if(Typ[i] == FLD){
+
+//			double Acc_x = 0.0;			double Acc_y = 0.0;			double Acc_z = 0.0;
+			double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
+			double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
+
+			if(PTYPE[i] == 1) {
+				MEU[i] = KNM_VS1 * DNS_FL1;
+			}
+			else if(PTYPE[i] == 2){
+				// phi: internal friction angle
+				// phi2: ?
+				phi = (C[i] - 0.25)*PHI / (1 - 0.25);
+				phi2 = (C[i] - 0.25)*PHI_2 / (1 - 0.25);
+				if (C[i] <= 0.25) { phi = 0.00001; phi2 = 0.00001; } // phi close to zero
+				if (PTYPE[i] <= 0) phi = PHI_BED; // ghost
+
+				// Normal stress calculation (mechanical pressure)
+				p_rheo_new[i] = p_smooth[i];
+
+				kx = int((pos_ix - Xmin) / aa / PCL_DST) + 1;
+				ky = int((pos_iy - Ymin) / aa / PCL_DST) + 1;
+
+				// Effective pressure = total pressure (from EOS) - hydrostatic pressure
+				//normal_stress=(BL[k]-pos_iy+DL/2)*(DNS_FL2)*9.81;	// normal_stress= Gama.H
+				normal_stress = (BL[kx][ky] - pos_iz + PCL_DST / 2)*(DNS_FL2 - DNS_FL1)*9.81 - (vec_ix*vec_ix + vec_iy*vec_iy + vec_iz*vec_iz)*(DNS_FL2 - DNS_FL1) / 2.0;	// normal_stress= Gama.H
+
+				if (p_smooth[i] - (WL[kx][ky] - pos_iz)*DNS_FL1*9.81<0) p_smooth[i] = (WL[kx][ky] - pos_iz)*DNS_FL1*9.81;
+				if (TIM <= 1) normal_stress = 1.0*(1 - TIM)*(p_smooth[i] - (WL[kx][ky] - pos_iz)*DNS_FL1*9.81) + 1.0*(TIM)*normal_stress;
+
+//				normal_stress = p_smooth[i] - (WL[kx][ky] - pos_iz)*DNS_FL1*9.81;
+//				normal_stress = p_smooth[i];
+				//normal_stress=normal_stress*0.61*1500/DNS_FL2;
+				if (normal_stress < 1 || C[i] < 0.5) normal_stress = 1;
+
+				p_rheo_new[i] = normal_stress;
+
+				// Yield stress calculation
+				//Inertia[i] = sqrt(II[i])*dg/sqrt(normal_stress/DNS_SDT);		// Free-fall (dry granular material)
+				Inertia[i] = sqrt(II[i])*dg/sqrt(normal_stress/(DNS_FL1*Cd));	// Grain inertia (submerged)
+				//Inertia[i] = sqrt(II[i])*(KNM_VS1*DNS_FL1)/normal_stress ;	// Viscous regime
+
+//				Inertia[i] = 1.0;
+				// VF_max VF_min
+				VF[i] = VF_max - (VF_max - VF_min)*Inertia[i];
+				if (VF[i] < VF_min) VF[i] = VF_min;
+				RHO[i] = DNS_SDT * VF[i] + (1-VF[i])*DNS_FL1;
+				phi = phi * VF[i] / VF_max;
+
+				// Mohr-Coulomb
+				double yield_stress = cohes * cos(phi) + normal_stress * sin(phi);
+
+				if (yield_stress < 0) yield_stress = 0;
+
+				double visc_max = (yield_stress*mm*0.5 + MEU0);
+
+				if (II[i]>0)
+					MEU_Y[i] = yield_stress * (1 - exp(-mm * sqrt(II[i]))) / 2.0 / sqrt(II[i]);
+				else
+					MEU_Y[i] = visc_max;
+
+				// H-B rheology
+
+				//meu0 = MEU0;
+
+				// Non-linear Meu(I) rheology
+				//meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*dg/(I0*sqrt(normal_stress/DNS_FL2)+sqrt(II[i])*dg);			//free fall
+				meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*dg/(I0*sqrt(normal_stress/(DNS_FL1*Cd))+sqrt(II[i])*dg);		//grain inertia
+			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*(KNM_VS1*DNS_FL1)/(I0*normal_stress+sqrt(II[i])*(KNM_VS1*DNS_FL1));	//viscous
+			   	
+			   	// Linear Meu(I) rheology
+			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*dg*sqrt(normal_stress*DNS_FL2)/I0;		//free fall
+			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*dg*sqrt(normal_stress*DNS_FL1*Cd)/I0;	//grain inertia
+			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*(KNM_VS1*DNS_FL1)/I0;					//viscous
+
+				if (II[i] <= 0 || (meu0 * 0) != 0) meu0 = MEU0;
+
+				visc_max = (yield_stress*mm*0.5 + meu0);
+
+				//if(isnan(II[i]) || isinf(II[i])){
+					//std::cout << " viscmax: " << II[i] << std::endl;
+				//	assert(visc_max >= 0 || visc_max <= 0);
+				//}
+				
+				// Herschel bulkley papanastasiou
+				MEU[i] = MEU_Y[i] + MEU0 * pow(4 * II[i], (N - 1) / 2);
+
+				// MEU_Y rheological model
+				//MEU[i] = MEU_Y[i] + meu0;
+				
+				if (II[i] == 0 || MEU[i]>visc_max) MEU[i] = visc_max;
+				if (PTYPE[i] <= 0) MEU[i] = MEU[i] * C[i] + DNS_FL1*KNM_VS1*(1 - C[i]);
+
+				//if (MEU[i]/RHO[i] > maxVIS) maxVIS = MEU[i]/RHO[i];
+			}
+			
+			if(PTYPE[i] >= 2) {
+				if (C[i] > 0.5) RHO[i] = DNS_FL2;
+				else RHO[i] = C[i] * DNS_FL2 + (1 - C[i]) * DNS_FL1;
+			}
+		}}
+
+		//---------------------------------- Direct stress calculation method -----------------------------------------
+//		if (stress_cal_method == 2)
+//		{
+//			for (i = 1; i <= NUM; i++)
+//			{
+//				double sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sum5 = 0, sum6 = 0, sum7 = 0, sum8 = 0, sum9 = 0, sum10 = 0;
+//				for (l = 2; l <= neighb[i][1]; l++)
+//				{
+//					j = neighb[i][l];
+//					d = DIST(i, j);
+//					if (i != j && d <= re)
+//					{
+//						w = W(d, KTYPE, 2);
+
+//						double meuij = 2 * MEU[i] * MEU[j] / (MEU[i] + MEU[j]);
+//						if ((NEUt[i] + NEUt[j])>0) meuij = meuij + 2 * NEUt[i] * RHO[i] * NEUt[j] * RHO[j] / (NEUt[i] * RHO[i] + NEUt[j] * RHO[j]);
+
+//						sum1 = sum1 + meuij * (x_vel[j] - x_vel[i])*DX(i, j)*w / d / d;
+//						sum2 = sum2 + meuij * (x_vel[j] - x_vel[i])*DY(i, j)*w / d / d;
+//						sum3 = sum3 + meuij * (x_vel[j] - x_vel[i])*DZ(i, j)*w / d / d;
+
+//						sum4 = sum4 + meuij * (y_vel[j] - y_vel[i])*DX(i, j)*w / d / d;
+//						sum5 = sum5 + meuij * (y_vel[j] - y_vel[i])*DY(i, j)*w / d / d;
+//						sum6 = sum6 + meuij * (y_vel[j] - y_vel[i])*DZ(i, j)*w / d / d;
+
+//						sum7 = sum7 + meuij * (z_vel[j] - z_vel[i])*DX(i, j)*w / d / d;
+//						sum8 = sum8 + meuij * (z_vel[j] - z_vel[i])*DY(i, j)*w / d / d;
+//						sum9 = sum9 + meuij * (z_vel[j] - z_vel[i])*DZ(i, j)*w / d / d;
+//					}
+//				}
+
+//				Tau_xx[i] = (DIM / n0) * 2 * sum1;
+//				Tau_yy[i] = (DIM / n0) * 2 * sum5;
+//				Tau_zz[i] = (DIM / n0) * 2 * sum9;
+
+//				Tau_xy[i] = (DIM / n0)*(sum2 + sum4);
+//				Tau_xz[i] = (DIM / n0)*(sum3 + sum7);
+//				Tau_yz[i] = (DIM / n0)*(sum6 + sum8);
+//			}
+//		}
+
+	} // if (Fluid2_type == 1)
+
+	//---------------------------------------------------------------
+
+	delete[]S11; delete[]S12; delete[]S13; delete[]S22; delete[]S23; delete[]S33; delete[]BL; delete[]WL; delete[]PS; //delete[]p_smooth;
+	S11 = NULL; S12 = NULL; S13 = NULL; S22 = NULL; S23 = NULL; S33 = NULL; BL = NULL; WL = NULL; PS = NULL; //p_smooth = NULL;
+}
+
+// Slip condition. Viscosity interaction values
+void WallSlipVscIntVal_omp(){
+
+	double  *S12, *S13, *S23, *S11, *S22, *S33, d, phi = 0.0, phi2 = 0.0, meu0, normal_stress;//, grain_VF, *p_smooth;
+	double **BL, **WL, **PS;
+
+	// Changed !!!
+	// Be carefull to assign all domain
+	double Xmin, Xmax, Ymin, Ymax, Zmin; // Minimum and maximum of searching grid
+	// dam1610
+	Xmin = 0.0 - PCL_DST*3; Xmax = 1.65 + PCL_DST*3;
+	Ymin = 0.0 - PCL_DST*3; Ymax = 0.15 + PCL_DST*3;
+	Zmin = 0.0 - PCL_DST*3; //Zmax = 0.7 + PCL_DST*30;
+	// Changed !!!
+
+	// Search free-surface particles for each interval of aa = 2 particles in wall
+	int aa = 2, kx, ky;
+	int kx_max = int((Xmax - Xmin) / aa / PCL_DST) + 1;
+	int ky_max = int((Ymax - Ymin) / aa / PCL_DST) + 1;
+
+	double Uxx, Uxy, Uxz, Uyx, Uyy, Uyz, Uzx, Uzy, Uzz;
+	double aUxx, aUxy, aUxz, aUyx, aUyy, aUyz, aUzx, aUzy, aUzz;
+
+	S11 = new double[nP + 1];
+	S22 = new double[nP + 1];
+	S33 = new double[nP + 1];
+	S12 = new double[nP + 1];
+	S13 = new double[nP + 1];
+	S23 = new double[nP + 1];
+	//p_smooth = new double[nP + 1];
+	BL = new double*[kx_max + 1];  // bed level
+	WL = new double*[kx_max + 1];  // water level
+	PS = new double*[kx_max + 1];  // pressure sediment
+
+#pragma omp parallel for
+	for (int m = 1; m <= kx_max; m++)
+	{
+		BL[m] = new double[ky_max + 1];
+		WL[m] = new double[ky_max + 1];
+		PS[m] = new double[ky_max + 1];
+	}
+
+	// Determining the bed level
+#pragma omp parallel for schedule(dynamic,64)
+	for (kx = 1; kx <= kx_max; kx++)
+	{
+		for (ky = 1; ky <= ky_max; ky++)
+		{
+			BL[kx][ky] = Zmin;
+			WL[kx][ky] = Zmin;
+		}
+	}
+
+#pragma omp parallel for
+	for(int i=0;i<nP;i++){
+		if(Typ[i] == FLD){
+			double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
+			
+			kx = int((pos_ix - Xmin) / aa / PCL_DST) + 1;
+			ky = int((pos_iy - Ymin) / aa / PCL_DST) + 1;
+
+			//if (pos_iz>BL[kx][ky] && C[i]>0.5) { BL[kx][ky] = pos_iz; PS[kx][ky] = pnew[i]; }
+			if (pos_iz>BL[kx][ky] && C[i]>0.5) { BL[kx][ky] = pos_iz; PS[kx][ky] = Prs[i]; }
+			if (pos_iz>WL[kx][ky] && PTYPE[i] == 1) { WL[kx][ky] = pos_iz; }
+		}
+	}
+
+	// Strain rate calculation
+	int nPartNearMesh = partNearMesh.size();
+	//printf(" Mesh %d \n", partNearMesh);
+	// Loop only for particles near mesh
+#pragma omp parallel for schedule(dynamic,64)
+	for(int im=0;im<nPartNearMesh;im++){
+	//for(int i=0;i<nP;i++){
+	int i = partNearMesh[im];
+	if(Typ[i] == FLD){
+		double sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sum5 = 0, sum6 = 0, sum7 = 0, sum8 = 0, sum9 = 0, sum10 = 0;
+
+//		double Acc_x = 0.0;			double Acc_y = 0.0;			double Acc_z = 0.0;
+		double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
+		double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
+		double pos_mix = mirrorPos[i*3  ];	double pos_miy = mirrorPos[i*3+1];	double pos_miz = mirrorPos[i*3+2];
+//		double vec_ix = Velk[i*3  ];	double vec_iy = Velk[i*3+1];	double vec_iz = Velk[i*3+2
+
+		// Transformation matrix Rref_i = I - 2*normal_iwall*normal_iwall
+		double Rref_i[9], normaliw[3], normalMod2;
+	    // Normal fluid-wall particle = 0.5*(Normal fluid-mirror particle)
+	    normaliw[0] = 0.5*(pos_ix - pos_mix); normaliw[1] = 0.5*(pos_iy - pos_miy); normaliw[2] = 0.5*(pos_iz - pos_miz);
+	    normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
+
+	    if (normalMod2 > 0.00000001) {
+	    	double normalMod = sqrt(normalMod2);
+	    	normaliw[0] = normaliw[0]/normalMod;
+	    	normaliw[1] = normaliw[1]/normalMod;
+	    	normaliw[2] = normaliw[2]/normalMod;
+	    }
+	    else {
+	    	normaliw[0] = 0;
+	    	normaliw[1] = 0;
+	    	normaliw[2] = 0;
+	    }
+
+	    //  Transformation matrix R_i = I - 2*normal_iwall*normal_iwall
+	    Rref_i[0] = 1.0 - 2*normaliw[0]*normaliw[0]; Rref_i[1] = 0.0 - 2*normaliw[0]*normaliw[1]; Rref_i[2] = 0.0 - 2*normaliw[0]*normaliw[2];
+		Rref_i[3] = 0.0 - 2*normaliw[1]*normaliw[0]; Rref_i[4] = 1.0 - 2*normaliw[1]*normaliw[1]; Rref_i[5] = 0.0 - 2*normaliw[1]*normaliw[2];
+		Rref_i[6] = 0.0 - 2*normaliw[2]*normaliw[0]; Rref_i[7] = 0.0 - 2*normaliw[2]*normaliw[1]; Rref_i[8] = 1.0 - 2*normaliw[2]*normaliw[2];
+
+		// Mirror particle velocity vi' = Ri * vi
+      	double vec_mix = (Rref_i[0]*vec_ix + Rref_i[1]*vec_iy + Rref_i[2]*vec_iz);
+		double vec_miy = (Rref_i[3]*vec_ix + Rref_i[4]*vec_iy + Rref_i[5]*vec_iz);
+		double vec_miz = (Rref_i[6]*vec_ix + Rref_i[7]*vec_iy + Rref_i[8]*vec_iz);
+
+		int ix = (int)((pos_ix - MIN_X)*DBinv) +1;
+		int iy = (int)((pos_iy - MIN_Y)*DBinv) +1;
+		int iz = (int)((pos_iz - MIN_Z)*DBinv) +1;
+		for(int jz=iz-1;jz<=iz+1;jz++){
+		for(int jy=iy-1;jy<=iy+1;jy++){
+		for(int jx=ix-1;jx<=ix+1;jx++){
+			int jb = jz*nBxy + jy*nBx + jx;
+			int j = bfst[jb];
+			if(j == -1) continue;
+			for(;;){
+				// Particle distance r_ij = Xj - Xi_temporary_position
+				double v0ij = Pos[j*3  ] - pos_ix;
+				double v1ij = Pos[j*3+1] - pos_iy;
+				double v2ij = Pos[j*3+2] - pos_iz;
+
+				double dstij2 = v0ij*v0ij+v1ij*v1ij+v2ij*v2ij;
+
+				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				double v0 = Pos[j*3  ] - pos_mix;
+				double v1 = Pos[j*3+1] - pos_miy;
+				double v2 = Pos[j*3+2] - pos_miz;
+
+				double dst2 = v0*v0+v1*v1+v2*v2;
+				// If inside neighboor of i and im (intersection)
+				if(dstij2<r2 && dst2<r2){
+				if(j!=i && Typ[j]!=GST){
+					double dst = sqrt(dst2);
+					double w = WEI(dst, r);
+
+					double vec_mijx = Vel[j*3  ]-vec_mix;	
+					double vec_mijy = Vel[j*3+1]-vec_miy;	
+					double vec_mijz = Vel[j*3+2]-vec_miz;
+
+					sum1 += vec_mijx*v0*w/dst2;
+					sum2 += vec_mijx*v1*w/dst2;
+					sum3 += vec_mijx*v2*w/dst2;
+					
+					sum4 += vec_mijy*v0*w/dst2;
+					sum5 += vec_mijy*v1*w/dst2;
+					sum6 += vec_mijy*v2*w/dst2;
+					
+					sum7 += vec_mijz*v0*w/dst2;
+					sum8 += vec_mijz*v1*w/dst2;
+					sum9 += vec_mijz*v2*w/dst2;
+					
+					sum10 += Prs[j]*w;
+				}}
+				j = nxt[j];
+				if(j==-1) break;
+			}
+		}}}
+
+		// Rref_i * gradU
+		// A3 is a negative cte (-DIM/n0Grad)
+		aUxx = -A3*(Rref_i[0]*sum1 + Rref_i[1]*sum4 + Rref_i[2]*sum7);
+		aUxy = -A3*(Rref_i[0]*sum2 + Rref_i[1]*sum5 + Rref_i[2]*sum8);
+		aUxz = -A3*(Rref_i[0]*sum3 + Rref_i[1]*sum6 + Rref_i[2]*sum9);
+
+		aUyx = -A3*(Rref_i[3]*sum1 + Rref_i[4]*sum4 + Rref_i[5]*sum7);
+		aUyy = -A3*(Rref_i[3]*sum2 + Rref_i[4]*sum5 + Rref_i[5]*sum8);
+		aUyz = -A3*(Rref_i[3]*sum3 + Rref_i[4]*sum6 + Rref_i[5]*sum9);
+
+		aUzx = -A3*(Rref_i[6]*sum1 + Rref_i[7]*sum4 + Rref_i[8]*sum7);
+		aUzy = -A3*(Rref_i[6]*sum2 + Rref_i[7]*sum5 + Rref_i[8]*sum8);
+		aUzz = -A3*(Rref_i[6]*sum3 + Rref_i[7]*sum6 + Rref_i[8]*sum9);
+
+		// Rref_i * gradU * Rref_i
+		Uxx = aUxx*Rref_i[0] + aUxy*Rref_i[3] + aUxz*Rref_i[6];
+		Uxy = aUxx*Rref_i[1] + aUxy*Rref_i[4] + aUxz*Rref_i[7];
+		Uxz = aUxx*Rref_i[2] + aUxy*Rref_i[5] + aUxz*Rref_i[8];
+
+		Uyx = aUyx*Rref_i[0] + aUyy*Rref_i[3] + aUyz*Rref_i[6];
+		Uyy = aUyx*Rref_i[1] + aUyy*Rref_i[4] + aUyz*Rref_i[7];
+		Uyz = aUyx*Rref_i[2] + aUyy*Rref_i[5] + aUyz*Rref_i[8];
+
+		Uzx = aUzx*Rref_i[0] + aUzy*Rref_i[3] + aUzz*Rref_i[6];
+		Uzy = aUzx*Rref_i[1] + aUzy*Rref_i[4] + aUzz*Rref_i[7];
+		Uzz = aUzx*Rref_i[2] + aUzy*Rref_i[5] + aUzz*Rref_i[8];
+
+		// Addition of smoothed pressure for particles near mesh
+		p_smooth[i] += sum10 / n0Grad;
+		if (p_smooth[i]<0) p_smooth[i] = 0;
+
+		// 0.5*(gradU + gradUt)
+		S11[i] = 0.5*(Uxx + Uxx);
+		S12[i] = 0.5*(Uxy + Uyx);
+		S13[i] = 0.5*(Uxz + Uzx);
+		S22[i] = 0.5*(Uyy + Uyy);
+		S23[i] = 0.5*(Uyz + Uzy);
+		S33[i] = 0.5*(Uzz + Uzz);
+
+		//II[i] = 0.5*Uxx*Uxx + 0.5*Uyy*Uyy + 0.25*(Uxy + Uyx)*(Uxy + Uyx);
+
+		// Addition of II for particles near mesh
+		//II[i] += 0.5*(S11[i] * S11[i] + S12[i] * S12[i] + S13[i] * S13[i] + S12[i] * S12[i] + S22[i] * S22[i] + S23[i] * S23[i] + S13[i] * S13[i] + S23[i] * S23[i] + S33[i] * S33[i]);
+		II[i] += 0.5*(S11[i] * S11[i] + 2 * S12[i] * S12[i] + 2 * S13[i] * S13[i] + S22[i] * S22[i] + 2 * S23[i] * S23[i] + S33[i] * S33[i]);
+//		II[i] = 0.5*(S11[i] * S11[i] + S12[i] * S12[i] + S13[i] * S13[i] + S12[i] * S12[i] + S22[i] * S22[i] + S23[i] * S23[i] + S13[i] * S13[i] + S23[i] * S23[i] + S33[i] * S33[i]);
+		//II[i]= S11[i]*S22[i] +S22[i]*S33[i]+ S11[i]*S33[i] - S12[i]*S12[i] -S13[i]*S13[i]- S23[i]*S23[i] ;
+		if (II[i]<0 || II[i] * 0 != 0) II[i] = 0;
+		//II=fabs(S11[i]*S22[i]-S12[i]*S12[i]);
+	}}
+	
+	// Newtonian viscosity
+	if (Fluid2_type == 0)
+	{
+	// Loop only for particles near mesh
+#pragma omp parallel for
+		for(int im=0;im<nPartNearMesh;im++){
+		//for(int i=0;i<nP;i++){
+		int i = partNearMesh[im];
+		if(Typ[i] == FLD){
+			if (PTYPE[i] <= 1)MEU[i] = KNM_VS1 * DNS_FL1;
+			if (PTYPE[i] != 1)MEU[i] = KNM_VS2 * DNS_FL2;
+		}}
+
+//		if (TURB>0)
+//		{
+//			NEUt[i] = Cs*DL*Cs*DL*2*sqrt(II[i]);
+
+//			if (NEUt[i] * 0 != 0)  NEUt[i] = 0;
+//			if (NEUt[i]>1)     NEUt[i] = 1;
+//		}
+	}
+
+	// Granular Fluid
+	if (Fluid2_type == 1)
+	{
+		// PROBLEMS TO USE OPENMP HERE. MAYBE THE ACCESS TO BL, WL
+		// Loop only for particles near mesh
+//#pragma omp parallel for
+		for(int im=0;im<nPartNearMesh;im++){
+		//for(int i=0;i<nP;i++){
+		int i = partNearMesh[im];
+		if(Typ[i] == FLD){
+
+//			double Acc_x = 0.0;			double Acc_y = 0.0;			double Acc_z = 0.0;
+			double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
+			double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
+
+			if(PTYPE[i] == 1){
+				MEU[i] = KNM_VS1 * DNS_FL1;
+			}
+			else if(PTYPE[i] == 2){
+				phi = (C[i] - 0.25)*PHI / (1 - 0.25);
+				phi2 = (C[i] - 0.25)*PHI_2 / (1 - 0.25);
+				if (C[i] <= 0.25) { phi = 0.00001; phi2 = 0.00001; } // phi close to zero
+				if (PTYPE[i] <= 0) phi = PHI_BED;
+
+				// Normal stress calculation (mehcanical pressure)
+				p_rheo_new[i] = p_smooth[i];
+
+				kx = int((pos_ix - Xmin) / aa / PCL_DST) + 1;
+				ky = int((pos_iy - Ymin) / aa / PCL_DST) + 1;
+
+				// Effective pressure = total pressure (from EOS) - hydrostatic pressure
+				//normal_stress=(BL[k]-pos_iy+DL/2)*(DNS_FL2)*9.81;	// normal_stress= Gama.H
+				normal_stress = (BL[kx][ky] - pos_iz + PCL_DST / 2)*(DNS_FL2 - DNS_FL1)*9.81 - (vec_ix*vec_ix + vec_iy*vec_iy + vec_iz*vec_iz)*(DNS_FL2 - DNS_FL1) / 2.0;	// normal_stress= Gama.H
+
+				if (p_smooth[i] - (WL[kx][ky] - pos_iz)*DNS_FL1*9.81<0) p_smooth[i] = (WL[kx][ky] - pos_iz)*DNS_FL1*9.81;
+				if (TIM <= 1) normal_stress = 1.0*(1 - TIM)*(p_smooth[i] - (WL[kx][ky] - pos_iz)*DNS_FL1*9.81) + 1.0*(TIM)*normal_stress;
+
+//				normal_stress = p_smooth[i] - (WL[kx][ky] - pos_iz)*DNS_FL1*9.81;
+//				normal_stress = p_smooth[i];
+				//normal_stress=normal_stress*0.61*1500/DNS_FL2;
+				if (normal_stress < 1 || C[i] < 0.5) normal_stress = 1;
+
+				p_rheo_new[i] = normal_stress;
+
+				// Yield stress calculation
+				//Inertia[i] = sqrt(II[i])*dg/sqrt(normal_stress/DNS_SDT);		// Free-fall (dry granular material)
+				Inertia[i] = sqrt(II[i])*dg/sqrt(normal_stress/(DNS_FL1*Cd));	// Grain inertia (submerged)
+				//Inertia[i] = sqrt(II[i])*(KNM_VS1*DNS_FL1)/normal_stress ;	// Viscous regime
+
+				// VF_max VF_min
+				VF[i] = VF_max - (VF_max - VF_min)*Inertia[i];
+				if (VF[i] < VF_min) VF[i] = VF_min;
+				RHO[i] = DNS_SDT * VF[i] + (1-VF[i])*DNS_FL1;
+				phi = phi * VF[i] / VF_max;
+
+				double yield_stress = cohes * cos(phi) + normal_stress * sin(phi);
+
+				if (yield_stress < 0) yield_stress = 0;
+
+				double visc_max = (yield_stress*mm*0.5 + MEU0);
+
+				if (II[i]>0)
+					MEU_Y[i] = yield_stress * (1 - exp(-mm * sqrt(II[i]))) / 2.0 / sqrt(II[i]);
+				else
+					MEU_Y[i] = visc_max;
+
+				// H-B rheology
+
+				//meu0 = MEU0;
+
+				// Non-linear Meu(I) rheology
+				//meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*dg/(I0*sqrt(normal_stress/DNS_FL2)+sqrt(II[i])*dg);			//free fall
+				meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*dg/(I0*sqrt(normal_stress/(DNS_FL1*Cd))+sqrt(II[i])*dg);		//grain inertia
+			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*(KNM_VS1*DNS_FL1)/(I0*normal_stress+sqrt(II[i])*(KNM_VS1*DNS_FL1));	//viscous
+			   	
+			   	// Linear Meu(I) rheology
+			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*dg*sqrt(normal_stress*DNS_FL2)/I0;		//free fall
+			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*dg*sqrt(normal_stress*DNS_FL1*Cd)/I0;	//grain inertia
+			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*(KNM_VS1*DNS_FL1)/I0;					//viscous
+
+				if (II[i] <= 0 || (meu0 * 0) != 0) meu0 = MEU0;
+
+				visc_max = (yield_stress*mm*0.5 + meu0);
+
+				// Herschel bulkley papanastasiou
+				MEU[i] = MEU_Y[i] + MEU0 * pow(4 * II[i], (N - 1) / 2);
+
+				// MEU_Y rheological model
+				//MEU[i] = MEU_Y[i] + meu0;
+				
+				if (II[i] == 0 || MEU[i]>visc_max) MEU[i] = visc_max;
+				if (PTYPE[i] <= 0) MEU[i] = MEU[i] * C[i] + DNS_FL1*KNM_VS1*(1 - C[i]);
+			}
+			
+			if(PTYPE[i] >= 2) {
+				if (C[i] > 0.5) RHO[i] = DNS_FL2;
+				else RHO[i] = C[i] * DNS_FL2 + (1 - C[i]) * DNS_FL1;
+			}
+		}}
+
+		//---------------------------------- Direct stress calculation method -----------------------------------------
+//		if (stress_cal_method == 2)
+//		{
+//			for (i = 1; i <= NUM; i++)
+//			{
+//				double sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sum5 = 0, sum6 = 0, sum7 = 0, sum8 = 0, sum9 = 0, sum10 = 0;
+//				for (l = 2; l <= neighb[i][1]; l++)
+//				{
+//					j = neighb[i][l];
+//					d = DIST(i, j);
+//					if (i != j && d <= re)
+//					{
+//						w = W(d, KTYPE, 2);
+
+//						double meuij = 2 * MEU[i] * MEU[j] / (MEU[i] + MEU[j]);
+//						if ((NEUt[i] + NEUt[j])>0) meuij = meuij + 2 * NEUt[i] * RHO[i] * NEUt[j] * RHO[j] / (NEUt[i] * RHO[i] + NEUt[j] * RHO[j]);
+
+//						sum1 = sum1 + meuij * (x_vel[j] - x_vel[i])*DX(i, j)*w / d / d;
+//						sum2 = sum2 + meuij * (x_vel[j] - x_vel[i])*DY(i, j)*w / d / d;
+//						sum3 = sum3 + meuij * (x_vel[j] - x_vel[i])*DZ(i, j)*w / d / d;
+
+//						sum4 = sum4 + meuij * (y_vel[j] - y_vel[i])*DX(i, j)*w / d / d;
+//						sum5 = sum5 + meuij * (y_vel[j] - y_vel[i])*DY(i, j)*w / d / d;
+//						sum6 = sum6 + meuij * (y_vel[j] - y_vel[i])*DZ(i, j)*w / d / d;
+
+//						sum7 = sum7 + meuij * (z_vel[j] - z_vel[i])*DX(i, j)*w / d / d;
+//						sum8 = sum8 + meuij * (z_vel[j] - z_vel[i])*DY(i, j)*w / d / d;
+//						sum9 = sum9 + meuij * (z_vel[j] - z_vel[i])*DZ(i, j)*w / d / d;
+//					}
+//				}
+
+//				Tau_xx[i] = (DIM / n0) * 2 * sum1;
+//				Tau_yy[i] = (DIM / n0) * 2 * sum5;
+//				Tau_zz[i] = (DIM / n0) * 2 * sum9;
+
+//				Tau_xy[i] = (DIM / n0)*(sum2 + sum4);
+//				Tau_xz[i] = (DIM / n0)*(sum3 + sum7);
+//				Tau_yz[i] = (DIM / n0)*(sum6 + sum8);
+//			}
+//		}
+
+	} // if (Fluid2_type == 1)
+
+	//---------------------------------------------------------------
+
+	delete[]S11; delete[]S12; delete[]S13; delete[]S22; delete[]S23; delete[]S33; delete[]BL; delete[]WL; delete[]PS;// delete[]p_smooth;
+	S11 = NULL; S12 = NULL; S13 = NULL; S22 = NULL; S23 = NULL; S33 = NULL; BL = NULL; WL = NULL; PS = NULL;// p_smooth = NULL;
+}
+
+// No-Slip condition. Viscosity interaction values
+void WallNoSlipVscIntVal_omp(){
+
+	double  *S12, *S13, *S23, *S11, *S22, *S33, d, phi = 0.0, phi2 = 0.0, meu0, normal_stress;//, grain_VF, *p_smooth;
+	double **BL, **WL, **PS;
+
+	// Changed !!!
+	// Be carefull to assign all domain
+	double Xmin, Xmax, Ymin, Ymax, Zmin; // Minimum and maximum of searching grid
+	// dam1610
+	Xmin = 0.0 - PCL_DST*3; Xmax = 1.65 + PCL_DST*3;
+	Ymin = 0.0 - PCL_DST*3; Ymax = 0.15 + PCL_DST*3;
+	Zmin = 0.0 - PCL_DST*3; //Zmax = 0.7 + PCL_DST*30;
+	// Changed !!!
+
+	// Search free-surface particles for each interval of aa = 2 particles in wall
+	int aa = 2, kx, ky;
+	int kx_max = int((Xmax - Xmin) / aa / PCL_DST) + 1;
+	int ky_max = int((Ymax - Ymin) / aa / PCL_DST) + 1;
+
+	double Uxx, Uxy, Uxz, Uyx, Uyy, Uyz, Uzx, Uzy, Uzz;
+
+	S11 = new double[nP + 1];
+	S22 = new double[nP + 1];
+	S33 = new double[nP + 1];
+	S12 = new double[nP + 1];
+	S13 = new double[nP + 1];
+	S23 = new double[nP + 1];
+	//p_smooth = new double[nP + 1];
+	BL = new double*[kx_max + 1];  // bed level
+	WL = new double*[kx_max + 1];  // water level
+	PS = new double*[kx_max + 1];  // pressure sediment
+
+#pragma omp parallel for
+	for (int m = 1; m <= kx_max; m++)
+	{
+		BL[m] = new double[ky_max + 1];
+		WL[m] = new double[ky_max + 1];
+		PS[m] = new double[ky_max + 1];
+	}
+
+	// Determining the bed level
+#pragma omp parallel for schedule(dynamic,64)
+	for (kx = 1; kx <= kx_max; kx++)
+	{
+		for (ky = 1; ky <= ky_max; ky++)
+		{
+			BL[kx][ky] = Zmin;
+			WL[kx][ky] = Zmin;
+		}
+	}
+
+#pragma omp parallel for
+	for(int i=0;i<nP;i++){
+		if(Typ[i] == FLD){
+			double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
+		
+			kx = int((pos_ix - Xmin) / aa / PCL_DST) + 1;
+			ky = int((pos_iy - Ymin) / aa / PCL_DST) + 1;
+
+			//if (pos_iz>BL[kx][ky] && C[i]>0.5) { BL[kx][ky] = pos_iz; PS[kx][ky] = pnew[i]; }
+			if (pos_iz>BL[kx][ky] && C[i]>0.5) { BL[kx][ky] = pos_iz; PS[kx][ky] = Prs[i]; }
+			if (pos_iz>WL[kx][ky] && PTYPE[i] == 1) { WL[kx][ky] = pos_iz; }
+		}
+	}
+
+	// Strain rate calculation
+	int nPartNearMesh = partNearMesh.size();
+	//printf(" Mesh %d \n", partNearMesh);
+	// Loop only for particles near mesh
+#pragma omp parallel for schedule(dynamic,64)
+	for(int im=0;im<nPartNearMesh;im++){
+	//for(int i=0;i<nP;i++){
+	int i = partNearMesh[im];
+	if(Typ[i] == FLD){
+		double sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sum5 = 0, sum6 = 0, sum7 = 0, sum8 = 0, sum9 = 0, sum10 = 0;
+
+//		double Acc_x = 0.0;			double Acc_y = 0.0;			double Acc_z = 0.0;
+		double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
+		double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
+		double pos_mix = mirrorPos[i*3  ];	double pos_miy = mirrorPos[i*3+1];	double pos_miz = mirrorPos[i*3+2];
+//		double vec_ix = Velk[i*3  ];	double vec_iy = Velk[i*3+1];	double vec_iz = Velk[i*3+2];
+
+		// Transformation matrix R_i = I
+		double Rref_i[9], Rinv_i[9], normaliw[3], normalMod2;
+	    // Normal fluid-wall particle = 0.5*(Normal fluid-mirror particle)
+	    normaliw[0] = 0.5*(pos_ix - pos_mix); normaliw[1] = 0.5*(pos_iy - pos_miy); normaliw[2] = 0.5*(pos_iz - pos_miz);
+	    normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
+
+	    if (normalMod2 > 0.00000001) {
+	    	double normalMod = sqrt(normalMod2);
+	    	normaliw[0] = normaliw[0]/normalMod;
+	    	normaliw[1] = normaliw[1]/normalMod;
+	    	normaliw[2] = normaliw[2]/normalMod;
+	    }
+	    else {
+	    	normaliw[0] = 0;
+	    	normaliw[1] = 0;
+	    	normaliw[2] = 0;
+	    }
+
+	    //  Inverse transformation matrix Rinv_i = - I
+	    Rinv_i[0] = -1.0; Rinv_i[1] =  0.0; Rinv_i[2] =  0.0;
+		Rinv_i[3] =  0.0; Rinv_i[4] = -1.0; Rinv_i[5] =  0.0;
+		Rinv_i[6] =  0.0; Rinv_i[7] =  0.0; Rinv_i[8] = -1.0;
+
+		//  Transformation matrix Rref_i = I - 2*normal_iwall*normal_iwall
+	    Rref_i[0] = 1.0 - 2*normaliw[0]*normaliw[0]; Rref_i[1] = 0.0 - 2*normaliw[0]*normaliw[1]; Rref_i[2] = 0.0 - 2*normaliw[0]*normaliw[2];
+		Rref_i[3] = 0.0 - 2*normaliw[1]*normaliw[0]; Rref_i[4] = 1.0 - 2*normaliw[1]*normaliw[1]; Rref_i[5] = 0.0 - 2*normaliw[1]*normaliw[2];
+		Rref_i[6] = 0.0 - 2*normaliw[2]*normaliw[0]; Rref_i[7] = 0.0 - 2*normaliw[2]*normaliw[1]; Rref_i[8] = 1.0 - 2*normaliw[2]*normaliw[2];
+
+		double viwall[3], vtil[3];
+		// Wall velocity (0 if fixed)
+		viwall[0]=viwall[1]=viwall[2]=0.0;
+		// normal_iwall*v_iwall
+		double dotnv = normaliw[0]*viwall[0] + normaliw[1]*viwall[1] + normaliw[2]*viwall[2];
+		// vtil = vi - 2 {v_iwall - (normal_iwall*v_iwall)normal_iwall}
+		vtil[0] = vec_ix - 2*(viwall[0] - dotnv*normaliw[0]);
+		vtil[1] = vec_iy - 2*(viwall[1] - dotnv*normaliw[1]);
+		vtil[2] = vec_iz - 2*(viwall[2] - dotnv*normaliw[2]);
+		// Mirror particle velocity vi' = Ri_inv * [vi - 2 {v_iwall - (normal_iwall*v_iwall)normal_iwall}] 
+      	double vec_mix = (Rinv_i[0]*vtil[0] + Rinv_i[1]*vtil[1] + Rinv_i[2]*vtil[2]);
+		double vec_miy = (Rinv_i[3]*vtil[0] + Rinv_i[4]*vtil[1] + Rinv_i[5]*vtil[2]);
+		double vec_miz = (Rinv_i[6]*vtil[0] + Rinv_i[7]*vtil[1] + Rinv_i[8]*vtil[2]);
+
+		int ix = (int)((pos_ix - MIN_X)*DBinv) +1;
+		int iy = (int)((pos_iy - MIN_Y)*DBinv) +1;
+		int iz = (int)((pos_iz - MIN_Z)*DBinv) +1;
+		for(int jz=iz-1;jz<=iz+1;jz++){
+		for(int jy=iy-1;jy<=iy+1;jy++){
+		for(int jx=ix-1;jx<=ix+1;jx++){
+			int jb = jz*nBxy + jy*nBx + jx;
+			int j = bfst[jb];
+			if(j == -1) continue;
+			for(;;){
+				// Particle distance r_ij = Xj - Xi_temporary_position
+				double v0ij = Pos[j*3  ] - pos_ix;
+				double v1ij = Pos[j*3+1] - pos_iy;
+				double v2ij = Pos[j*3+2] - pos_iz;
+
+				double dstij2 = v0ij*v0ij+v1ij*v1ij+v2ij*v2ij;
+
+				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				double v0 = Pos[j*3  ] - pos_mix;
+				double v1 = Pos[j*3+1] - pos_miy;
+				double v2 = Pos[j*3+2] - pos_miz;
+
+				double dst2 = v0*v0+v1*v1+v2*v2;
+				// If inside neighboor of i and im (intersection)
+				if(dstij2<r2 && dst2<r2){
+				if(j!=i && Typ[j]!=GST){
+					double dst = sqrt(dst2);
+					double w = WEI(dst, r);
+
+					double vec_mijx = Vel[j*3  ]-vec_mix;	
+					double vec_mijy = Vel[j*3+1]-vec_miy;	
+					double vec_mijz = Vel[j*3+2]-vec_miz;
+
+					sum1 += vec_mijx*v0*w/dst2;
+					sum2 += vec_mijx*v1*w/dst2;
+					sum3 += vec_mijx*v2*w/dst2;
+					
+					sum4 += vec_mijy*v0*w/dst2;
+					sum5 += vec_mijy*v1*w/dst2;
+					sum6 += vec_mijy*v2*w/dst2;
+					
+					sum7 += vec_mijz*v0*w/dst2;
+					sum8 += vec_mijz*v1*w/dst2;
+					sum9 += vec_mijz*v2*w/dst2;
+					
+					sum10 += Prs[j]*w;
+				}}
+				j = nxt[j];
+				if(j==-1) break;
+			}
+		}}}
+
+		// Rinv_i * gradU * Rref_i = - gradU * Rref_i
+		// A3 is a negative cte (-DIM/n0Grad)
+		Uxx = A3*(sum1*Rref_i[0] + sum2*Rref_i[3] + sum3*Rref_i[6]);
+		Uxy = A3*(sum1*Rref_i[1] + sum2*Rref_i[4] + sum3*Rref_i[7]);
+		Uxz = A3*(sum1*Rref_i[2] + sum2*Rref_i[5] + sum3*Rref_i[8]);
+
+		Uyx = A3*(sum4*Rref_i[0] + sum5*Rref_i[3] + sum6*Rref_i[6]);
+		Uyy = A3*(sum4*Rref_i[1] + sum5*Rref_i[4] + sum6*Rref_i[7]);
+		Uyz = A3*(sum4*Rref_i[2] + sum5*Rref_i[5] + sum6*Rref_i[8]);
+
+		Uzx = A3*(sum7*Rref_i[0] + sum8*Rref_i[3] + sum9*Rref_i[6]);
+		Uzy = A3*(sum7*Rref_i[1] + sum8*Rref_i[4] + sum9*Rref_i[7]);
+		Uzz = A3*(sum7*Rref_i[2] + sum8*Rref_i[5] + sum9*Rref_i[8]);
+
+		// Addition of smoothed pressure for particles near mesh
+		p_smooth[i] += sum10 / n0Grad;
+		if (p_smooth[i]<0) p_smooth[i] = 0;
+
+		// - (Rref_i * gradU) - (Rref_i * gradU)t
+		S11[i] = 0.5*(Uxx + Uxx);
+		S12[i] = 0.5*(Uxy + Uyx);
+		S13[i] = 0.5*(Uxz + Uzx);
+		S22[i] = 0.5*(Uyy + Uyy);
+		S23[i] = 0.5*(Uyz + Uzy);
+		S33[i] = 0.5*(Uzz + Uzz);
+
+		//II[i] = 0.5*Uxx*Uxx + 0.5*Uyy*Uyy + 0.25*(Uxy + Uyx)*(Uxy + Uyx);
+		
+		// Addition of II for particles near mesh
+		//II[i] += 0.5*(S11[i] * S11[i] + S12[i] * S12[i] + S13[i] * S13[i] + S12[i] * S12[i] + S22[i] * S22[i] + S23[i] * S23[i] + S13[i] * S13[i] + S23[i] * S23[i] + S33[i] * S33[i]);
+		II[i] += 0.5*(S11[i] * S11[i] + 2 * S12[i] * S12[i] + 2 * S13[i] * S13[i] + S22[i] * S22[i] + 2 * S23[i] * S23[i] + S33[i] * S33[i]);
+//		II[i] = 0.5*(S11[i] * S11[i] + S12[i] * S12[i] + S13[i] * S13[i] + S12[i] * S12[i] + S22[i] * S22[i] + S23[i] * S23[i] + S13[i] * S13[i] + S23[i] * S23[i] + S33[i] * S33[i]);
+		//II[i]= S11[i]*S22[i] +S22[i]*S33[i]+ S11[i]*S33[i] - S12[i]*S12[i] -S13[i]*S13[i]- S23[i]*S23[i] ;
+		if (II[i]<0 || II[i] * 0 != 0) II[i] = 0;
+		//II=fabs(S11[i]*S22[i]-S12[i]*S12[i]);
+	}}
+	
+	// Newtonian viscosity
+	if (Fluid2_type == 0)
+	{
+	// Loop only for particles near mesh
+#pragma omp parallel for
+		for(int im=0;im<nPartNearMesh;im++){
+		//for(int i=0;i<nP;i++){
+		int i = partNearMesh[im];
+		if(Typ[i] == FLD){
+			if (PTYPE[i] <= 1)MEU[i] = KNM_VS1 * DNS_FL1;
+			if (PTYPE[i] != 1)MEU[i] = KNM_VS2 * DNS_FL2;
+		}}
+
+//		if (TURB>0)
+//		{
+//			NEUt[i] = Cs*DL*Cs*DL*2*sqrt(II[i]);
+
+//			if (NEUt[i] * 0 != 0)  NEUt[i] = 0;
+//			if (NEUt[i]>1)     NEUt[i] = 1;
+//		}
+	}
+
+	// Granular Fluid
+	if (Fluid2_type == 1)
+	{
+		// PROBLEMS TO USE OPENMP HERE. MAYBE THE ACCESS TO BL, WL
+		// Loop only for particles near mesh
+//#pragma omp parallel for
+		for(int im=0;im<nPartNearMesh;im++){
+		//for(int i=0;i<nP;i++){
+		int i = partNearMesh[im];
+		if(Typ[i] == FLD){
+
+//			double Acc_x = 0.0;			double Acc_y = 0.0;			double Acc_z = 0.0;
+			double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
+			double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
+
+			if(PTYPE[i] == 1) 
+				MEU[i] = KNM_VS1 * DNS_FL1;
+			else if(PTYPE[i] == 2){
+				phi = (C[i] - 0.25)*PHI / (1 - 0.25);
+				phi2 = (C[i] - 0.25)*PHI_2 / (1 - 0.25);
+				if (C[i] <= 0.25) { phi = 0.00001; phi2 = 0.00001; } // phi close to zero
+				if (PTYPE[i] <= 0) phi = PHI_BED;
+
+				// Normal stress calculation (mechanical pressure)
+				p_rheo_new[i] = p_smooth[i];
+
+				kx = int((pos_ix - Xmin) / aa / PCL_DST) + 1;
+				ky = int((pos_iy - Ymin) / aa / PCL_DST) + 1;
+
+				// Effective pressure = total pressure (from EOS) - hydrostatic pressure
+				//normal_stress=(BL[k]-pos_iy+DL/2)*(DNS_FL2)*9.81;	// normal_stress= Gama.H
+				normal_stress = (BL[kx][ky] - pos_iz + PCL_DST / 2)*(DNS_FL2 - DNS_FL1)*9.81 - (vec_ix*vec_ix + vec_iy*vec_iy + vec_iz*vec_iz)*(DNS_FL2 - DNS_FL1) / 2.0;	// normal_stress= Gama.H
+
+				if (p_smooth[i] - (WL[kx][ky] - pos_iz)*DNS_FL1*9.81<0) p_smooth[i] = (WL[kx][ky] - pos_iz)*DNS_FL1*9.81;
+				if (TIM <= 1) normal_stress = 1.0*(1 - TIM)*(p_smooth[i] - (WL[kx][ky] - pos_iz)*DNS_FL1*9.81) + 1.0*(TIM)*normal_stress;
+
+//				normal_stress = p_smooth[i] - (WL[kx][ky] - pos_iz)*DNS_FL1*9.81;
+//				normal_stress = p_smooth[i];
+				//normal_stress=normal_stress*0.61*1500/DNS_FL2;
+				if (normal_stress < 1 || C[i] < 0.5) normal_stress = 1;
+
+				p_rheo_new[i] = normal_stress;
+
+				// Yield stress calculation
+				//Inertia[i] = sqrt(II[i])*dg/sqrt(normal_stress/DNS_SDT);		// Free-fall (dry granular material)
+				Inertia[i] = sqrt(II[i])*dg/sqrt(normal_stress/(DNS_FL1*Cd));	// Grain inertia (submerged)
+				//Inertia[i] = sqrt(II[i])*(KNM_VS1*DNS_FL1)/normal_stress ;	// Viscous regime
+
+				// VF_max VF_min
+				VF[i] = VF_max - (VF_max - VF_min)*Inertia[i];
+				if (VF[i] < VF_min) VF[i] = VF_min;
+				RHO[i] = DNS_SDT * VF[i] + (1-VF[i])*DNS_FL1;
+				phi = phi * VF[i] / VF_max;
+
+				double yield_stress = cohes * cos(phi) + normal_stress * sin(phi);
+
+				if (yield_stress < 0) yield_stress = 0;
+
+				double visc_max = (yield_stress*mm*0.5 + MEU0);
+
+				if (II[i]>0)
+					MEU_Y[i] = yield_stress * (1 - exp(-mm * sqrt(II[i]))) / 2.0 / sqrt(II[i]);
+				else
+					MEU_Y[i] = visc_max;
+
+				// H-B rheology
+
+				//meu0 = MEU0;
+
+				// Non-linear Meu(I) rheology
+				//meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*dg/(I0*sqrt(normal_stress/DNS_FL2)+sqrt(II[i])*dg);			//free fall
+				meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*dg/(I0*sqrt(normal_stress/(DNS_FL1*Cd))+sqrt(II[i])*dg);		//grain inertia
+			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*(KNM_VS1*DNS_FL1)/(I0*normal_stress+sqrt(II[i])*(KNM_VS1*DNS_FL1));	//viscous
+			   	
+			   	// Linear Meu(I) rheology
+			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*dg*sqrt(normal_stress*DNS_FL2)/I0;		//free fall
+			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*dg*sqrt(normal_stress*DNS_FL1*Cd)/I0;	//grain inertia
+			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*(KNM_VS1*DNS_FL1)/I0;					//viscous
+
+				if (II[i] <= 0 || (meu0 * 0) != 0) meu0 = MEU0;
+
+				visc_max = (yield_stress*mm*0.5 + meu0);
+
+				// Herschel bulkley papanastasiou
+				MEU[i] = MEU_Y[i] + MEU0 * pow(4 * II[i], (N - 1) / 2);
+
+				// MEU_Y rheological model
+				//MEU[i] = MEU_Y[i] + meu0;
+				
+				if (II[i] == 0 || MEU[i]>visc_max) MEU[i] = visc_max;
+				if (PTYPE[i] <= 0) MEU[i] = MEU[i] * C[i] + DNS_FL1*KNM_VS1*(1 - C[i]);
+			}
+			
+			if(PTYPE[i] >= 2) {
+				if (C[i] > 0.5) RHO[i] = DNS_FL2;
+				else RHO[i] = C[i] * DNS_FL2 + (1 - C[i]) * DNS_FL1;
+			}
+		}}
+
+		//---------------------------------- Direct stress calculation method -----------------------------------------
+//		if (stress_cal_method == 2)
+//		{
+//			for (i = 1; i <= NUM; i++)
+//			{
+//				double sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sum5 = 0, sum6 = 0, sum7 = 0, sum8 = 0, sum9 = 0, sum10 = 0;
+//				for (l = 2; l <= neighb[i][1]; l++)
+//				{
+//					j = neighb[i][l];
+//					d = DIST(i, j);
+//					if (i != j && d <= re)
+//					{
+//						w = W(d, KTYPE, 2);
+
+//						double meuij = 2 * MEU[i] * MEU[j] / (MEU[i] + MEU[j]);
+//						if ((NEUt[i] + NEUt[j])>0) meuij = meuij + 2 * NEUt[i] * RHO[i] * NEUt[j] * RHO[j] / (NEUt[i] * RHO[i] + NEUt[j] * RHO[j]);
+
+//						sum1 = sum1 + meuij * (x_vel[j] - x_vel[i])*DX(i, j)*w / d / d;
+//						sum2 = sum2 + meuij * (x_vel[j] - x_vel[i])*DY(i, j)*w / d / d;
+//						sum3 = sum3 + meuij * (x_vel[j] - x_vel[i])*DZ(i, j)*w / d / d;
+
+//						sum4 = sum4 + meuij * (y_vel[j] - y_vel[i])*DX(i, j)*w / d / d;
+//						sum5 = sum5 + meuij * (y_vel[j] - y_vel[i])*DY(i, j)*w / d / d;
+//						sum6 = sum6 + meuij * (y_vel[j] - y_vel[i])*DZ(i, j)*w / d / d;
+
+//						sum7 = sum7 + meuij * (z_vel[j] - z_vel[i])*DX(i, j)*w / d / d;
+//						sum8 = sum8 + meuij * (z_vel[j] - z_vel[i])*DY(i, j)*w / d / d;
+//						sum9 = sum9 + meuij * (z_vel[j] - z_vel[i])*DZ(i, j)*w / d / d;
+//					}
+//				}
+
+//				Tau_xx[i] = (DIM / n0) * 2 * sum1;
+//				Tau_yy[i] = (DIM / n0) * 2 * sum5;
+//				Tau_zz[i] = (DIM / n0) * 2 * sum9;
+
+//				Tau_xy[i] = (DIM / n0)*(sum2 + sum4);
+//				Tau_xz[i] = (DIM / n0)*(sum3 + sum7);
+//				Tau_yz[i] = (DIM / n0)*(sum6 + sum8);
+//			}
+//		}
+
+	} // if (Fluid2_type == 1)
+
+	//---------------------------------------------------------------
+
+	delete[]S11; delete[]S12; delete[]S13; delete[]S22; delete[]S23; delete[]S33; delete[]BL; delete[]WL; delete[]PS; //delete[]p_smooth;
+	S11 = NULL; S12 = NULL; S13 = NULL; S22 = NULL; S23 = NULL; S33 = NULL; BL = NULL; WL = NULL; PS = NULL;// p_smooth = NULL;
+}
+
+void VscTrm_omp(){
+#pragma omp parallel for schedule(dynamic,64)
+	for(int i=0;i<nP;i++){
+	if(Typ[i] == FLD){
+		double meu_i = MEU[i];
+		double Acc_x = 0.0;			double Acc_y = 0.0;			double Acc_z = 0.0;
+		double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
+		double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
+		int ix = (int)((pos_ix - MIN_X)*DBinv) +1;
+		int iy = (int)((pos_iy - MIN_Y)*DBinv) +1;
+		int iz = (int)((pos_iz - MIN_Z)*DBinv) +1;
+		for(int jz=iz-1;jz<=iz+1;jz++){
+		for(int jy=iy-1;jy<=iy+1;jy++){
+		for(int jx=ix-1;jx<=ix+1;jx++){
+			int jb = jz*nBxy + jy*nBx + jx;
+			int j = bfst[jb];
+			if(j == -1) continue;
+			for(;;){
+				double v0 = Pos[j*3  ] - pos_ix;
+				double v1 = Pos[j*3+1] - pos_iy;
+				double v2 = Pos[j*3+2] - pos_iz;
+				double dst2 = v0*v0+v1*v1+v2*v2;
+				if(dst2<r2){
+				if(j!=i && Typ[j]!=GST){
+					double dst = sqrt(dst2);
+					double w = WEI(dst, r);
+
+					NEU = 2 * meu_i * MEU[j] / (meu_i + MEU[j]);
+
+//NEU = KNM_VS2 * DNS_FL2;
+
+					if (PTYPE[i] == 1) NEU = NEU/DNS_FL1;
+					else NEU = NEU/DNS_FL2;
+//					NEU = NEU/RHO[i];
+					
+					//if ((NEUt[i] + NEUt[j])>0) NEU = NEU + (2 * NEUt[i] * RHO[j] * NEUt[j] * RHO[j] / (NEUt[i] * RHO[i] + NEUt[j] * RHO[j])) / RHO[i];
+
+					// Original
+//					Acc_x +=(Vel[j*3  ]-vec_ix)*w;
+//					Acc_y +=(Vel[j*3+1]-vec_iy)*w;
+//					Acc_z +=(Vel[j*3+2]-vec_iz)*w;
+					// Modified
+					Acc_x +=(Vel[j*3  ]-vec_ix)*w*NEU;
+					Acc_y +=(Vel[j*3+1]-vec_iy)*w*NEU;
+					Acc_z +=(Vel[j*3+2]-vec_iz)*w*NEU;
+				}}
+				j = nxt[j];
+				if(j==-1) break;
+			}
+		}}}
+		// Original
+//		Acc[i*3  ]=Acc_x*A1 + G_X;
+//		Acc[i*3+1]=Acc_y*A1 + G_Y;
+//		Acc[i*3+2]=Acc_z*A1 + G_Z;
+		// Modified
+		Acc[i*3  ]=Acc_x*A1_M + G_X;
+		Acc[i*3+1]=Acc_y*A1_M + G_Y;
+		Acc[i*3+2]=Acc_z*A1_M + G_Z;
+	}}
 }
 
 void UpPcl1_omp(){
@@ -986,7 +1780,11 @@ void MkPrs_omp(){
 			}
 		}}}
 		pndi[i] = ni;
-		double mi = Dns[Typ[i]];
+//		double mi = Dns[Typ[i]];
+		double mi;
+		if (PTYPE[i] == 1) mi = DNS_FL1;
+		else mi = DNS_FL2;
+
 		double pressure = 0.0;
 		Bc[i] = SRF;
 		if (ni > PND_TRS*n0){
@@ -1032,7 +1830,11 @@ void MkPrsWc_omp(){
 			}
 		}}}
 		pndi[i] = ni;
-		double mi = Dns[Typ[i]];
+//		double mi = Dns[Typ[i]];
+		double mi;
+		if (PTYPE[i] == 1) mi = DNS_FL1;
+		else mi = DNS_FL2;
+
 		double pressure = 0.0;
 		Bc[i] = SRF;
 		if (ni > PND_TRS*n0){
@@ -1473,754 +2275,6 @@ void WallPrsGrdTrm_omp(){
 	}}
 }
 
-// Slip condition. Viscosity interaction values
-void WallSlipVscIntVal_omp(){
-
-	double  *S12, *S13, *S23, *S11, *S22, *S33, d, phi = 0.0, phi2 = 0.0, grain_VF, meu0, normal_stress;//, *p_smooth;
-	double **BL, **WL, **PS;
-
-	// Changed !!!
-	// Be carefull to assign all domain
-	double Xmin, Xmax, Ymin, Ymax, Zmin; // Minimum and maximum of searching grid
-	// dam1610
-	Xmin = 0.0 - PCL_DST*3; Xmax = 1.65 + PCL_DST*3;
-	Ymin = 0.0 - PCL_DST*3; Ymax = 0.15 + PCL_DST*3;
-	Zmin = 0.0 - PCL_DST*3; //Zmax = 0.7 + PCL_DST*30;
-	// Changed !!!
-
-	// Search free-surface particles for each interval of aa = 2 particles in wall
-	int aa = 2, kx, ky;
-	int kx_max = int((Xmax - Xmin) / aa / PCL_DST) + 1;
-	int ky_max = int((Ymax - Ymin) / aa / PCL_DST) + 1;
-
-	double Uxx, Uxy, Uxz, Uyx, Uyy, Uyz, Uzx, Uzy, Uzz;
-	double aUxx, aUxy, aUxz, aUyx, aUyy, aUyz, aUzx, aUzy, aUzz;
-
-	S11 = new double[nP + 1];
-	S22 = new double[nP + 1];
-	S33 = new double[nP + 1];
-	S12 = new double[nP + 1];
-	S13 = new double[nP + 1];
-	S23 = new double[nP + 1];
-	//p_smooth = new double[nP + 1];
-	BL = new double*[kx_max + 1];
-	WL = new double*[kx_max + 1];
-	PS = new double*[kx_max + 1];
-
-#pragma omp parallel for
-	for (int m = 1; m <= kx_max; m++)
-	{
-		BL[m] = new double[ky_max + 1];
-		WL[m] = new double[ky_max + 1];
-		PS[m] = new double[ky_max + 1];
-	}
-
-	// Determining the bed level
-#pragma omp parallel for schedule(dynamic,64)
-	for (kx = 1; kx <= kx_max; kx++)
-	{
-		for (ky = 1; ky <= ky_max; ky++)
-		{
-			BL[kx][ky] = Zmin;
-			WL[kx][ky] = Zmin;
-		}
-	}
-
-#pragma omp parallel for
-	for(int i=0;i<nP;i++){
-		if(Typ[i] == FLD){
-			double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
-			
-			kx = int((pos_ix - Xmin) / aa / PCL_DST) + 1;
-			ky = int((pos_iy - Ymin) / aa / PCL_DST) + 1;
-
-			//if (pos_iz>BL[kx][ky] && C[i]>0.5) { BL[kx][ky] = pos_iy; PS[kx][ky] = pnew[i]; }
-			if (pos_iz>BL[kx][ky] && C[i]>0.5) { BL[kx][ky] = pos_iy; PS[kx][ky] = Prs[i]; }
-			if (pos_iz>WL[kx][ky] && PTYPE[i] == 1) { WL[kx][ky] = pos_iy; }
-		}
-	}
-
-	// Strain rate calculation
-	int nPartNearMesh = partNearMesh.size();
-	//printf(" Mesh %d \n", partNearMesh);
-	// Loop only for particles near mesh
-#pragma omp parallel for schedule(dynamic,64)
-	for(int im=0;im<nPartNearMesh;im++){
-	//for(int i=0;i<nP;i++){
-	int i = partNearMesh[im];
-	if(Typ[i] == FLD){
-		double sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sum5 = 0, sum6 = 0, sum7 = 0, sum8 = 0, sum9 = 0, sum10 = 0;
-
-//		double Acc_x = 0.0;			double Acc_y = 0.0;			double Acc_z = 0.0;
-		double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
-		double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
-		double pos_mix = mirrorPos[i*3  ];	double pos_miy = mirrorPos[i*3+1];	double pos_miz = mirrorPos[i*3+2];
-//		double vec_ix = Velk[i*3  ];	double vec_iy = Velk[i*3+1];	double vec_iz = Velk[i*3+2
-
-		// Transformation matrix Rref_i = I - 2*normal_iwall*normal_iwall
-		double Rref_i[9], normaliw[3], normalMod2;
-	    // Normal fluid-wall particle = 0.5*(Normal fluid-mirror particle)
-	    normaliw[0] = 0.5*(pos_ix - pos_mix); normaliw[1] = 0.5*(pos_iy - pos_miy); normaliw[2] = 0.5*(pos_iz - pos_miz);
-	    normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
-
-	    if (normalMod2 > 0.00000001) {
-	    	double normalMod = sqrt(normalMod2);
-	    	normaliw[0] = normaliw[0]/normalMod;
-	    	normaliw[1] = normaliw[1]/normalMod;
-	    	normaliw[2] = normaliw[2]/normalMod;
-	    }
-	    else {
-	    	normaliw[0] = 0;
-	    	normaliw[1] = 0;
-	    	normaliw[2] = 0;
-	    }
-
-	    //  Transformation matrix R_i = I - 2*normal_iwall*normal_iwall
-	    Rref_i[0] = 1.0 - 2*normaliw[0]*normaliw[0]; Rref_i[1] = 0.0 - 2*normaliw[0]*normaliw[1]; Rref_i[2] = 0.0 - 2*normaliw[0]*normaliw[2];
-		Rref_i[3] = 0.0 - 2*normaliw[1]*normaliw[0]; Rref_i[4] = 1.0 - 2*normaliw[1]*normaliw[1]; Rref_i[5] = 0.0 - 2*normaliw[1]*normaliw[2];
-		Rref_i[6] = 0.0 - 2*normaliw[2]*normaliw[0]; Rref_i[7] = 0.0 - 2*normaliw[2]*normaliw[1]; Rref_i[8] = 1.0 - 2*normaliw[2]*normaliw[2];
-
-		// Mirror particle velocity vi' = Ri * vi
-      	double vec_mix = (Rref_i[0]*vec_ix + Rref_i[1]*vec_iy + Rref_i[2]*vec_iz);
-		double vec_miy = (Rref_i[3]*vec_ix + Rref_i[4]*vec_iy + Rref_i[5]*vec_iz);
-		double vec_miz = (Rref_i[6]*vec_ix + Rref_i[7]*vec_iy + Rref_i[8]*vec_iz);
-
-		int ix = (int)((pos_ix - MIN_X)*DBinv) +1;
-		int iy = (int)((pos_iy - MIN_Y)*DBinv) +1;
-		int iz = (int)((pos_iz - MIN_Z)*DBinv) +1;
-		for(int jz=iz-1;jz<=iz+1;jz++){
-		for(int jy=iy-1;jy<=iy+1;jy++){
-		for(int jx=ix-1;jx<=ix+1;jx++){
-			int jb = jz*nBxy + jy*nBx + jx;
-			int j = bfst[jb];
-			if(j == -1) continue;
-			for(;;){
-				// Particle distance r_ij = Xj - Xi_temporary_position
-				double v0ij = Pos[j*3  ] - pos_ix;
-				double v1ij = Pos[j*3+1] - pos_iy;
-				double v2ij = Pos[j*3+2] - pos_iz;
-
-				double dstij2 = v0ij*v0ij+v1ij*v1ij+v2ij*v2ij;
-
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
-				double v0 = Pos[j*3  ] - pos_mix;
-				double v1 = Pos[j*3+1] - pos_miy;
-				double v2 = Pos[j*3+2] - pos_miz;
-
-				double dst2 = v0*v0+v1*v1+v2*v2;
-				// If inside neighboor of i and im (intersection)
-				if(dstij2<r2 && dst2<r2){
-				if(j!=i && Typ[j]!=GST){
-					double dst = sqrt(dst2);
-					double w = WEI(dst, r);
-
-					double vec_mijx = Vel[j*3  ]-vec_mix;	
-					double vec_mijy = Vel[j*3+1]-vec_miy;	
-					double vec_mijz = Vel[j*3+2]-vec_miz;
-
-					sum1 += vec_mijx*v0*w/dst2;
-					sum2 += vec_mijx*v1*w/dst2;
-					sum3 += vec_mijx*v2*w/dst2;
-					
-					sum4 += vec_mijy*v0*w/dst2;
-					sum5 += vec_mijy*v1*w/dst2;
-					sum6 += vec_mijy*v2*w/dst2;
-					
-					sum7 += vec_mijz*v0*w/dst2;
-					sum8 += vec_mijz*v1*w/dst2;
-					sum9 += vec_mijz*v2*w/dst2;
-					
-					//sum10 += sum10 + pnew[j]*w;
-					sum10 += sum10 + Prs[j]*w;
-				}}
-				j = nxt[j];
-				if(j==-1) break;
-			}
-		}}}
-
-		// Rref_i * gradU
-		// A3 is a negative cte (-DIM/n0Grad)
-		aUxx = -A3*(Rref_i[0]*sum1 + Rref_i[1]*sum4 + Rref_i[2]*sum7);
-		aUxy = -A3*(Rref_i[0]*sum2 + Rref_i[1]*sum5 + Rref_i[2]*sum8);
-		aUxz = -A3*(Rref_i[0]*sum3 + Rref_i[1]*sum6 + Rref_i[2]*sum9);
-
-		aUyx = -A3*(Rref_i[3]*sum1 + Rref_i[4]*sum4 + Rref_i[5]*sum7);
-		aUyy = -A3*(Rref_i[3]*sum2 + Rref_i[4]*sum5 + Rref_i[5]*sum8);
-		aUyz = -A3*(Rref_i[3]*sum3 + Rref_i[4]*sum6 + Rref_i[5]*sum9);
-
-		aUzx = -A3*(Rref_i[6]*sum1 + Rref_i[7]*sum4 + Rref_i[8]*sum7);
-		aUzy = -A3*(Rref_i[6]*sum2 + Rref_i[7]*sum5 + Rref_i[8]*sum8);
-		aUzz = -A3*(Rref_i[6]*sum3 + Rref_i[7]*sum6 + Rref_i[8]*sum9);
-
-		// Rref_i * gradU * Rref_i
-		Uxx = aUxx*Rref_i[0] + aUxy*Rref_i[3] + aUxz*Rref_i[6];
-		Uxy = aUxx*Rref_i[1] + aUxy*Rref_i[4] + aUxz*Rref_i[7];
-		Uxz = aUxx*Rref_i[2] + aUxy*Rref_i[5] + aUxz*Rref_i[8];
-
-		Uyx = aUyx*Rref_i[0] + aUyy*Rref_i[3] + aUyz*Rref_i[6];
-		Uyy = aUyx*Rref_i[1] + aUyy*Rref_i[4] + aUyz*Rref_i[7];
-		Uyz = aUyx*Rref_i[2] + aUyy*Rref_i[5] + aUyz*Rref_i[8];
-
-		Uzx = aUzx*Rref_i[0] + aUzy*Rref_i[3] + aUzz*Rref_i[6];
-		Uzy = aUzx*Rref_i[1] + aUzy*Rref_i[4] + aUzz*Rref_i[7];
-		Uzz = aUzx*Rref_i[2] + aUzy*Rref_i[5] + aUzz*Rref_i[8];
-
-		p_smooth[i] += sum10 / n0Grad;
-		if (p_smooth[i]<0) p_smooth[i] = 0;
-
-		// 0.5*(gradU + gradUt)
-		S11[i] = 0.5*(Uxx + Uxx);
-		S12[i] = 0.5*(Uxy + Uyx);
-		S13[i] = 0.5*(Uxz + Uzx);
-		S22[i] = 0.5*(Uyy + Uyy);
-		S23[i] = 0.5*(Uyz + Uzy);
-		S33[i] = 0.5*(Uzz + Uzz);
-
-		//II[i] = 0.5*Uxx*Uxx + 0.5*Uyy*Uyy + 0.25*(Uxy + Uyx)*(Uxy + Uyx);
-
-		// Addition of II for particles near mesh
-		II[i] += 0.5*(S11[i] * S11[i] + S12[i] * S12[i] + S13[i] * S13[i] + S12[i] * S12[i] + S22[i] * S22[i] + S23[i] * S23[i] + S13[i] * S13[i] + S23[i] * S23[i] + S33[i] * S33[i]);
-
-//		II[i] = 0.5*(S11[i] * S11[i] + S12[i] * S12[i] + S13[i] * S13[i] + S12[i] * S12[i] + S22[i] * S22[i] + S23[i] * S23[i] + S13[i] * S13[i] + S23[i] * S23[i] + S33[i] * S33[i]);
-		//II[i]= S11[i]*S22[i] +S22[i]*S33[i]+ S11[i]*S33[i] - S12[i]*S12[i] -S13[i]*S13[i]- S23[i]*S23[i] ;
-		if (II[i]<0 || II[i] * 0 != 0) II[i] = 0;
-		//II=fabs(S11[i]*S22[i]-S12[i]*S12[i]);
-	}}
-	
-	// Newtonian viscosity
-	if (Fluid2_type == 0)
-	{
-	// Loop only for particles near mesh
-#pragma omp parallel for
-		for(int im=0;im<nPartNearMesh;im++){
-		//for(int i=0;i<nP;i++){
-		int i = partNearMesh[im];
-		if(Typ[i] == FLD){
-			if (PTYPE[i] <= 1)MEU[i] = KNM_VS1 * DNS_FL1;
-			if (PTYPE[i] != 1)MEU[i] = KNM_VS2 * DNS_FL2;
-		}}
-
-//		if (TURB>0)
-//		{
-//			NEUt[i] = Cs*DL*Cs*DL*2*sqrt(II[i]);
-
-//			if (NEUt[i] * 0 != 0)  NEUt[i] = 0;
-//			if (NEUt[i]>1)     NEUt[i] = 1;
-//		}
-	}
-
-	// Granular Fluid
-	if (Fluid2_type == 1)
-	{
-		// PROBLEMS TO USE OPENMP HERE. MAYBE THE ACCESS TO BL, WL
-		// Loop only for particles near mesh
-//#pragma omp parallel for
-		for(int im=0;im<nPartNearMesh;im++){
-		//for(int i=0;i<nP;i++){
-		int i = partNearMesh[im];
-		if(Typ[i] == FLD){
-
-//			double Acc_x = 0.0;			double Acc_y = 0.0;			double Acc_z = 0.0;
-			double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
-			double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
-
-			if(PTYPE[i] == 1) 
-				MEU[i] = KNM_VS1 * DNS_FL1;
-			else if(PTYPE[i] == 2){
-				phi = (C[i] - 0.25)*PHI / (1 - 0.25);
-				phi2 = (C[i] - 0.25)*PHI_2 / (1 - 0.25);
-				if (C[i] <= 0.25) { phi = 0.00001; phi2 = 0.00001; }
-				if (PTYPE[i] <= 0) phi = PHI_BED;
-
-				// Normal stress calculation
-				p_rheo_new[i] = p_smooth[i];
-
-				kx = int((pos_ix - Xmin) / aa / PCL_DST) + 1;
-				ky = int((pos_iy - Ymin) / aa / PCL_DST) + 1;
-
-				//normal_stress=(BL[k]-pos_iy+DL/2)*(DNS_FL2)*9.81;	// normal_stress= Gama.H
-				normal_stress = (BL[kx][ky] - pos_iz + PCL_DST / 2)*(DNS_FL2 - DNS_FL1)*9.81 - (vec_ix*vec_ix + vec_iy*vec_iy + vec_iz*vec_iz)*(DNS_FL2 - DNS_FL1) / 2.0;	// normal_stress= Gama.H
-
-				if (p_smooth[i] - (WL[kx][ky] - pos_iz)*DNS_FL1*9.8<0) p_smooth[i] = (WL[kx][ky] - pos_iz)*DNS_FL1*9.8;
-				if (TIM <= 1) normal_stress = 1.0*(1 - TIM)*(p_smooth[i] - (WL[kx][ky] - pos_iz)*DNS_FL1*9.8) + 1.0*(TIM)*normal_stress;
-
-				//normal_stress=normal_stress*0.61*1500/DNS_FL2;
-				if (normal_stress < 1 || C[i] < 0.5) normal_stress = 1;
-
-				p_rheo_new[i] = normal_stress;
-
-				// Yield stress calculation
-				//Inertia[i] = sqrt(II[i])* dg / sqrt(normal_stress / DNS_FL2);		// Free-fall regime
-				Inertia[i] = sqrt(II[i])*dg / sqrt(normal_stress/(DNS_FL1*0.47));	// Grain inertia regime
-				//Inertia[i] = sqrt(II[i])* (KNM_VS1*DNS_FL1) / normal_stress ;			//viscous regime
-
-				grain_VF = 0.65 - (0.65 - 0.25)*Inertia[i];
-				phi = phi * grain_VF / 0.65;
-
-				double yield_stress = cohes * cos(phi) + normal_stress * sin(phi);
-
-				if (yield_stress < 0) yield_stress = 0;
-
-				double visc_max = (yield_stress*mm + MEU0);
-
-				if (II[i]>0)
-					MEU_Y[i] = yield_stress * (1 - exp(-mm * sqrt(II[i]))) / 2.0 / sqrt(II[i]);
-				else
-					MEU_Y[i] = visc_max;
-
-				// H-B rheology
-
-				//meu0 = MEU0;
-
-				// Non-linear Meu(I) rheology
-				//meu0 =  0.5* 0.36 *normal_stress* dg/ (I0* sqrt(normal_stress/ DNS_FL2)+ sqrt(II[i])*dg);	//free fall
-				meu0 = 0.5*(sin(phi2) - sin(phi)) *normal_stress* dg / (I0* sqrt(normal_stress / (DNS_FL1*0.47)) + sqrt(II[i])*dg);	//grain inertia
-			   	//meu0 = 0.5*0.36*normal_stress* (KNM_VS1*DNS_FL1)/ (I0* normal_stress+ sqrt(II[i])*(KNM_VS1*DNS_FL1));	//viscous
-			   	
-			   	// Linear Meu(I) rheology
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi)) * dg* sqrt(normal_stress * DNS_FL2)      / I0;		//free fall
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi)) * dg* sqrt(normal_stress * DNS_FL1*0.47) / I0;		//grain inertia
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi)) * (KNM_VS1*DNS_FL1)                         / I0;		//viscous
-
-				if (II[i] <= 0 || (meu0 * 0) != 0) meu0 = MEU0;
-
-				visc_max = (yield_stress*mm + meu0);
-
-				MEU[i] = MEU_Y[i] + MEU0 * pow(4 * II[i], (N - 1) / 2);
-				
-				if (II[i] == 0 || MEU[i]>visc_max) MEU[i] = visc_max;
-				if (PTYPE[i] <= 0) MEU[i] = MEU[i] * C[i] + 0.001*(1 - C[i]);
-			}
-			
-			if(PTYPE[i] >= 2) {
-				if (C[i] > 0.5) RHO[i] = DNS_FL2;
-				else RHO[i] = C[i] * DNS_FL2 + (1 - C[i]) * 2650;
-			}
-		}}
-
-		//---------------------------------- Direct stress calculation method -----------------------------------------
-//		if (stress_cal_method == 2)
-//		{
-//			for (i = 1; i <= NUM; i++)
-//			{
-//				double sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sum5 = 0, sum6 = 0, sum7 = 0, sum8 = 0, sum9 = 0, sum10 = 0;
-//				for (l = 2; l <= neighb[i][1]; l++)
-//				{
-//					j = neighb[i][l];
-//					d = DIST(i, j);
-//					if (i != j && d <= re)
-//					{
-//						w = W(d, KTYPE, 2);
-
-//						double meuij = 2 * MEU[i] * MEU[j] / (MEU[i] + MEU[j]);
-//						if ((NEUt[i] + NEUt[j])>0) meuij = meuij + 2 * NEUt[i] * RHO[i] * NEUt[j] * RHO[j] / (NEUt[i] * RHO[i] + NEUt[j] * RHO[j]);
-
-//						sum1 = sum1 + meuij * (x_vel[j] - x_vel[i])*DX(i, j)*w / d / d;
-//						sum2 = sum2 + meuij * (x_vel[j] - x_vel[i])*DY(i, j)*w / d / d;
-//						sum3 = sum3 + meuij * (x_vel[j] - x_vel[i])*DZ(i, j)*w / d / d;
-
-//						sum4 = sum4 + meuij * (y_vel[j] - y_vel[i])*DX(i, j)*w / d / d;
-//						sum5 = sum5 + meuij * (y_vel[j] - y_vel[i])*DY(i, j)*w / d / d;
-//						sum6 = sum6 + meuij * (y_vel[j] - y_vel[i])*DZ(i, j)*w / d / d;
-
-//						sum7 = sum7 + meuij * (z_vel[j] - z_vel[i])*DX(i, j)*w / d / d;
-//						sum8 = sum8 + meuij * (z_vel[j] - z_vel[i])*DY(i, j)*w / d / d;
-//						sum9 = sum9 + meuij * (z_vel[j] - z_vel[i])*DZ(i, j)*w / d / d;
-//					}
-//				}
-
-//				Tau_xx[i] = (DIM / n0) * 2 * sum1;
-//				Tau_yy[i] = (DIM / n0) * 2 * sum5;
-//				Tau_zz[i] = (DIM / n0) * 2 * sum9;
-
-//				Tau_xy[i] = (DIM / n0)*(sum2 + sum4);
-//				Tau_xz[i] = (DIM / n0)*(sum3 + sum7);
-//				Tau_yz[i] = (DIM / n0)*(sum6 + sum8);
-//			}
-//		}
-
-	} // if (Fluid2_type == 1)
-
-	//---------------------------------------------------------------
-
-	delete[]S11; delete[]S12; delete[]S13; delete[]S22; delete[]S23; delete[]S33; delete[]BL; delete[]WL; delete[]PS;// delete[]p_smooth;
-	S11 = NULL; S12 = NULL; S13 = NULL; S22 = NULL; S23 = NULL; S33 = NULL; BL = NULL; WL = NULL; PS = NULL;// p_smooth = NULL;
-}
-
-// No-Slip condition. Viscosity interaction values
-void WallNoSlipVscIntVal_omp(){
-
-	double  *S12, *S13, *S23, *S11, *S22, *S33, d, phi = 0.0, phi2 = 0.0, grain_VF, meu0, normal_stress;//, *p_smooth;
-	double **BL, **WL, **PS;
-
-	// Changed !!!
-	// Be carefull to assign all domain
-	double Xmin, Xmax, Ymin, Ymax, Zmin; // Minimum and maximum of searching grid
-	// dam1610
-	Xmin = 0.0 - PCL_DST*3; Xmax = 1.65 + PCL_DST*3;
-	Ymin = 0.0 - PCL_DST*3; Ymax = 0.15 + PCL_DST*3;
-	Zmin = 0.0 - PCL_DST*3; //Zmax = 0.7 + PCL_DST*30;
-	// Changed !!!
-
-	// Search free-surface particles for each interval of aa = 2 particles in wall
-	int aa = 2, kx, ky;
-	int kx_max = int((Xmax - Xmin) / aa / PCL_DST) + 1;
-	int ky_max = int((Ymax - Ymin) / aa / PCL_DST) + 1;
-
-	double Uxx, Uxy, Uxz, Uyx, Uyy, Uyz, Uzx, Uzy, Uzz;
-
-	S11 = new double[nP + 1];
-	S22 = new double[nP + 1];
-	S33 = new double[nP + 1];
-	S12 = new double[nP + 1];
-	S13 = new double[nP + 1];
-	S23 = new double[nP + 1];
-	//p_smooth = new double[nP + 1];
-	BL = new double*[kx_max + 1];
-	WL = new double*[kx_max + 1];
-	PS = new double*[kx_max + 1];
-
-#pragma omp parallel for
-	for (int m = 1; m <= kx_max; m++)
-	{
-		BL[m] = new double[ky_max + 1];
-		WL[m] = new double[ky_max + 1];
-		PS[m] = new double[ky_max + 1];
-	}
-
-	// Determining the bed level
-#pragma omp parallel for schedule(dynamic,64)
-	for (kx = 1; kx <= kx_max; kx++)
-	{
-		for (ky = 1; ky <= ky_max; ky++)
-		{
-			BL[kx][ky] = Zmin;
-			WL[kx][ky] = Zmin;
-		}
-	}
-
-#pragma omp parallel for
-	for(int i=0;i<nP;i++){
-		if(Typ[i] == FLD){
-			double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
-		
-			kx = int((pos_ix - Xmin) / aa / PCL_DST) + 1;
-			ky = int((pos_iy - Ymin) / aa / PCL_DST) + 1;
-
-			//if (pos_iz>BL[kx][ky] && C[i]>0.5) { BL[kx][ky] = pos_iy; PS[kx][ky] = pnew[i]; }
-			if (pos_iz>BL[kx][ky] && C[i]>0.5) { BL[kx][ky] = pos_iy; PS[kx][ky] = Prs[i]; }
-			if (pos_iz>WL[kx][ky] && PTYPE[i] == 1) { WL[kx][ky] = pos_iy; }
-		}
-	}
-
-	// Strain rate calculation
-	int nPartNearMesh = partNearMesh.size();
-	//printf(" Mesh %d \n", partNearMesh);
-	// Loop only for particles near mesh
-#pragma omp parallel for schedule(dynamic,64)
-	for(int im=0;im<nPartNearMesh;im++){
-	//for(int i=0;i<nP;i++){
-	int i = partNearMesh[im];
-	if(Typ[i] == FLD){
-		double sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sum5 = 0, sum6 = 0, sum7 = 0, sum8 = 0, sum9 = 0, sum10 = 0;
-
-//		double Acc_x = 0.0;			double Acc_y = 0.0;			double Acc_z = 0.0;
-		double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
-		double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
-		double pos_mix = mirrorPos[i*3  ];	double pos_miy = mirrorPos[i*3+1];	double pos_miz = mirrorPos[i*3+2];
-//		double vec_ix = Velk[i*3  ];	double vec_iy = Velk[i*3+1];	double vec_iz = Velk[i*3+2];
-
-		// Transformation matrix R_i = I
-		double Rref_i[9], Rinv_i[9], normaliw[3], normalMod2;
-	    // Normal fluid-wall particle = 0.5*(Normal fluid-mirror particle)
-	    normaliw[0] = 0.5*(pos_ix - pos_mix); normaliw[1] = 0.5*(pos_iy - pos_miy); normaliw[2] = 0.5*(pos_iz - pos_miz);
-	    normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
-
-	    if (normalMod2 > 0.00000001) {
-	    	double normalMod = sqrt(normalMod2);
-	    	normaliw[0] = normaliw[0]/normalMod;
-	    	normaliw[1] = normaliw[1]/normalMod;
-	    	normaliw[2] = normaliw[2]/normalMod;
-	    }
-	    else {
-	    	normaliw[0] = 0;
-	    	normaliw[1] = 0;
-	    	normaliw[2] = 0;
-	    }
-
-	    //  Inverse transformation matrix Rinv_i = - I
-	    Rinv_i[0] = -1.0; Rinv_i[1] =  0.0; Rinv_i[2] =  0.0;
-		Rinv_i[3] =  0.0; Rinv_i[4] = -1.0; Rinv_i[5] =  0.0;
-		Rinv_i[6] =  0.0; Rinv_i[7] =  0.0; Rinv_i[8] = -1.0;
-
-		//  Transformation matrix Rref_i = I - 2*normal_iwall*normal_iwall
-	    Rref_i[0] = 1.0 - 2*normaliw[0]*normaliw[0]; Rref_i[1] = 0.0 - 2*normaliw[0]*normaliw[1]; Rref_i[2] = 0.0 - 2*normaliw[0]*normaliw[2];
-		Rref_i[3] = 0.0 - 2*normaliw[1]*normaliw[0]; Rref_i[4] = 1.0 - 2*normaliw[1]*normaliw[1]; Rref_i[5] = 0.0 - 2*normaliw[1]*normaliw[2];
-		Rref_i[6] = 0.0 - 2*normaliw[2]*normaliw[0]; Rref_i[7] = 0.0 - 2*normaliw[2]*normaliw[1]; Rref_i[8] = 1.0 - 2*normaliw[2]*normaliw[2];
-
-		double viwall[3], vtil[3];
-		// Wall velocity (0 if fixed)
-		viwall[0]=viwall[1]=viwall[2]=0.0;
-		// normal_iwall*v_iwall
-		double dotnv = normaliw[0]*viwall[0] + normaliw[1]*viwall[1] + normaliw[2]*viwall[2];
-		// vtil = vi - 2 {v_iwall - (normal_iwall*v_iwall)normal_iwall}
-		vtil[0] = vec_ix - 2*(viwall[0] - dotnv*normaliw[0]);
-		vtil[1] = vec_iy - 2*(viwall[1] - dotnv*normaliw[1]);
-		vtil[2] = vec_iz - 2*(viwall[2] - dotnv*normaliw[2]);
-		// Mirror particle velocity vi' = Ri_inv * [vi - 2 {v_iwall - (normal_iwall*v_iwall)normal_iwall}] 
-      	double vec_mix = (Rinv_i[0]*vtil[0] + Rinv_i[1]*vtil[1] + Rinv_i[2]*vtil[2]);
-		double vec_miy = (Rinv_i[3]*vtil[0] + Rinv_i[4]*vtil[1] + Rinv_i[5]*vtil[2]);
-		double vec_miz = (Rinv_i[6]*vtil[0] + Rinv_i[7]*vtil[1] + Rinv_i[8]*vtil[2]);
-
-		int ix = (int)((pos_ix - MIN_X)*DBinv) +1;
-		int iy = (int)((pos_iy - MIN_Y)*DBinv) +1;
-		int iz = (int)((pos_iz - MIN_Z)*DBinv) +1;
-		for(int jz=iz-1;jz<=iz+1;jz++){
-		for(int jy=iy-1;jy<=iy+1;jy++){
-		for(int jx=ix-1;jx<=ix+1;jx++){
-			int jb = jz*nBxy + jy*nBx + jx;
-			int j = bfst[jb];
-			if(j == -1) continue;
-			for(;;){
-				// Particle distance r_ij = Xj - Xi_temporary_position
-				double v0ij = Pos[j*3  ] - pos_ix;
-				double v1ij = Pos[j*3+1] - pos_iy;
-				double v2ij = Pos[j*3+2] - pos_iz;
-
-				double dstij2 = v0ij*v0ij+v1ij*v1ij+v2ij*v2ij;
-
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
-				double v0 = Pos[j*3  ] - pos_mix;
-				double v1 = Pos[j*3+1] - pos_miy;
-				double v2 = Pos[j*3+2] - pos_miz;
-
-				double dst2 = v0*v0+v1*v1+v2*v2;
-				// If inside neighboor of i and im (intersection)
-				if(dstij2<r2 && dst2<r2){
-				if(j!=i && Typ[j]!=GST){
-					double dst = sqrt(dst2);
-					double w = WEI(dst, r);
-
-					double vec_mijx = Vel[j*3  ]-vec_mix;	
-					double vec_mijy = Vel[j*3+1]-vec_miy;	
-					double vec_mijz = Vel[j*3+2]-vec_miz;
-
-					sum1 += vec_mijx*v0*w/dst2;
-					sum2 += vec_mijx*v1*w/dst2;
-					sum3 += vec_mijx*v2*w/dst2;
-					
-					sum4 += vec_mijy*v0*w/dst2;
-					sum5 += vec_mijy*v1*w/dst2;
-					sum6 += vec_mijy*v2*w/dst2;
-					
-					sum7 += vec_mijz*v0*w/dst2;
-					sum8 += vec_mijz*v1*w/dst2;
-					sum9 += vec_mijz*v2*w/dst2;
-					
-					//sum10 += sum10 + pnew[j]*w;
-					sum10 += sum10 + Prs[j]*w;
-				}}
-				j = nxt[j];
-				if(j==-1) break;
-			}
-		}}}
-
-		// Rref_i * gradU * Rinv_i = - Rref_i * gradU
-		// A3 is a negative cte (-DIM/n0Grad)
-		Uxx = A3*(Rref_i[0]*sum1 + Rref_i[1]*sum4 + Rref_i[2]*sum7);
-		Uxy = A3*(Rref_i[0]*sum2 + Rref_i[1]*sum5 + Rref_i[2]*sum8);
-		Uxz = A3*(Rref_i[0]*sum3 + Rref_i[1]*sum6 + Rref_i[2]*sum9);
-
-		Uyx = A3*(Rref_i[3]*sum1 + Rref_i[4]*sum4 + Rref_i[5]*sum7);
-		Uyy = A3*(Rref_i[3]*sum2 + Rref_i[4]*sum5 + Rref_i[5]*sum8);
-		Uyz = A3*(Rref_i[3]*sum3 + Rref_i[4]*sum6 + Rref_i[5]*sum9);
-
-		Uzx = A3*(Rref_i[6]*sum1 + Rref_i[7]*sum4 + Rref_i[8]*sum7);
-		Uzy = A3*(Rref_i[6]*sum2 + Rref_i[7]*sum5 + Rref_i[8]*sum8);
-		Uzz = A3*(Rref_i[6]*sum3 + Rref_i[7]*sum6 + Rref_i[8]*sum9);
-		
-		p_smooth[i] = +sum10 / n0Grad;
-		if (p_smooth[i]<0) p_smooth[i] = 0;
-
-		// - (Rref_i * gradU) - (Rref_i * gradU)t
-		S11[i] = 0.5*(Uxx + Uxx);
-		S12[i] = 0.5*(Uxy + Uyx);
-		S13[i] = 0.5*(Uxz + Uzx);
-		S22[i] = 0.5*(Uyy + Uyy);
-		S23[i] = 0.5*(Uyz + Uzy);
-		S33[i] = 0.5*(Uzz + Uzz);
-
-		//II[i] = 0.5*Uxx*Uxx + 0.5*Uyy*Uyy + 0.25*(Uxy + Uyx)*(Uxy + Uyx);
-		
-		// Addition of II for particles near mesh
-		II[i] += 0.5*(S11[i] * S11[i] + S12[i] * S12[i] + S13[i] * S13[i] + S12[i] * S12[i] + S22[i] * S22[i] + S23[i] * S23[i] + S13[i] * S13[i] + S23[i] * S23[i] + S33[i] * S33[i]);
-
-//		II[i] = 0.5*(S11[i] * S11[i] + S12[i] * S12[i] + S13[i] * S13[i] + S12[i] * S12[i] + S22[i] * S22[i] + S23[i] * S23[i] + S13[i] * S13[i] + S23[i] * S23[i] + S33[i] * S33[i]);
-		//II[i]= S11[i]*S22[i] +S22[i]*S33[i]+ S11[i]*S33[i] - S12[i]*S12[i] -S13[i]*S13[i]- S23[i]*S23[i] ;
-		if (II[i]<0 || II[i] * 0 != 0) II[i] = 0;
-		//II=fabs(S11[i]*S22[i]-S12[i]*S12[i]);
-	}}
-	
-	// Newtonian viscosity
-	if (Fluid2_type == 0)
-	{
-	// Loop only for particles near mesh
-#pragma omp parallel for
-		for(int im=0;im<nPartNearMesh;im++){
-		//for(int i=0;i<nP;i++){
-		int i = partNearMesh[im];
-		if(Typ[i] == FLD){
-			if (PTYPE[i] <= 1)MEU[i] = KNM_VS1 * DNS_FL1;
-			if (PTYPE[i] != 1)MEU[i] = KNM_VS2 * DNS_FL2;
-		}}
-
-//		if (TURB>0)
-//		{
-//			NEUt[i] = Cs*DL*Cs*DL*2*sqrt(II[i]);
-
-//			if (NEUt[i] * 0 != 0)  NEUt[i] = 0;
-//			if (NEUt[i]>1)     NEUt[i] = 1;
-//		}
-	}
-
-	// Granular Fluid
-	if (Fluid2_type == 1)
-	{
-		// PROBLEMS TO USE OPENMP HERE. MAYBE THE ACCESS TO BL, WL
-		// Loop only for particles near mesh
-//#pragma omp parallel for
-		for(int im=0;im<nPartNearMesh;im++){
-		//for(int i=0;i<nP;i++){
-		int i = partNearMesh[im];
-		if(Typ[i] == FLD){
-
-//			double Acc_x = 0.0;			double Acc_y = 0.0;			double Acc_z = 0.0;
-			double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
-			double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
-
-			if(PTYPE[i] == 1) 
-				MEU[i] = KNM_VS1 * DNS_FL1;
-			else if(PTYPE[i] == 2){
-				phi = (C[i] - 0.25)*PHI / (1 - 0.25);
-				phi2 = (C[i] - 0.25)*PHI_2 / (1 - 0.25);
-				if (C[i] <= 0.25) { phi = 0.00001; phi2 = 0.00001; }
-				if (PTYPE[i] <= 0) phi = PHI_BED;
-
-				// Normal stress calculation
-				p_rheo_new[i] = p_smooth[i];
-
-				kx = int((pos_ix - Xmin) / aa / PCL_DST) + 1;
-				ky = int((pos_iy - Ymin) / aa / PCL_DST) + 1;
-
-				//normal_stress=(BL[k]-pos_iy+DL/2)*(DNS_FL2)*9.81;	// normal_stress= Gama.H
-				normal_stress = (BL[kx][ky] - pos_iz + PCL_DST / 2)*(DNS_FL2 - DNS_FL1)*9.81 - (vec_ix*vec_ix + vec_iy*vec_iy + vec_iz*vec_iz)*(DNS_FL2 - DNS_FL1) / 2.0;	// normal_stress= Gama.H
-
-				if (p_smooth[i] - (WL[kx][ky] - pos_iz)*DNS_FL1*9.8<0) p_smooth[i] = (WL[kx][ky] - pos_iz)*DNS_FL1*9.8;
-				if (TIM <= 1) normal_stress = 1.0*(1 - TIM)*(p_smooth[i] - (WL[kx][ky] - pos_iz)*DNS_FL1*9.8) + 1.0*(TIM)*normal_stress;
-
-				//normal_stress=normal_stress*0.61*1500/DNS_FL2;
-				if (normal_stress < 1 || C[i] < 0.5) normal_stress = 1;
-
-				p_rheo_new[i] = normal_stress;
-
-				// Yield stress calculation
-				//Inertia[i] = sqrt(II[i])* dg / sqrt(normal_stress / DNS_FL2);		// Free-fall regime
-				Inertia[i] = sqrt(II[i])*dg / sqrt(normal_stress/(DNS_FL1*0.47));	// Grain inertia regime
-				//Inertia[i] = sqrt(II[i])* (KNM_VS1*DNS_FL1) / normal_stress ;			//viscous regime
-
-				grain_VF = 0.65 - (0.65 - 0.25)*Inertia[i];
-				phi = phi * grain_VF / 0.65;
-
-				double yield_stress = cohes * cos(phi) + normal_stress * sin(phi);
-
-				if (yield_stress < 0) yield_stress = 0;
-
-				double visc_max = (yield_stress*mm + MEU0);
-
-				if (II[i]>0)
-					MEU_Y[i] = yield_stress * (1 - exp(-mm * sqrt(II[i]))) / 2.0 / sqrt(II[i]);
-				else
-					MEU_Y[i] = visc_max;
-
-				// H-B rheology
-
-				//meu0 = MEU0;
-
-				// Non-linear Meu(I) rheology
-				//meu0 =  0.5* 0.36 *normal_stress* dg/ (I0* sqrt(normal_stress/ DNS_FL2)+ sqrt(II[i])*dg);	//free fall
-				meu0 = 0.5*(sin(phi2) - sin(phi)) *normal_stress* dg / (I0* sqrt(normal_stress / (DNS_FL1*0.47)) + sqrt(II[i])*dg);	//grain inertia
-			   	//meu0 = 0.5*0.36*normal_stress* (KNM_VS1*DNS_FL1)/ (I0* normal_stress+ sqrt(II[i])*(KNM_VS1*DNS_FL1));	//viscous
-			   	
-			   	// Linear Meu(I) rheology
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi)) * dg* sqrt(normal_stress * DNS_FL2)      / I0;		//free fall
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi)) * dg* sqrt(normal_stress * DNS_FL1*0.47) / I0;		//grain inertia
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi)) * (KNM_VS1*DNS_FL1)                         / I0;		//viscous
-
-				if (II[i] <= 0 || (meu0 * 0) != 0) meu0 = MEU0;
-
-				visc_max = (yield_stress*mm + meu0);
-
-				MEU[i] = MEU_Y[i] + MEU0 * pow(4 * II[i], (N - 1) / 2);
-				
-				if (II[i] == 0 || MEU[i]>visc_max) MEU[i] = visc_max;
-				if (PTYPE[i] <= 0) MEU[i] = MEU[i] * C[i] + 0.001*(1 - C[i]);
-			}
-			
-			if(PTYPE[i] >= 2) {
-				if (C[i] > 0.5) RHO[i] = DNS_FL2;
-				else RHO[i] = C[i] * DNS_FL2 + (1 - C[i]) * 2650;
-			}
-		}}
-
-		//---------------------------------- Direct stress calculation method -----------------------------------------
-//		if (stress_cal_method == 2)
-//		{
-//			for (i = 1; i <= NUM; i++)
-//			{
-//				double sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sum5 = 0, sum6 = 0, sum7 = 0, sum8 = 0, sum9 = 0, sum10 = 0;
-//				for (l = 2; l <= neighb[i][1]; l++)
-//				{
-//					j = neighb[i][l];
-//					d = DIST(i, j);
-//					if (i != j && d <= re)
-//					{
-//						w = W(d, KTYPE, 2);
-
-//						double meuij = 2 * MEU[i] * MEU[j] / (MEU[i] + MEU[j]);
-//						if ((NEUt[i] + NEUt[j])>0) meuij = meuij + 2 * NEUt[i] * RHO[i] * NEUt[j] * RHO[j] / (NEUt[i] * RHO[i] + NEUt[j] * RHO[j]);
-
-//						sum1 = sum1 + meuij * (x_vel[j] - x_vel[i])*DX(i, j)*w / d / d;
-//						sum2 = sum2 + meuij * (x_vel[j] - x_vel[i])*DY(i, j)*w / d / d;
-//						sum3 = sum3 + meuij * (x_vel[j] - x_vel[i])*DZ(i, j)*w / d / d;
-
-//						sum4 = sum4 + meuij * (y_vel[j] - y_vel[i])*DX(i, j)*w / d / d;
-//						sum5 = sum5 + meuij * (y_vel[j] - y_vel[i])*DY(i, j)*w / d / d;
-//						sum6 = sum6 + meuij * (y_vel[j] - y_vel[i])*DZ(i, j)*w / d / d;
-
-//						sum7 = sum7 + meuij * (z_vel[j] - z_vel[i])*DX(i, j)*w / d / d;
-//						sum8 = sum8 + meuij * (z_vel[j] - z_vel[i])*DY(i, j)*w / d / d;
-//						sum9 = sum9 + meuij * (z_vel[j] - z_vel[i])*DZ(i, j)*w / d / d;
-//					}
-//				}
-
-//				Tau_xx[i] = (DIM / n0) * 2 * sum1;
-//				Tau_yy[i] = (DIM / n0) * 2 * sum5;
-//				Tau_zz[i] = (DIM / n0) * 2 * sum9;
-
-//				Tau_xy[i] = (DIM / n0)*(sum2 + sum4);
-//				Tau_xz[i] = (DIM / n0)*(sum3 + sum7);
-//				Tau_yz[i] = (DIM / n0)*(sum6 + sum8);
-//			}
-//		}
-
-	} // if (Fluid2_type == 1)
-
-	//---------------------------------------------------------------
-
-	delete[]S11; delete[]S12; delete[]S13; delete[]S22; delete[]S23; delete[]S33; delete[]BL; delete[]WL; delete[]PS; //delete[]p_smooth;
-	S11 = NULL; S12 = NULL; S13 = NULL; S22 = NULL; S23 = NULL; S33 = NULL; BL = NULL; WL = NULL; PS = NULL;// p_smooth = NULL;
-}
-
 void WallSlipVscTrm_omp(){
 	int nPartNearMesh = partNearMesh.size();
 	//printf(" Mesh %d \n", nPartNearMesh);
@@ -2297,7 +2351,7 @@ void WallSlipVscTrm_omp(){
 
 					NEU = 2 * meu_i * MEU[j] / (meu_i + MEU[j]);
 
-NEU = KNM_VS2 * DNS_FL2;
+//NEU = KNM_VS2 * DNS_FL2;
 
 					if (PTYPE[i] == 1) NEU = NEU/DNS_FL1;
 					else NEU = NEU/DNS_FL2;
@@ -2333,7 +2387,7 @@ NEU = KNM_VS2 * DNS_FL2;
 
 			NEU = 2 * meu_i * meu_i / (meu_i + meu_i);
 
-NEU = KNM_VS2 * DNS_FL2;
+//NEU = KNM_VS2 * DNS_FL2;
 
 			if (PTYPE[i] == 1) NEU = NEU/DNS_FL1;
 			else NEU = NEU/DNS_FL2;
@@ -2449,7 +2503,7 @@ void WallNoSlipVscTrm_omp(){
 
 					NEU = 2 * meu_i * MEU[j] / (meu_i + MEU[j]);
 
-NEU = KNM_VS2 * DNS_FL2;
+//NEU = KNM_VS2 * DNS_FL2;
 
 
 					if (PTYPE[i] == 1) NEU = NEU/DNS_FL1;
@@ -2496,7 +2550,7 @@ NEU = KNM_VS2 * DNS_FL2;
 
 			NEU = 2 * meu_i * meu_i / (meu_i + meu_i);
 
-NEU = KNM_VS2 * DNS_FL2;
+//NEU = KNM_VS2 * DNS_FL2;
 
 			if (PTYPE[i] == 1) NEU = NEU/DNS_FL1;
 			else NEU = NEU/DNS_FL2;
@@ -2646,7 +2700,7 @@ void ClcEMPS(mesh mesh){
 
 				VscIntVal_omp();// Calculation of viscosity due fluid particles
 
-//				WallSlipVscIntVal_omp();// Calculation of viscosity due polygon
+				WallSlipVscIntVal_omp();// Calculation of viscosity due polygon
 			}
 			WallSlipVscTrm_omp(); // Slip
 		}
