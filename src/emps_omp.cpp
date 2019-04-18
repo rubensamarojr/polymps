@@ -10,13 +10,13 @@
 #include <sys/types.h> 
 
 // Grid file
-#define IN_FILE "../mk_particle/dambreak_fluid.prof"
-//#define IN_FILE "../mk_particle/brumadinho_fluid_lo10p00.prof"
-//#define IN_FILE "../mk_particle/brumadinho_fluid_lo05p00_desl.prof"
+#define IN_FILE "input/dambreak_fluid.prof"
+//#define IN_FILE "input/brumadinho_fluid_lo10p00.prof"
+//#define IN_FILE "input/brumadinho_fluid_lo05p00_desl.prof"
 
 // Mesh file
-#define IN_MESH "../input/dam1610.stl"
-//#define IN_MESH "../input/BRUMADINHO_space10_model_lucas_top_0p50.stl"
+#define IN_MESH "input/dam1610.stl"
+//#define IN_MESH "input/BRUMADINHO_space10_model_lucas_top_0p50.stl"
 
 // Output folder
 //#define OUT_FOLDER "BRUMADINHO_lo10p00_rho1500_v04p00e-01"
