@@ -10,31 +10,34 @@
 #include <sys/types.h> 
 
 // Grid file
-#define IN_FILE "input/dambreak_fluid.prof"
+//#define IN_FILE "input/dambreak_fluid.prof"
 //#define IN_FILE "input/brumadinho_fluid_lo10p00.prof"
 //#define IN_FILE "input/brumadinho_fluid_lo05p00_desl.prof"
+#define IN_FILE "input/damErosion3D_lo05p00e-03_mps.grid"
 
 // Mesh file
-#define IN_MESH "input/dam1610.stl"
+//#define IN_MESH "input/dam1610.stl"
 //#define IN_MESH "input/BRUMADINHO_space10_model_lucas_top_0p50.stl"
+#define IN_MESH "input/damErosion3D.stl"
 
 // Output folder
 //#define OUT_FOLDER "BRUMADINHO_lo10p00_rho1500_v04p00e-01"
 //#define OUT_FOLDER "BRUMADINHO_lo05p00_rho1500_v04p00e-01"
-#define OUT_FOLDER "dam1610_NONEW_02"
+//#define OUT_FOLDER "dam1610_NONEW_02"
+#define OUT_FOLDER "damErosion3D_lo05p00e-03_02"
 
 // Output
 #define OUTPND 1
 #define OUTAUX 1
 
 // Geometry
-#define PCL_DST 0.01				// Average particle distance (m) (10/5) (0.01)
+#define PCL_DST 0.005				// Average particle distance (m) (10/5) (0.01)
 #define MIN_X  (0.0 - PCL_DST*3)	// Minimum value in the x direction of the analysis domain (m) (0)
 #define MIN_Y  (0.0 - PCL_DST*3)	// Minimum value in the y direction of the analysis domain (m) (0)
 #define MIN_Z  (0.0 - PCL_DST*3)	// Minimum value in the z direction of the analysis domain (m) (700) (0)
-#define MAX_X  (1.65 + PCL_DST*3)	// Maximum value in the x direction of the analysis domain (m) (6000) (1.65)
-#define MAX_Y  (0.15 + PCL_DST*3)	// Maximum value in the y direction of the analysis domain (m) (5300) (0.15)
-#define MAX_Z  (0.70 + PCL_DST*30)	// Maximum value in the z direction of the analysis domain (m) (1300) (0.70)
+#define MAX_X  (2.0 + PCL_DST*3)	// Maximum value in the x direction of the analysis domain (m) (6000) (1.65)
+#define MAX_Y  (0.1 + PCL_DST*3)	// Maximum value in the y direction of the analysis domain (m) (5300) (0.15)
+#define MAX_Z  (0.2 + PCL_DST*30)	// Maximum value in the z direction of the analysis domain (m) (1300) (0.70)
 // Model
 #define DIM 3				// Dimension
 #define GST -1				// Ghost particle ID
@@ -48,27 +51,27 @@
 #define DNS_FLD 1000		// Fluid particle density (kg/m3)
 #define DNS_WLL 1000		// Wall particle density (kg/m3)
 #define KNM_VS1 0.000001			// Kinematic viscosity phase 1 (m2/s)
-#define KNM_VS2 0.0001		// Kinematic viscosity phase 2 (m2/s)
+#define KNM_VS2 0.000001		// Kinematic viscosity phase 2 (m2/s)
 #define DNS_FL1 1000.0		// Fluid particle density phase 1 (kg/m3)
-#define DNS_FL2 2000.0		// bulk particle density phase 2 (kg/m3)
-#define DNS_SDT	2000.0		// sediment density (kg/m3)
+#define DNS_FL2 1540.0		// bulk particle density phase 2 (kg/m3)
+#define DNS_SDT	1540.0		// sediment density (kg/m3)
 #define G_X 0.0				// Gravity acceleration x component (m/s2)
 #define G_Y 0.0				// Gravity acceleration y component (m/s2)
 #define G_Z -9.81			// Gravity acceleration z component (m/s2)
 // Rheological parameters
-#define Fluid2_type 1		// Newtonian:0  , Non Newtonian:1 
-#define N 1.0				// flow behaviour (power law) index
+#define Fluid2_type 1		// Newtonian:0 , Non Newtonian:1 
+#define N 1.2				// flow behaviour (power law) index
 #define MEU0 0.03			// consistency index
-#define PHI 0.05			// friction angle (RAD)
-#define PHI_WAL 0.005		// friction angle (RAD)
-#define PHI_BED 0.005		// friction angle (RAD)
-#define PHI_2 0.2			// second friction angle Values are based on  Minatti & Paris (2015)
+#define PHI 0.541			// friction angle (RAD) lower limit
+#define PHI_WAL 0.541		// friction angle (RAD)
+#define PHI_BED 0.541		// friction angle (RAD)
+#define PHI_2 0.6			// second friction angle Values are based on  Minatti & Paris (2015) upper limit
 #define cohes 0.0				// cohesiveness coefficient
 #define Fraction_method 2   // Method of calculation of volume of fraction. 1: Linear dist across the interface, 2: smoothed value
 //#define visc_max 20			// maximum viscosity uses to avoid singularity
-#define dg 0.01			// grain size
+#define DG 0.0035			// grain size
 #define I0 0.75				// I0 value in Meu9I0 rheology     Values are based on  Minatti &  Paris (2015)
-#define mm 200.0
+#define mm 100.0			// Regularization parameter. Control the viscosity grows
 #define stress_cal_method 1	// Method 1; viscosity is directly used in momentum equation. Method 2: first the stress tensor is calculated then it is used in momentum equation
 #define visc_itr_num 1
 #define visc_error 0.0
@@ -77,16 +80,16 @@
 #define VF_min 0.25		// Minimum volume fraction
 #define VF_max 0.65		// Maximum volume fraction
 // Numerical
-#define DT 0.00025				// Time step (s) (0.02/0.01) (0.00025)
-#define FIN_TIM 1.0		// Time of simulation (s)
-#define OPT_FQC 100			// Number of iterations to determine the output interval
-#define MPS_TYP	0			// Explicit MPS = 0 ;  Weakly compressible MPS = 1
+#define DT 0.000125				// Time step (s) (0.02/0.01) (0.00025)
+#define FIN_TIM 1.05		// Time of simulation (s)
+#define OPT_FQC 1000			// Number of iterations to determine the output interval
+#define MPS_TYP	1			// Explicit MPS = 0 ;  Weakly compressible MPS = 1
 #define GRD_TYP	0			// Pressure gradient: Pj - Pmin = 0 ;  Pj + Pi = 1 ; Pj + Pi - 2*Pmin = 0
 #define RLX_PRS 1.0			// Relaxation factor for pressure correction
 #define SND 10.00			// Sound speed (m/s) (10)
 #define GAM 7.0				// Gamma weakly compressible MPS
 #define ARF 5000000.0			// Wall coefficent repulsive force (10000/100000) (500000)
-#define SLP 1				// No-slip = 0 ; Slip = 1 
+#define SLP 0				// No-slip = 0 ; Slip = 1 
 #define CRT_NUM 0.2			// Courant (CFL) condition number
 #define PND_TRS 0.93			// Surface threshold PND
 #define NGH_TRS 0.85		// Surface threshold Neighboors (not implemented)
@@ -124,6 +127,7 @@ double *F1, *F2;
 // Non-Newtonian
 double A1_M, NEU;
 double *C, *II, *MEU, *MEU_Y, *Inertia, *pnew, *p_rheo_new, *RHO, *p_smooth, *VF;
+double *S12, *S13, *S23, *S11, *S22, *S33;
 int *PTYPE;
 
 // Vector with ID of particles near to mesh
@@ -149,6 +153,10 @@ void ChkPcl(int i){
 
 void RdDat(void) {
 	fp = fopen(IN_FILE, "r");
+
+	int zeroZero;
+	fscanf(fp,"%d",&zeroZero);
+
 	fscanf(fp,"%d",&nP);
 	printf("nP: %d\n",nP);
 	Acc = (double*)malloc(sizeof(double)*nP*3);	// Particle acceleration
@@ -185,16 +193,28 @@ void RdDat(void) {
 	RHO = (double*)malloc(sizeof(double)*nP);			// Fluid density
 	p_smooth = (double*)malloc(sizeof(double)*nP);	//
 	VF = (double*)malloc(sizeof(double)*nP);	//
+	S12 = (double*)malloc(sizeof(double)*nP);	//
+	S13 = (double*)malloc(sizeof(double)*nP);	//
+	S23 = (double*)malloc(sizeof(double)*nP);	//
+	S11 = (double*)malloc(sizeof(double)*nP);	//
+	S22 = (double*)malloc(sizeof(double)*nP);	//
+	S33 = (double*)malloc(sizeof(double)*nP);	//
 
 	for(int i=0;i<nP;i++) {
 		int a[2];
 		double b[8];
-		fscanf(fp," %d %d %lf %lf %lf %lf %lf %lf %lf %lf",&a[0],&a[1],&b[0],&b[1],&b[2],&b[3],&b[4],&b[5],&b[6],&b[7]);
+
+		// Uncomment here to read .prof file
+		//fscanf(fp," %d %d %lf %lf %lf %lf %lf %lf %lf %lf",&a[0],&a[1],&b[0],&b[1],&b[2],&b[3],&b[4],&b[5],&b[6],&b[7]);
+		// Uncomment here to read .grid file
+		a[0] = 0;
+		fscanf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf",&a[1],&b[0],&b[1],&b[2],&b[3],&b[4],&b[5],&b[6],&b[7]);
 		Typ[i]=a[1];
 		Pos[i*3]=b[0];	Pos[i*3+1]=b[1];	Pos[i*3+2]=b[2];
 		Vel[i*3]=b[3];	Vel[i*3+1]=b[4];	Vel[i*3+2]=b[5];
 		Prs[i]=b[6];		pav[i]=b[7];
 
+//		printf("X: %d %lf %lf %lf %lf %lf %lf %lf %lf\n",Typ[i],Pos[3*i],Pos[3*i+1],Pos[3*i+2],Vel[3*i],Vel[3*i+1],Vel[3*i+2],Prs[i],pav[i]);
 //		Posk[i*3]=b[0];	Posk[i*3+1]=b[1];	Posk[i*3+2]=b[2];
 //		Velk[i*3]=b[3];	Velk[i*3+1]=b[4];	Velk[i*3+2]=b[5];
 	}
@@ -205,7 +225,9 @@ void RdDat(void) {
 	for(int i=0;i<nP;i++) {
 		niw[i]=0.0;numNeigh[i]=0.0;pndi[i]=0.0;Bc[i]=0;Nw[i]=0;
 		C[i]=0.0;II[i]=0.0;PTYPE[i]=0;MEU[i]=0.0;MEU_Y[i]=0.0;Inertia[i]=0.0;pnew[i]=0.0;p_rheo_new[i]=0.0;p_smooth[i]=0.0;VF[i]=0.0;
+		S12[i]=0.0;S13[i]=0.0;S23[i]=0.0;S11[i]=0.0;S22[i]=0.0;S33[i]=0.0;
 
+		/*
 		// Assign type and density
 		if(Pos[i*3+2] <= 0.3) {
 			PTYPE[i]=2;
@@ -214,6 +236,22 @@ void RdDat(void) {
 			MEU[i] = KNM_VS2 * DNS_FL2;
 		}
 		else {
+			PTYPE[i]=1;
+			RHO[i] = DNS_FL1;
+			// CHANGED Only for the first time step
+			MEU[i] = KNM_VS1 * DNS_FL1;
+		}
+		*/
+		// Assign type and density
+		if(Typ[i]==1) {
+			Typ[i]=0;
+			PTYPE[i]=2;
+			RHO[i] = DNS_FL2;
+			// CHANGED Only for the first time step
+			MEU[i] = KNM_VS2 * DNS_FL2;
+		}
+		else {
+			Typ[i]=0;
 			PTYPE[i]=1;
 			RHO[i] = DNS_FL1;
 			// CHANGED Only for the first time step
@@ -525,16 +563,20 @@ void VolFract_omp()
 // Viscosity interaction values for "real" fluid particles
 void VscIntVal_omp(){
 
-	double  *S12, *S13, *S23, *S11, *S22, *S33, d, phi = 0.0, phi2 = 0.0, meu0, normal_stress;//,grain_VF, *p_smooth;
+	//double  *S12, *S13, *S23, *S11, *S22, *S33, d, phi = 0.0, phi2 = 0.0, meu_0, normal_stress;//,grain_VF, *p_smooth;
+	double d, phi = 0.0, phi2 = 0.0, meu_0, normal_stress;
 	double **BL, **WL, **PS;
 
 	// Changed !!!
 	// Be carefull to assign all domain
 	double Xmin, Xmax, Ymin, Ymax, Zmin; // Minimum and maximum of searching grid
 	// dam1610
-	Xmin = 0.0 - PCL_DST*3; Xmax = 1.65 + PCL_DST*3;
-	Ymin = 0.0 - PCL_DST*3; Ymax = 0.15 + PCL_DST*3;
+//	Xmin = 0.0 - PCL_DST*3; Xmax = 1.65 + PCL_DST*3;
+//	Ymin = 0.0 - PCL_DST*3; Ymax = 0.15 + PCL_DST*3;
 	Zmin = 0.0 - PCL_DST*3; //Zmax = 0.7 + PCL_DST*30;
+	// damErosion3D
+	Xmin = 0.0 - PCL_DST*3; Xmax = 2.00 + PCL_DST*3;
+	Ymin = 0.0 - PCL_DST*3; Ymax = 0.10 + PCL_DST*3;
 	// Changed !!!
 
 	// Search free-surface particles for each interval of aa = 2 particles in wall
@@ -543,13 +585,14 @@ void VscIntVal_omp(){
 	int ky_max = int((Ymax - Ymin) / aa / PCL_DST) + 1;
 
 	double Uxx, Uxy, Uxz, Uyx, Uyy, Uyz, Uzx, Uzy, Uzz;
-
+/*
 	S11 = new double[nP + 1];
 	S22 = new double[nP + 1];
 	S33 = new double[nP + 1];
 	S12 = new double[nP + 1];
 	S13 = new double[nP + 1];
 	S23 = new double[nP + 1];
+*/
 	//p_smooth = new double[nP + 1];
 	BL = new double*[kx_max + 1];  // bed level
 	WL = new double*[kx_max + 1];  // water level
@@ -700,7 +743,7 @@ void VscIntVal_omp(){
 			}
 			else if(PTYPE[i] == 2){
 				// phi: internal friction angle
-				// phi2: ?
+				// phi2: maximum friction angle
 				phi = (C[i] - 0.25)*PHI / (1 - 0.25);
 				phi2 = (C[i] - 0.25)*PHI_2 / (1 - 0.25);
 				if (C[i] <= 0.25) { phi = 0.00001; phi2 = 0.00001; } // phi close to zero
@@ -727,8 +770,8 @@ void VscIntVal_omp(){
 				p_rheo_new[i] = normal_stress;
 
 				// Yield stress calculation
-				//Inertia[i] = sqrt(II[i])*dg/sqrt(normal_stress/DNS_SDT);		// Free-fall (dry granular material)
-				Inertia[i] = sqrt(II[i])*dg/sqrt(normal_stress/(DNS_FL1*Cd));	// Grain inertia (submerged)
+				//Inertia[i] = sqrt(II[i])*DG/sqrt(normal_stress/DNS_SDT);		// Free-fall (dry granular material)
+				Inertia[i] = sqrt(II[i])*DG/sqrt(normal_stress/(DNS_FL1*Cd));	// Grain inertia (submerged)
 				//Inertia[i] = sqrt(II[i])*(KNM_VS1*DNS_FL1)/normal_stress ;	// Viscous regime
 
 //				Inertia[i] = 1.0;
@@ -752,21 +795,21 @@ void VscIntVal_omp(){
 
 				// H-B rheology
 
-				//meu0 = MEU0;
+				//meu_0 = MEU0;
 
 				// Non-linear Meu(I) rheology
-				//meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*dg/(I0*sqrt(normal_stress/DNS_FL2)+sqrt(II[i])*dg);			//free fall
-				meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*dg/(I0*sqrt(normal_stress/(DNS_FL1*Cd))+sqrt(II[i])*dg);		//grain inertia
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*(KNM_VS1*DNS_FL1)/(I0*normal_stress+sqrt(II[i])*(KNM_VS1*DNS_FL1));	//viscous
+				//meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*DG/(I0*sqrt(normal_stress/DNS_FL2)+sqrt(II[i])*DG);			//free fall
+				meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*DG/(I0*sqrt(normal_stress/(DNS_FL1*Cd))+sqrt(II[i])*DG);		//grain inertia
+			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*(KNM_VS1*DNS_FL1)/(I0*normal_stress+sqrt(II[i])*(KNM_VS1*DNS_FL1));	//viscous
 			   	
 			   	// Linear Meu(I) rheology
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*dg*sqrt(normal_stress*DNS_FL2)/I0;		//free fall
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*dg*sqrt(normal_stress*DNS_FL1*Cd)/I0;	//grain inertia
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*(KNM_VS1*DNS_FL1)/I0;					//viscous
+			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*DG*sqrt(normal_stress*DNS_FL2)/I0;		//free fall
+			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*DG*sqrt(normal_stress*DNS_FL1*Cd)/I0;	//grain inertia
+			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*(KNM_VS1*DNS_FL1)/I0;					//viscous
 
-				if (II[i] <= 0 || (meu0 * 0) != 0) meu0 = MEU0;
+				if (II[i] <= 0 || (meu_0 * 0) != 0) meu_0 = MEU0;
 
-				visc_max = (yield_stress*mm*0.5 + meu0);
+				visc_max = (yield_stress*mm*0.5 + meu_0);
 
 				//if(isnan(II[i]) || isinf(II[i])){
 					//std::cout << " viscmax: " << II[i] << std::endl;
@@ -777,9 +820,12 @@ void VscIntVal_omp(){
 				MEU[i] = MEU_Y[i] + MEU0 * pow(4 * II[i], (N - 1) / 2);
 
 				// MEU_Y rheological model
-				//MEU[i] = MEU_Y[i] + meu0;
+				//MEU[i] = MEU_Y[i] + meu_0;
 				
-				if (II[i] == 0 || MEU[i]>visc_max) MEU[i] = visc_max;
+				if (II[i] == 0 || MEU[i]>visc_max) {
+					//std::cout << " MEU>viscmax: " << yield_stress*mm*0.5 << " meu0: " << meu_0 << " II: " << II[i] << std::endl;
+					MEU[i] = visc_max;
+				}
 				if (PTYPE[i] <= 0) MEU[i] = MEU[i] * C[i] + DNS_FL1*KNM_VS1*(1 - C[i]);
 
 				//if (MEU[i]/RHO[i] > maxVIS) maxVIS = MEU[i]/RHO[i];
@@ -836,23 +882,30 @@ void VscIntVal_omp(){
 
 	//---------------------------------------------------------------
 
-	delete[]S11; delete[]S12; delete[]S13; delete[]S22; delete[]S23; delete[]S33; delete[]BL; delete[]WL; delete[]PS; //delete[]p_smooth;
-	S11 = NULL; S12 = NULL; S13 = NULL; S22 = NULL; S23 = NULL; S33 = NULL; BL = NULL; WL = NULL; PS = NULL; //p_smooth = NULL;
+//	delete[]S11; delete[]S12; delete[]S13; delete[]S22; delete[]S23; delete[]S33; delete[]BL; delete[]WL; delete[]PS; //delete[]p_smooth;
+//	S11 = NULL; S12 = NULL; S13 = NULL; S22 = NULL; S23 = NULL; S33 = NULL; BL = NULL; WL = NULL; PS = NULL; //p_smooth = NULL;
+
+	delete[]BL; delete[]WL; delete[]PS;
+	BL = NULL; WL = NULL; PS = NULL;
 }
 
 // Slip condition. Viscosity interaction values
 void WallSlipVscIntVal_omp(){
 
-	double  *S12, *S13, *S23, *S11, *S22, *S33, d, phi = 0.0, phi2 = 0.0, meu0, normal_stress;//, grain_VF, *p_smooth;
+	//double  *S12, *S13, *S23, *S11, *S22, *S33, d, phi = 0.0, phi2 = 0.0, meu_0, normal_stress;//, grain_VF, *p_smooth;
+	double d, phi = 0.0, phi2 = 0.0, meu_0, normal_stress;
 	double **BL, **WL, **PS;
 
 	// Changed !!!
 	// Be carefull to assign all domain
 	double Xmin, Xmax, Ymin, Ymax, Zmin; // Minimum and maximum of searching grid
 	// dam1610
-	Xmin = 0.0 - PCL_DST*3; Xmax = 1.65 + PCL_DST*3;
-	Ymin = 0.0 - PCL_DST*3; Ymax = 0.15 + PCL_DST*3;
+//	Xmin = 0.0 - PCL_DST*3; Xmax = 1.65 + PCL_DST*3;
+//	Ymin = 0.0 - PCL_DST*3; Ymax = 0.15 + PCL_DST*3;
 	Zmin = 0.0 - PCL_DST*3; //Zmax = 0.7 + PCL_DST*30;
+	// damErosion3D
+	Xmin = 0.0 - PCL_DST*3; Xmax = 2.00 + PCL_DST*3;
+	Ymin = 0.0 - PCL_DST*3; Ymax = 0.10 + PCL_DST*3;
 	// Changed !!!
 
 	// Search free-surface particles for each interval of aa = 2 particles in wall
@@ -862,13 +915,14 @@ void WallSlipVscIntVal_omp(){
 
 	double Uxx, Uxy, Uxz, Uyx, Uyy, Uyz, Uzx, Uzy, Uzz;
 	double aUxx, aUxy, aUxz, aUyx, aUyy, aUyz, aUzx, aUzy, aUzz;
-
+/*
 	S11 = new double[nP + 1];
 	S22 = new double[nP + 1];
 	S33 = new double[nP + 1];
 	S12 = new double[nP + 1];
 	S13 = new double[nP + 1];
 	S23 = new double[nP + 1];
+*/
 	//p_smooth = new double[nP + 1];
 	BL = new double*[kx_max + 1];  // bed level
 	WL = new double*[kx_max + 1];  // water level
@@ -1121,8 +1175,8 @@ void WallSlipVscIntVal_omp(){
 				p_rheo_new[i] = normal_stress;
 
 				// Yield stress calculation
-				//Inertia[i] = sqrt(II[i])*dg/sqrt(normal_stress/DNS_SDT);		// Free-fall (dry granular material)
-				Inertia[i] = sqrt(II[i])*dg/sqrt(normal_stress/(DNS_FL1*Cd));	// Grain inertia (submerged)
+				//Inertia[i] = sqrt(II[i])*DG/sqrt(normal_stress/DNS_SDT);		// Free-fall (dry granular material)
+				Inertia[i] = sqrt(II[i])*DG/sqrt(normal_stress/(DNS_FL1*Cd));	// Grain inertia (submerged)
 				//Inertia[i] = sqrt(II[i])*(KNM_VS1*DNS_FL1)/normal_stress ;	// Viscous regime
 
 				// VF_max VF_min
@@ -1144,27 +1198,27 @@ void WallSlipVscIntVal_omp(){
 
 				// H-B rheology
 
-				//meu0 = MEU0;
+				//meu_0 = MEU0;
 
 				// Non-linear Meu(I) rheology
-				//meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*dg/(I0*sqrt(normal_stress/DNS_FL2)+sqrt(II[i])*dg);			//free fall
-				meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*dg/(I0*sqrt(normal_stress/(DNS_FL1*Cd))+sqrt(II[i])*dg);		//grain inertia
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*(KNM_VS1*DNS_FL1)/(I0*normal_stress+sqrt(II[i])*(KNM_VS1*DNS_FL1));	//viscous
+				//meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*DG/(I0*sqrt(normal_stress/DNS_FL2)+sqrt(II[i])*DG);			//free fall
+				meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*DG/(I0*sqrt(normal_stress/(DNS_FL1*Cd))+sqrt(II[i])*DG);		//grain inertia
+			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*(KNM_VS1*DNS_FL1)/(I0*normal_stress+sqrt(II[i])*(KNM_VS1*DNS_FL1));	//viscous
 			   	
 			   	// Linear Meu(I) rheology
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*dg*sqrt(normal_stress*DNS_FL2)/I0;		//free fall
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*dg*sqrt(normal_stress*DNS_FL1*Cd)/I0;	//grain inertia
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*(KNM_VS1*DNS_FL1)/I0;					//viscous
+			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*DG*sqrt(normal_stress*DNS_FL2)/I0;		//free fall
+			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*DG*sqrt(normal_stress*DNS_FL1*Cd)/I0;	//grain inertia
+			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*(KNM_VS1*DNS_FL1)/I0;					//viscous
 
-				if (II[i] <= 0 || (meu0 * 0) != 0) meu0 = MEU0;
+				if (II[i] <= 0 || (meu_0 * 0) != 0) meu_0 = MEU0;
 
-				visc_max = (yield_stress*mm*0.5 + meu0);
+				visc_max = (yield_stress*mm*0.5 + meu_0);
 
 				// Herschel bulkley papanastasiou
 				MEU[i] = MEU_Y[i] + MEU0 * pow(4 * II[i], (N - 1) / 2);
 
 				// MEU_Y rheological model
-				//MEU[i] = MEU_Y[i] + meu0;
+				//MEU[i] = MEU_Y[i] + meu_0;
 				
 				if (II[i] == 0 || MEU[i]>visc_max) MEU[i] = visc_max;
 				if (PTYPE[i] <= 0) MEU[i] = MEU[i] * C[i] + DNS_FL1*KNM_VS1*(1 - C[i]);
@@ -1221,23 +1275,30 @@ void WallSlipVscIntVal_omp(){
 
 	//---------------------------------------------------------------
 
-	delete[]S11; delete[]S12; delete[]S13; delete[]S22; delete[]S23; delete[]S33; delete[]BL; delete[]WL; delete[]PS;// delete[]p_smooth;
-	S11 = NULL; S12 = NULL; S13 = NULL; S22 = NULL; S23 = NULL; S33 = NULL; BL = NULL; WL = NULL; PS = NULL;// p_smooth = NULL;
+//	delete[]S11; delete[]S12; delete[]S13; delete[]S22; delete[]S23; delete[]S33; delete[]BL; delete[]WL; delete[]PS;// delete[]p_smooth;
+//	S11 = NULL; S12 = NULL; S13 = NULL; S22 = NULL; S23 = NULL; S33 = NULL; BL = NULL; WL = NULL; PS = NULL;// p_smooth = NULL;
+
+	delete[]BL; delete[]WL; delete[]PS;
+	BL = NULL; WL = NULL; PS = NULL;
 }
 
 // No-Slip condition. Viscosity interaction values
 void WallNoSlipVscIntVal_omp(){
 
-	double  *S12, *S13, *S23, *S11, *S22, *S33, d, phi = 0.0, phi2 = 0.0, meu0, normal_stress;//, grain_VF, *p_smooth;
+	//double  *S12, *S13, *S23, *S11, *S22, *S33, d, phi = 0.0, phi2 = 0.0, meu_0, normal_stress;//, grain_VF, *p_smooth;
+	double d, phi = 0.0, phi2 = 0.0, meu_0, normal_stress;
 	double **BL, **WL, **PS;
 
 	// Changed !!!
 	// Be carefull to assign all domain
 	double Xmin, Xmax, Ymin, Ymax, Zmin; // Minimum and maximum of searching grid
 	// dam1610
-	Xmin = 0.0 - PCL_DST*3; Xmax = 1.65 + PCL_DST*3;
-	Ymin = 0.0 - PCL_DST*3; Ymax = 0.15 + PCL_DST*3;
+//	Xmin = 0.0 - PCL_DST*3; Xmax = 1.65 + PCL_DST*3;
+//	Ymin = 0.0 - PCL_DST*3; Ymax = 0.15 + PCL_DST*3;
 	Zmin = 0.0 - PCL_DST*3; //Zmax = 0.7 + PCL_DST*30;
+	// damErosion3D
+	Xmin = 0.0 - PCL_DST*3; Xmax = 2.00 + PCL_DST*3;
+	Ymin = 0.0 - PCL_DST*3; Ymax = 0.10 + PCL_DST*3;
 	// Changed !!!
 
 	// Search free-surface particles for each interval of aa = 2 particles in wall
@@ -1246,13 +1307,14 @@ void WallNoSlipVscIntVal_omp(){
 	int ky_max = int((Ymax - Ymin) / aa / PCL_DST) + 1;
 
 	double Uxx, Uxy, Uxz, Uyx, Uyy, Uyz, Uzx, Uzy, Uzz;
-
+/*
 	S11 = new double[nP + 1];
 	S22 = new double[nP + 1];
 	S33 = new double[nP + 1];
 	S12 = new double[nP + 1];
 	S13 = new double[nP + 1];
 	S23 = new double[nP + 1];
+*/
 	//p_smooth = new double[nP + 1];
 	BL = new double*[kx_max + 1];  // bed level
 	WL = new double*[kx_max + 1];  // water level
@@ -1505,8 +1567,8 @@ void WallNoSlipVscIntVal_omp(){
 				p_rheo_new[i] = normal_stress;
 
 				// Yield stress calculation
-				//Inertia[i] = sqrt(II[i])*dg/sqrt(normal_stress/DNS_SDT);		// Free-fall (dry granular material)
-				Inertia[i] = sqrt(II[i])*dg/sqrt(normal_stress/(DNS_FL1*Cd));	// Grain inertia (submerged)
+				//Inertia[i] = sqrt(II[i])*DG/sqrt(normal_stress/DNS_SDT);		// Free-fall (dry granular material)
+				Inertia[i] = sqrt(II[i])*DG/sqrt(normal_stress/(DNS_FL1*Cd));	// Grain inertia (submerged)
 				//Inertia[i] = sqrt(II[i])*(KNM_VS1*DNS_FL1)/normal_stress ;	// Viscous regime
 
 				// VF_max VF_min
@@ -1528,27 +1590,27 @@ void WallNoSlipVscIntVal_omp(){
 
 				// H-B rheology
 
-				//meu0 = MEU0;
+				//meu_0 = MEU0;
 
 				// Non-linear Meu(I) rheology
-				//meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*dg/(I0*sqrt(normal_stress/DNS_FL2)+sqrt(II[i])*dg);			//free fall
-				meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*dg/(I0*sqrt(normal_stress/(DNS_FL1*Cd))+sqrt(II[i])*dg);		//grain inertia
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*(KNM_VS1*DNS_FL1)/(I0*normal_stress+sqrt(II[i])*(KNM_VS1*DNS_FL1));	//viscous
+				//meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*DG/(I0*sqrt(normal_stress/DNS_FL2)+sqrt(II[i])*DG);			//free fall
+				meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*DG/(I0*sqrt(normal_stress/(DNS_FL1*Cd))+sqrt(II[i])*DG);		//grain inertia
+			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*(KNM_VS1*DNS_FL1)/(I0*normal_stress+sqrt(II[i])*(KNM_VS1*DNS_FL1));	//viscous
 			   	
 			   	// Linear Meu(I) rheology
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*dg*sqrt(normal_stress*DNS_FL2)/I0;		//free fall
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*dg*sqrt(normal_stress*DNS_FL1*Cd)/I0;	//grain inertia
-			   	//meu0 = 0.5*(tan(phi2) - tan(phi))*(KNM_VS1*DNS_FL1)/I0;					//viscous
+			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*DG*sqrt(normal_stress*DNS_FL2)/I0;		//free fall
+			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*DG*sqrt(normal_stress*DNS_FL1*Cd)/I0;	//grain inertia
+			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*(KNM_VS1*DNS_FL1)/I0;					//viscous
 
-				if (II[i] <= 0 || (meu0 * 0) != 0) meu0 = MEU0;
+				if (II[i] <= 0 || (meu_0 * 0) != 0) meu_0 = MEU0;
 
-				visc_max = (yield_stress*mm*0.5 + meu0);
+				visc_max = (yield_stress*mm*0.5 + meu_0);
 
 				// Herschel bulkley papanastasiou
 				MEU[i] = MEU_Y[i] + MEU0 * pow(4 * II[i], (N - 1) / 2);
 
 				// MEU_Y rheological model
-				//MEU[i] = MEU_Y[i] + meu0;
+				//MEU[i] = MEU_Y[i] + meu_0;
 				
 				if (II[i] == 0 || MEU[i]>visc_max) MEU[i] = visc_max;
 				if (PTYPE[i] <= 0) MEU[i] = MEU[i] * C[i] + DNS_FL1*KNM_VS1*(1 - C[i]);
@@ -1605,8 +1667,11 @@ void WallNoSlipVscIntVal_omp(){
 
 	//---------------------------------------------------------------
 
-	delete[]S11; delete[]S12; delete[]S13; delete[]S22; delete[]S23; delete[]S33; delete[]BL; delete[]WL; delete[]PS; //delete[]p_smooth;
-	S11 = NULL; S12 = NULL; S13 = NULL; S22 = NULL; S23 = NULL; S33 = NULL; BL = NULL; WL = NULL; PS = NULL;// p_smooth = NULL;
+//	delete[]S11; delete[]S12; delete[]S13; delete[]S22; delete[]S23; delete[]S33; delete[]BL; delete[]WL; delete[]PS; //delete[]p_smooth;
+//	S11 = NULL; S12 = NULL; S13 = NULL; S22 = NULL; S23 = NULL; S33 = NULL; BL = NULL; WL = NULL; PS = NULL;// p_smooth = NULL;
+	
+	delete[]BL; delete[]WL; delete[]PS;
+	BL = NULL; WL = NULL; PS = NULL;
 }
 
 void VscTrm_omp(){
@@ -2741,8 +2806,6 @@ int main( int argc, char** argv) {
 	RdDat();
 	// Read mesh
 	//RdMes();
-	fp = fopen(IN_FILE, "r");
-	fscanf(fp,"%d",&nP);
 	mesh mesh(IN_FILE, nP);
 	mesh.readMeshFile(IN_MESH);
 	// Allocation
@@ -2764,6 +2827,13 @@ int main( int argc, char** argv) {
 	free(pndi);	free(numNeigh); free(Bc);
 	free(F1);	free(F2);	free(Nw);
 //	free(Posk); free(Velk); free(Acv);
+
+	free(C);	free(II);	free(PTYPE);
+	free(MEU);	free(MEU_Y);	free(Inertia);
+	free(pnew);	free(p_rheo_new);	free(RHO);
+	free(p_smooth);	free(VF);	free(S12);
+	free(S13);	free(S23);	free(S11);
+	free(S22);	free(S33);
 
 	printf("end emps_omp.\n");
 	return 0;
