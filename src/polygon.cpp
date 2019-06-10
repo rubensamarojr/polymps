@@ -85,8 +85,8 @@ double mesh::interpolate(int dim, int wijType, double re, double x, bool extrapo
    				2.033415e-01,1.410236e-01,1.134677e-01,8.921162e-02,6.598985e-02,4.373757e-02,2.239533e-02,1.908397e-03,0.000000e+00,0.000000e+00,
    				0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00};
 		}
-   		else if (wijType = 1){}
-   		else if (wijType = 2){}
+   		else if (wijType == 1){}
+   		else if (wijType == 2){}
    	}
    	else {
    		if (wijType == 0){
