@@ -29,14 +29,16 @@ public:
   // Read mesh file (STL)
   void readMeshFile(const std::string& path);
   // Interpolate the value of wall weight function from a given data
-  double interpolate(int dim, int wijType, double re, double x, bool extrapolate);
+  double interpolateWij(int dim, int wijType, double re, double x, bool extrapolate);
+  // Interpolate the value of wall first order derivative weight function from a given data
+  double interpolateDwij(int dim, int wijType, double re, double x, bool extrapolate);
   // Find closest point on the mesh from a particle and corrects the PND and number of neighboors
   // Real-time collision detection, Ericson, Chapter 5 - Pg 141 - function ClosestPtPointTriangle
   void closestPointPNDBoundary();
   // For Triangle meshes, the AABB tree is used to accelerate point-mesh closest point queries given a 
   // mesh (V,F) and a query point P (Particle) find the closest point C in the triangle face or vertex
   // Libigl
-  void closestPointPNDBoundaryAABB(int dim, double re2, int nP, int *Typ, int fld, double *Pos, 
+  void closestPointPNDBoundaryAABB(int dim, double re2, int nP,  int wijType, int *Typ, int fld, double *Pos, 
     double *wallPos, double *mirrorPos, double *niw, int *numNeigh, std::vector<int>& meshParticlesNeighbors);
   // Correction of velocity due the wall gradient of pressure
   void correctVelocityWallPressure(const double timer);

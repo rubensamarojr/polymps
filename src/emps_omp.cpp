@@ -13,31 +13,34 @@
 //#define IN_FILE "input/dambreak_fluid.prof"
 //#define IN_FILE "input/brumadinho_fluid_lo10p00.prof"
 //#define IN_FILE "input/brumadinho_fluid_lo05p00_desl.prof"
-#define IN_FILE "input/damErosion3D_lo05p00e-03_mps.grid"
+#define IN_FILE "input/dam1610_3D_fluid_lo0p010_mps.grid"
+//#define IN_FILE "input/hydro_3D_lo0p010_fluid_mps.grid"
 
 // Mesh file
-//#define IN_MESH "input/dam1610.stl"
+#define IN_MESH "input/dam1610.stl"
 //#define IN_MESH "input/BRUMADINHO_space10_model_lucas_top_0p50.stl"
-#define IN_MESH "input/damErosion3D.stl"
+//#define IN_MESH "input/damErosion3D.stl"
+//#define IN_MESH "input/hydro_3D_box.stl"
 
 // Output folder
 //#define OUT_FOLDER "BRUMADINHO_lo10p00_rho1500_v04p00e-01"
 //#define OUT_FOLDER "BRUMADINHO_lo05p00_rho1500_v04p00e-01"
 //#define OUT_FOLDER "dam1610_NONEW_02"
-#define OUT_FOLDER "damErosion3D_lo05p00e-03_02"
+#define OUT_FOLDER "dambreak01"
+//#define OUT_FOLDER "hydro_3D_lo0p010_03"
 
 // Output
-#define OUTPND 1
+#define OUTPND 0
 #define OUTAUX 1
 
 // Geometry
-#define PCL_DST 0.005				// Average particle distance (m) (10/5) (0.01)
+#define PCL_DST 0.01				// Average particle distance (m) (10/5) (0.01)
 #define MIN_X  (0.0 - PCL_DST*3)	// Minimum value in the x direction of the analysis domain (m) (0)
 #define MIN_Y  (0.0 - PCL_DST*3)	// Minimum value in the y direction of the analysis domain (m) (0)
 #define MIN_Z  (0.0 - PCL_DST*3)	// Minimum value in the z direction of the analysis domain (m) (700) (0)
-#define MAX_X  (2.0 + PCL_DST*3)	// Maximum value in the x direction of the analysis domain (m) (6000) (1.65)
-#define MAX_Y  (0.1 + PCL_DST*3)	// Maximum value in the y direction of the analysis domain (m) (5300) (0.15)
-#define MAX_Z  (0.2 + PCL_DST*30)	// Maximum value in the z direction of the analysis domain (m) (1300) (0.70)
+#define MAX_X  (1.7 + PCL_DST*3)	// Maximum value in the x direction of the analysis domain (m) (6000) (1.65) (1.7)
+#define MAX_Y  (0.2 + PCL_DST*3)	// Maximum value in the y direction of the analysis domain (m) (5300) (0.15) (0.2)
+#define MAX_Z  (0.7 + PCL_DST*30)	// Maximum value in the z direction of the analysis domain (m) (1300) (0.70) (0.6)
 // Model
 #define DIM 3				// Dimension
 #define GST -1				// Ghost particle ID
@@ -59,7 +62,7 @@
 #define G_Y 0.0				// Gravity acceleration y component (m/s2)
 #define G_Z -9.81			// Gravity acceleration z component (m/s2)
 // Rheological parameters
-#define Fluid2_type 1		// Newtonian:0 , Non Newtonian:1 
+#define Fluid2_type 0		// Newtonian:0 , Non Newtonian:1 
 #define N 1.2				// flow behaviour (power law) index
 #define MEU0 0.03			// consistency index
 #define PHI 0.541			// friction angle (RAD) lower limit
@@ -80,28 +83,36 @@
 #define VF_min 0.25		// Minimum volume fraction
 #define VF_max 0.65		// Maximum volume fraction
 // Numerical
-#define DT 0.000125				// Time step (s) (0.02/0.01) (0.00025)
-#define FIN_TIM 1.05		// Time of simulation (s)
-#define OPT_FQC 1000			// Number of iterations to determine the output interval
+#define DT 0.00025				// Time step (s) (0.02/0.01) (0.00025)
+#define FIN_TIM 1.00		// Time of simulation (s)
+#define OPT_FQC 100			// Number of iterations to determine the output interval
 #define MPS_TYP	1			// Explicit MPS = 0 ;  Weakly compressible MPS = 1
 #define GRD_TYP	0			// Pressure gradient: Pj - Pmin = 0 ;  Pj + Pi = 1 ; Pj + Pi - 2*Pmin = 0
 #define RLX_PRS 1.0			// Relaxation factor for pressure correction
-#define SND 10.00			// Sound speed (m/s) (10)
+#define SND 20.00			// Sound speed (m/s) (10)
 #define GAM 7.0				// Gamma weakly compressible MPS
-#define ARF 5000000.0			// Wall coefficent repulsive force (10000/100000) (500000)
-#define SLP 0				// No-slip = 0 ; Slip = 1 
+#define ADJ_VEL 1			// Adjusted velocity: No = 0, Yes = 1 or 2
+#define DRI 0.005			// Adjusted velocity paramater (1) DRI <= 0.01
+#define VEL_A 0.9			// Adjusted velocity paramater (2) a = 0.9
+#define ARF 2000000.0			// Wall coefficent repulsive force (10000/100000) (500000)
+#define SLP 0				// No-slip = 0 ; Slip = 1
 #define CRT_NUM 0.2			// Courant (CFL) condition number
 #define PND_TRS 0.93			// Surface threshold PND
 #define NGH_TRS 0.85		// Surface threshold Neighboors (not implemented)
 #define COL_RAT 0.2			// Collision ratio
-#define DST_LMT_RAT 0.85	// Coefficient of distance which does not allow any further access between particles (0.9)
+#define DST_LMT_RAT 0.9	// Coefficient of distance which does not allow any further access between particles (0.9)
+#if MPS_TYP==0
 #define WEI(dst, re) ((re/dst) - 1.0)	// Weight function
+#define WEI_GRAD(dst, re) ((re/dst) - 1.0)	// Weight function Gradient
+#define DEL_WEI(dst, re) (-re*pow(1/dst,2))	// Derivate of weight function
+#else
+#define WEI(dst, re) (pow(1-dst/re,3.0))	// Weight function
+#define WEI_GRAD(dst, re) (pow(1-dst/re,3.0))	// Weight function
+#define DEL_WEI(dst, re) (-3/re*pow(1-(dst/re),2))	// Derivate of weight function
+#endif
 //#define WEI(dst, re) ((re/dst+dst/re) - 2.0)	// Weight function
 //#define WEI(dst, re) (re/dst-dst/re)	// Weight function
-//#define WEI(dst, re) (pow(1-dst/re,3.0))	// Weight function
-#define WEI_GRAD(dst, re) ((re/dst) - 1.0)	// Weight function Gradient
 //#define WEI_GRAD(dst, re) (re/dst-dst/re)	// Weight function Gradient
-//#define WEI_GRAD(dst, re) (pow(1-dst/re,3.0))	// Weight function
 
 FILE* fp;
 char filename[256];
@@ -114,14 +125,15 @@ double r,r2;
 double DB,DB2,DBinv;
 int nBx,nBy,nBz,nBxy,nBxyz;
 int *bfst,*blst,*nxt;
-double n0,lmd,A1,A2,A3,A4,rlim,rlim2,COL;
+double n0,lmd,A1,A2,A3,A4,A5,rlim,rlim2,COL;
 double Dns[NUM_TYP],invDns[NUM_TYP];
 // Polygon
 double n0Grad;
 double *wallPos, *mirrorPos, *niw, *pndi;
 int *numNeigh, *Bc, *Nw;
 
-double *F1, *F2;
+double *F1, *F2, *Normal;
+int wijType;
 //double *Posk, *Velk, *Acv;
 
 // Non-Newtonian
@@ -153,6 +165,7 @@ void ChkPcl(int i){
 
 void RdDat(void) {
 	fp = fopen(IN_FILE, "r");
+	if (fp == NULL) perror ("Error opening file");
 
 	int zeroZero;
 	fscanf(fp,"%d",&zeroZero);
@@ -165,6 +178,7 @@ void RdDat(void) {
 	Prs = (double*)malloc(sizeof(double)*nP);	// Particle pressure
 	pav = (double*)malloc(sizeof(double)*nP);	// Time averaged particle pressure
 	Typ = (int*)malloc(sizeof(int)*nP);			// Particle type
+	Normal = (double*)malloc(sizeof(double)*nP*3);	// Particle normal
 
 	// Polygons
 	wallPos = (double*)malloc(sizeof(double)*nP*3);		// Particle at wall coordinate
@@ -221,7 +235,7 @@ void RdDat(void) {
 	fclose(fp);
 	for(int i=0;i<nP;i++) {ChkPcl(i);}
 	for(int i=0;i<nP*3;i++) {Acc[i]=0.0;/*Acv[i]=0.0;*/}
-	for(int i=0;i<nP*3;i++) {wallPos[i]=0.0;mirrorPos[i]=0.0;F1[i]=0.0;F2[i]=0.0;}
+	for(int i=0;i<nP*3;i++) {wallPos[i]=0.0;mirrorPos[i]=0.0;F1[i]=0.0;F2[i]=0.0;Normal[i]=0.0;}
 	for(int i=0;i<nP;i++) {
 		niw[i]=0.0;numNeigh[i]=0.0;pndi[i]=0.0;Bc[i]=0;Nw[i]=0;
 		C[i]=0.0;II[i]=0.0;PTYPE[i]=0;MEU[i]=0.0;MEU_Y[i]=0.0;Inertia[i]=0.0;pnew[i]=0.0;p_rheo_new[i]=0.0;p_smooth[i]=0.0;VF[i]=0.0;
@@ -363,8 +377,12 @@ void WrtVtu(void) {
  		fprintf(fp,"<DataArray NumberOfComponents='1' type='Int32' Name='BC' format='ascii'>\n");
 		for(int i=0;i<nP;i++){fprintf(fp,"%d ",Bc[i]);}
  		fprintf(fp,"\n</DataArray>\n");
- 		//fprintf(fp,"<DataArray NumberOfComponents='1' type='Int32' Name='Nwall' format='ascii'>\n");
-		//for(int i=0;i<nP;i++){fprintf(fp,"%d ",Nw[i]);}
+ 		fprintf(fp,"<DataArray NumberOfComponents='1' type='Int32' Name='Nwall' format='ascii'>\n");
+		for(int i=0;i<nP;i++){fprintf(fp,"%d ",Nw[i]);}
+		fprintf(fp,"\n</DataArray>\n");
+		fprintf(fp,"<DataArray NumberOfComponents='3' type='Float32' Name='Normal' format='ascii'>\n");
+		for(int i=0;i<nP;i++){	fprintf(fp,"%f %f %f ",(float)Normal[i*3],(float)Normal[i*3+1],(float)Normal[i*3+2]);}
+ 		fprintf(fp,"\n</DataArray>\n");
  		//fprintf(fp,"<DataArray NumberOfComponents='3' type='Float32' Name='Fwall' format='ascii'>\n");
 		//for(int i=0;i<nP;i++){
 		//	fprintf(fp,"%f %f %f ",(float)Fwall[i*3],(float)Fwall[i*3+1],(float)Fwall[i*3+2]);
@@ -454,6 +472,7 @@ void SetPara(void){
 	A2 = SND*SND/n0;				// Coefficient used to calculate pressure E-MPS
 	A3 = -DIM/n0Grad;				// Coefficient used to calculate pressure gradient term
 	A4 = SND*SND;					// Coefficient used to calculate pressure WC-MPS
+	A5 = DRI*PCL_DST/n0;			// Coefficient used to adjust velocity
 	Dns[FLD]=DNS_FLD;			Dns[WLL]=DNS_WLL;
 	invDns[FLD]=1.0/DNS_FLD;	invDns[WLL]=1.0/DNS_WLL;
 	rlim = PCL_DST * DST_LMT_RAT;	// A distance that does not allow further access between particles
@@ -2518,7 +2537,7 @@ void WallNoSlipVscTrm_omp(){
 	    	normaliw[2] = 0;
 	    }
 
-	    //  Inverse transformation matrix Rinv_i = - I
+	    // Inverse transformation matrix Rinv_i = - I
 	    Rinv_i[0] = -1.0; Rinv_i[1] =  0.0; Rinv_i[2] =  0.0;
 		Rinv_i[3] =  0.0; Rinv_i[4] = -1.0; Rinv_i[5] =  0.0;
 		Rinv_i[6] =  0.0; Rinv_i[7] =  0.0; Rinv_i[8] = -1.0;
@@ -2712,6 +2731,247 @@ void UpPcl2_omp(void){
 	Crt = DT*vMax/PCL_DST;
 }
 
+// Improvements for accuracy and stability in a weakly-compressible particle method
+// https://www.sciencedirect.com/science/article/pii/S0045793016302250
+void AdjVel1_omp(){
+#pragma omp parallel for schedule(dynamic,64)
+	for(int i=0;i<nP;i++){
+	if(Typ[i] != GST){
+		double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
+		double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
+		double du_ix = 0.0;	double du_iy = 0.0;	double du_iz = 0.0;
+		//double ni = 0.0;
+		int ix = (int)((pos_ix - MIN_X)*DBinv) +1;
+		int iy = (int)((pos_iy - MIN_Y)*DBinv) +1;
+		int iz = (int)((pos_iz - MIN_Z)*DBinv) +1;
+		for(int jz=iz-1;jz<=iz+1;jz++){
+		for(int jy=iy-1;jy<=iy+1;jy++){
+		for(int jx=ix-1;jx<=ix+1;jx++){
+			int jb = jz*nBxy + jy*nBx + jx;
+			int j = bfst[jb];
+			if(j == -1) continue;
+			for(;;){
+				double v0 = Pos[j*3  ] - pos_ix;
+				double v1 = Pos[j*3+1] - pos_iy;
+				double v2 = Pos[j*3+2] - pos_iz;
+				double dst2 = v0*v0+v1*v1+v2*v2;
+				if(dst2<r2){
+				if(j!=i && Typ[j]!=GST){
+					double dst = sqrt(dst2);
+					double dw = DEL_WEI(dst, r);
+					du_ix += dw*(Vel[j*3  ]-vec_ix);
+					du_iy += dw*(Vel[j*3+1]-vec_iy);
+					du_iz += dw*(Vel[j*3+2]-vec_iz);
+					//double w = WEI(dst, r);
+					//ni += w;
+				}}
+				j = nxt[j];
+				if(j==-1) break;
+			}
+		}}}
+		if (pndi[i] > PND_TRS*n0){
+			Vel[i*3  ] -= A5*du_ix;
+			Vel[i*3+1] -= A5*du_iy;
+			Vel[i*3+2] -= A5*du_iz;
+		}
+		// else{
+		// 	double Inn[9], duAux[3];
+		// 	// I - nxn
+		// 	Inn[0] = 1.0 - Normal[i*3  ]*Normal[i*3  ]; Inn[1] = 0.0 - Normal[i*3  ]*Normal[i*3+1]; Inn[2] = 0.0 - Normal[i*3  ]*Normal[i*3+2];
+		// 	Inn[3] = 0.0 - Normal[i*3+1]*Normal[i*3  ]; Inn[4] = 1.0 - Normal[i*3+1]*Normal[i*3+1]; Inn[5] = 0.0 - Normal[i*3+1]*Normal[i*3+2];
+		// 	Inn[6] = 0.0 - Normal[i*3+2]*Normal[i*3  ]; Inn[7] = 0.0 - Normal[i*3+2]*Normal[i*3+1]; Inn[8] = 1.0 - Normal[i*3+2]*Normal[i*3+2];
+		// 	// (I - nxn)dr
+		// 	duAux[0] = Inn[0]*du_ix + Inn[1]*du_iy + Inn[2]*du_iz;
+		// 	duAux[1] = Inn[3]*du_ix + Inn[4]*du_iy + Inn[5]*du_iz;
+		// 	duAux[2] = Inn[6]*du_ix + Inn[7]*du_iy + Inn[8]*du_iz;
+		// 	Vel[i*3  ] -= A5*duAux[0];
+		// 	Vel[i*3+1] -= A5*duAux[1];
+		// 	Vel[i*3+2] -= A5*duAux[2];
+		// }
+	}}
+}
+
+// An accurate and stable multiphase moving particle semi-implicit method based on a corrective matrix for all particle interaction models
+// https://onlinelibrary.wiley.com/doi/full/10.1002/nme.5844
+void Normal_omp(){
+#pragma omp parallel for schedule(dynamic,64)
+	for(int i=0;i<nP;i++){
+	if(Typ[i] != GST){
+		double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
+		double dr_ix = 0.0;	double dr_iy = 0.0;	double dr_iz = 0.0;
+		int ix = (int)((pos_ix - MIN_X)*DBinv) +1;
+		int iy = (int)((pos_iy - MIN_Y)*DBinv) +1;
+		int iz = (int)((pos_iz - MIN_Z)*DBinv) +1;
+		for(int jz=iz-1;jz<=iz+1;jz++){
+		for(int jy=iy-1;jy<=iy+1;jy++){
+		for(int jx=ix-1;jx<=ix+1;jx++){
+			int jb = jz*nBxy + jy*nBx + jx;
+			int j = bfst[jb];
+			if(j == -1) continue;
+			for(;;){
+				double v0 = Pos[j*3  ] - pos_ix;
+				double v1 = Pos[j*3+1] - pos_iy;
+				double v2 = Pos[j*3+2] - pos_iz;
+				double dst2 = v0*v0+v1*v1+v2*v2;
+				if(dst2<r2){
+				if(j!=i && Typ[j]!=GST){
+					double dst = sqrt(dst2);
+					double w = WEI(dst, r);
+					dr_ix += v0*w/dst;
+					dr_iy += v1*w/dst;
+					dr_iz += v2*w/dst;
+				}}
+				j = nxt[j];
+				if(j==-1) break;
+			}
+		}}}
+		double norm2 = dr_ix*dr_ix + dr_iy*dr_iy + dr_iz*dr_iz;
+		if (norm2 > 0.0){
+			double norm = sqrt(norm2);
+			Normal[i*3  ] = dr_ix/norm;
+			Normal[i*3+1] = dr_iy/norm;
+			Normal[i*3+2] = dr_iz/norm;
+		}
+		else
+		{
+			Normal[i*3  ] = 0.0;
+			Normal[i*3+1] = 0.0;
+			Normal[i*3+2] = 0.0;
+		}
+	}}
+}
+
+void WallAdjVel1_omp(){
+	int nPartNearMesh = partNearMesh.size();
+	//printf(" Mesh %d \n", nPartNearMesh);
+	// Loop only for particles near mesh
+#pragma omp parallel for schedule(dynamic,64)
+	for(int im=0;im<nPartNearMesh;im++){
+	//for(int i=0;i<nP;i++){
+	int i = partNearMesh[im];
+	if(Typ[i] == FLD){
+		double pos_ix = Pos[i*3  ];	double pos_iy = Pos[i*3+1];	double pos_iz = Pos[i*3+2];
+		double pos_mix = mirrorPos[i*3  ];	double pos_miy = mirrorPos[i*3+1];	double pos_miz = mirrorPos[i*3+2];
+		double vec_ix = Vel[i*3  ];	double vec_iy = Vel[i*3+1];	double vec_iz = Vel[i*3+2];
+		double du_ix = 0.0;	double du_iy = 0.0;	double du_iz = 0.0;
+
+		// No-slip
+
+		// Inverse matrix Rinv_i = - I
+		double Rinv_i[9], normaliw[3], normalMod2;
+	    // Normal fluid-wall particle = 0.5*(Normal fluid-mirror particle)
+	    normaliw[0] = 0.5*(pos_ix - pos_mix); normaliw[1] = 0.5*(pos_iy - pos_miy); normaliw[2] = 0.5*(pos_iz - pos_miz);
+	    normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
+
+	    if (normalMod2 > 0.00000001) {
+	    	double normalMod = sqrt(normalMod2);
+	    	normaliw[0] = normaliw[0]/normalMod;
+	    	normaliw[1] = normaliw[1]/normalMod;
+	    	normaliw[2] = normaliw[2]/normalMod;
+	    }
+	    else {
+	    	normaliw[0] = 0;
+	    	normaliw[1] = 0;
+	    	normaliw[2] = 0;
+	    }
+
+	    // Inverse transformation matrix Rinv_i = - I
+	    Rinv_i[0] = -1.0; Rinv_i[1] =  0.0; Rinv_i[2] =  0.0;
+		Rinv_i[3] =  0.0; Rinv_i[4] = -1.0; Rinv_i[5] =  0.0;
+		Rinv_i[6] =  0.0; Rinv_i[7] =  0.0; Rinv_i[8] = -1.0;
+
+		double viwall[3], vtil[3];
+		// Wall velocity (0 if fixed)
+		viwall[0]=viwall[1]=viwall[2]=0.0;
+		// normal_iwall*v_iwall
+		double dotnv = normaliw[0]*viwall[0] + normaliw[1]*viwall[1] + normaliw[2]*viwall[2];
+		// vtil = vi - 2 {v_iwall - (normal_iwall*v_iwall)normal_iwall}
+		vtil[0] = vec_ix - 2*(viwall[0] - dotnv*normaliw[0]);
+		vtil[1] = vec_iy - 2*(viwall[1] - dotnv*normaliw[1]);
+		vtil[2] = vec_iz - 2*(viwall[2] - dotnv*normaliw[2]);
+		// Mirror particle velocity vi' = Rinv_i * [vi - 2 {v_iwall - (normal_iwall*v_iwall)normal_iwall}] 
+      	double vec_mix = (Rinv_i[0]*vtil[0] + Rinv_i[1]*vtil[1] + Rinv_i[2]*vtil[2]);
+		double vec_miy = (Rinv_i[3]*vtil[0] + Rinv_i[4]*vtil[1] + Rinv_i[5]*vtil[2]);
+		double vec_miz = (Rinv_i[6]*vtil[0] + Rinv_i[7]*vtil[1] + Rinv_i[8]*vtil[2]);
+
+		int ix = (int)((pos_ix - MIN_X)*DBinv) +1;
+		int iy = (int)((pos_iy - MIN_Y)*DBinv) +1;
+		int iz = (int)((pos_iz - MIN_Z)*DBinv) +1;
+		for(int jz=iz-1;jz<=iz+1;jz++){
+		for(int jy=iy-1;jy<=iy+1;jy++){
+		for(int jx=ix-1;jx<=ix+1;jx++){
+			int jb = jz*nBxy + jy*nBx + jx;
+			int j = bfst[jb];
+			if(j == -1) continue;
+			for(;;){
+				// Particle distance r_ij = Xj - Xi_temporary_position
+				double v0ij = Pos[j*3  ] - pos_ix;
+				double v1ij = Pos[j*3+1] - pos_iy;
+				double v2ij = Pos[j*3+2] - pos_iz;
+
+				double dstij2 = v0ij*v0ij+v1ij*v1ij+v2ij*v2ij;
+
+				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				double v0 = Pos[j*3  ] - pos_mix;
+				double v1 = Pos[j*3+1] - pos_miy;
+				double v2 = Pos[j*3+2] - pos_miz;
+
+				double dst2 = v0*v0+v1*v1+v2*v2;
+
+				// If inside neighboor of i and im (intersection)
+				if(dstij2<r2 && dst2<r2){
+				if(j!=i && Typ[j]!=GST){
+					double dst = sqrt(dst2);
+					double dw = DEL_WEI(dst, r);
+					du_ix += dw*(Vel[j*3  ]-vec_mix);
+					du_iy += dw*(Vel[j*3+1]-vec_miy);
+					du_iz += dw*(Vel[j*3+2]-vec_miz);
+				}}
+				j = nxt[j];
+				if(j==-1) break;
+			}
+		}}}
+		// Add "i" contribution ("i" is a neighboor of "mirror i")
+	  	double v0 = pos_ix - pos_mix;
+		double v1 = pos_iy - pos_miy;
+		double v2 = pos_iz - pos_miz;
+		double dst2 = v0*v0+v1*v1+v2*v2;
+		if(dst2<r2){
+			double dst = sqrt(dst2);
+			double dw = DEL_WEI(dst, r);
+			du_ix += dw*(vec_ix-vec_mix);
+			du_iy += dw*(vec_iy-vec_miy);
+			du_iz += dw*(vec_iz-vec_miz);
+	  	}
+
+		if (pndi[i] > PND_TRS*n0){
+			double dux = Rinv_i[0]*du_ix + Rinv_i[1]*du_iy + Rinv_i[2]*du_iz;
+	  		double duy = Rinv_i[3]*du_ix + Rinv_i[4]*du_iy + Rinv_i[5]*du_iz;
+	  		double duz = Rinv_i[6]*du_ix + Rinv_i[7]*du_iy + Rinv_i[8]*du_iz;
+			Vel[i*3  ] -= A5*dux;
+			Vel[i*3+1] -= A5*duy;
+			Vel[i*3+2] -= A5*duz;
+		}
+		// else{
+		// 	double Inn[9], duAux[3];
+		// 	// I - nxn
+		// 	Inn[0] = 1.0 - Normal[i*3  ]*Normal[i*3  ]; Inn[1] = 0.0 - Normal[i*3  ]*Normal[i*3+1]; Inn[2] = 0.0 - Normal[i*3  ]*Normal[i*3+2];
+		// 	Inn[3] = 0.0 - Normal[i*3+1]*Normal[i*3  ]; Inn[4] = 1.0 - Normal[i*3+1]*Normal[i*3+1]; Inn[5] = 0.0 - Normal[i*3+1]*Normal[i*3+2];
+		// 	Inn[6] = 0.0 - Normal[i*3+2]*Normal[i*3  ]; Inn[7] = 0.0 - Normal[i*3+2]*Normal[i*3+1]; Inn[8] = 1.0 - Normal[i*3+2]*Normal[i*3+2];
+		// 	double dux = Rinv_i[0]*du_ix + Rinv_i[1]*du_iy + Rinv_i[2]*du_iz;
+	 //  		double duy = Rinv_i[3]*du_ix + Rinv_i[4]*du_iy + Rinv_i[5]*du_iz;
+	 //  		double duz = Rinv_i[6]*du_ix + Rinv_i[7]*du_iy + Rinv_i[8]*du_iz;
+		// 	// (I - nxn)dr
+		// 	duAux[0] = Inn[0]*dux + Inn[1]*duy + Inn[2]*duz;
+		// 	duAux[1] = Inn[3]*dux + Inn[4]*duy + Inn[5]*duz;
+		// 	duAux[2] = Inn[6]*dux + Inn[7]*duy + Inn[8]*duz;
+		// 	Vel[i*3  ] -= A5*duAux[0];
+		// 	Vel[i*3+1] -= A5*duAux[1];
+		// 	Vel[i*3+2] -= A5*duAux[2];
+		// }
+	}}
+}
+
 void ClcEMPS(mesh mesh){
 	while(1){
 		if(iLP%100==0){
@@ -2747,7 +3007,7 @@ void ClcEMPS(mesh mesh){
 		ChkCol_omp();
 		// Fluid particles: Calculation of PND due wall and number of neighboors
 		// Positions of wall and mirror particles
-		mesh.closestPointPNDBoundaryAABB(DIM, r2, nP, Typ, FLD, Pos, wallPos, mirrorPos, niw, numNeigh, partNearMesh);
+		mesh.closestPointPNDBoundaryAABB(DIM, r2, nP, wijType, Typ, FLD, Pos, wallPos, mirrorPos, niw, numNeigh, partNearMesh);
 
 		// Pressure calculation
 		if(MPS_TYP==0)
@@ -2781,6 +3041,14 @@ void ClcEMPS(mesh mesh){
 		}
 		// Update velocity and positions
 		UpPcl2_omp();
+		// Adjust velocity
+		if(ADJ_VEL==1)
+		{
+			// MatrixCorr_omp();
+			//Normal_omp();
+			AdjVel1_omp();
+			//WallAdjVel1_omp();
+		}
 		// Pressure calculation
 		if(MPS_TYP==0)
 			MkPrs_omp();
@@ -2802,13 +3070,13 @@ int main( int argc, char** argv) {
     else{
     	printf("Directory created.\n");
     }
-	// Read data
+	// Read and allocte memory for data
 	RdDat();
 	// Read mesh
 	//RdMes();
 	mesh mesh(IN_FILE, nP);
 	mesh.readMeshFile(IN_MESH);
-	// Allocation
+	// Allocation of memory
 	AlcBkt();
 	// Setting parameters
 	SetPara();
@@ -2816,6 +3084,11 @@ int main( int argc, char** argv) {
 	WrtPvd();
 
 	timer_sta = get_dtime();
+	// Weight function
+	if(MPS_TYP==0)
+		wijType = 0;
+	else if(MPS_TYP==1)
+		wijType = 3;
 
 	ClcEMPS(mesh);
 
@@ -2826,6 +3099,7 @@ int main( int argc, char** argv) {
 	free(wallPos);	free(mirrorPos);	free(niw);
 	free(pndi);	free(numNeigh); free(Bc);
 	free(F1);	free(F2);	free(Nw);
+	free(Normal);
 //	free(Posk); free(Velk); free(Acv);
 
 	free(C);	free(II);	free(PTYPE);

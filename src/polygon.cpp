@@ -43,10 +43,11 @@ void mesh::readMeshFile(const std::string& path) {
   treeMesh.init(meshVertices, meshFaces);
 }
 
+// Weight function (Zij)
 // Returns interpolated value at x from parallel arrays ( xData, yData )
 // Assumes that xData has at least two elements, is sorted and is strictly monotonic increasing
 // boolean argument extrapolate determines behaviour beyond ends of array (if needed)
-double mesh::interpolate(int dim, int wijType, double re, double x, bool extrapolate)
+double mesh::interpolateWij(int dim, int wijType, double re, double x, bool extrapolate)
 {
    	// Ratio rij/re
    	std::vector<double> xData = {2.000000e-02,4.000000e-02,6.000000e-02,8.000000e-02,1.000000e-01,1.200000e-01,1.400000e-01,1.600000e-01,1.800000e-01,2.000000e-01,
@@ -147,9 +148,93 @@ double mesh::interpolate(int dim, int wijType, double re, double x, bool extrapo
    	return yL + dydx * ( rij_re - xL );                                         // linear interpolation
 }
 
+// First-order derivative of Weight function (DZij)
+// Returns interpolated value at x from parallel arrays ( xData, yData )
+// Assumes that xData has at least two elements, is sorted and is strictly monotonic increasing
+// boolean argument extrapolate determines behaviour beyond ends of array (if needed)
+double mesh::interpolateDwij(int dim, int wijType, double re, double x, bool extrapolate)
+{
+   	// Ratio rij/re
+   	std::vector<double> xData = {2.000000e-02,4.000000e-02,6.000000e-02,8.000000e-02,1.000000e-01,1.200000e-01,1.400000e-01,1.600000e-01,1.800000e-01,2.000000e-01,
+   								2.200000e-01,2.400000e-01,2.600000e-01,2.800000e-01,3.000000e-01,3.200000e-01,3.400000e-01,3.600000e-01,3.800000e-01,4.000000e-01,
+   								4.200000e-01,4.400000e-01,4.600000e-01,4.800000e-01,5.000000e-01,5.200000e-01,5.400000e-01,5.600000e-01,5.800000e-01,6.000000e-01,
+   								6.200000e-01,6.400000e-01,6.600000e-01,6.800000e-01,7.000000e-01,7.200000e-01,7.400000e-01,7.600000e-01,7.800000e-01,8.000000e-01,
+   								8.200000e-01,8.400000e-01,8.600000e-01,8.800000e-01,9.000000e-01,9.200000e-01,9.400000e-01,9.600000e-01,9.800000e-01,1 };
+   	/*
+   	// Mesh surface at center of wall particle
+   	// Weight function (Zij)
+   	std::vector<double> yData;
+   	if (condition_.dimension == 2) {
+   		yData= {5.324775e+01,2.807619e+01,1.958352e+01,1.526405e+01,1.260999e+01,1.078801e+01,9.441093e+00,8.390885e+00,7.538466e+00,6.824641e+00,
+				6.211883e+00,5.675301e+00,5.197765e+00,4.767128e+00,4.374544e+00,4.022795e+00,3.701045e+00,3.402413e+00,3.123826e+00,2.862821e+00,
+				2.646657e+00,2.448958e+00,2.262829e+00,2.087143e+00,1.920942e+00,1.763403e+00,1.629744e+00,1.506469e+00,1.389248e+00,1.277630e+00,
+				1.171215e+00,1.069645e+00,9.725965e-01,8.797768e-01,7.909196e-01,7.057820e-01,6.241412e-01,5.457926e-01,4.705477e-01,3.982322e-01,
+				3.286849e-01,2.617561e-01,1.973067e-01,1.363636e-01,1.111111e-01,8.695652e-02,6.382979e-02,4.166667e-02,2.040816e-02,0};
+   	}
+   	else {
+   		yData= {5.324775e+01,2.807619e+01,1.958352e+01,1.526405e+01,1.260999e+01,1.078801e+01,9.441093e+00,8.390885e+00,7.538466e+00,6.824641e+00,
+				6.211883e+00,5.675301e+00,5.197765e+00,4.767128e+00,4.374544e+00,4.022795e+00,3.701045e+00,3.402413e+00,3.123826e+00,2.862821e+00,
+				2.646657e+00,2.448958e+00,2.262829e+00,2.087143e+00,1.920942e+00,1.763403e+00,1.629744e+00,1.506469e+00,1.389248e+00,1.277630e+00,
+				1.171215e+00,1.069645e+00,9.725965e-01,8.797768e-01,7.909196e-01,7.057820e-01,6.241412e-01,5.457926e-01,4.705477e-01,3.982322e-01,
+				3.286849e-01,2.617561e-01,1.973067e-01,1.363636e-01,1.111111e-01,8.695652e-02,6.382979e-02,4.166667e-02,2.040816e-02,0};
+	}
+	*/
+	// Mesh surface tangent of wall particle
+   	// First-order derivative of Weight function (DZij)
+   	std::vector<double> yData;
+   	yData.clear();
+   	if (dim == 2) {
+   		if (wijType == 0){}
+   		else if (wijType == 1){}
+   		else if (wijType == 2){}
+   	}
+   	else {
+   		if (wijType == 0){
+   			// wij = re/r - 1
+		}
+		else if (wijType == 1){
+			// wij = re/r + r/re - 2
+		}
+		else if (wijType == 2){
+			// wij = re/r - r/re
+		}
+		else if (wijType == 3){
+			// dwij/drij = -3/re*(1 - r/re)^2
+			yData={-2.622022e+02,-2.468348e+02,-2.318073e+02,-2.171684e+02,-2.029474e+02,-1.891979e+02,-1.759739e+02,-1.633278e+02,-1.512109e+02,-1.394243e+02,
+				-1.279979e+02,-1.169713e+02,-1.063819e+02,-9.626575e+01,-8.662764e+01,-7.741953e+01,-6.866748e+01,-6.040059e+01,-5.264642e+01,-4.543104e+01,
+				-3.877909e+01,-3.271386e+01,-2.725737e+01,-2.243040e+01,-1.825256e+01,-1.463019e+01,-1.143514e+01,-8.674935e+00,-6.356975e+00,-4.488191e+00,
+				-3.075063e+00,-2.123654e+00,-1.483511e+00,-9.583414e-01,-5.474571e-01,-2.508584e-01,-6.854551e-02,-5.183026e-04,0.000000e+00,0.000000e+00,
+				0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00};
+		}
+   	}
+
+   	int sizeData = xData.size();
+   	double rij_re = x/re;
+
+   	int i = 0;                                                                  // find left end of interval for interpolation
+   	if ( rij_re >= xData[sizeData - 2] )										// special case: beyond right end
+   	{
+   		i = sizeData - 2;
+   	}
+   	else
+   	{
+		while ( rij_re > xData[i+1] ) i++;
+   	}
+   	double xL = xData[i], yL = yData[i], xR = xData[i+1], yR = yData[i+1];      // points on either side (unless beyond ends)
+   	if ( !extrapolate )                                                         // if beyond ends of array and not extrapolating
+   	{
+		if ( rij_re < xL ) yR = yL;
+		if ( rij_re > xR ) yL = yR;
+   	}
+
+   	double dydx = ( yR - yL ) / ( xR - xL );                                    // gradient
+
+   	return yL + dydx * ( rij_re - xL );                                         // linear interpolation
+}
+
 // Find closest point on the mesh from a particle and corrects the PND and number of neighboors
 // Libigl
-void mesh::closestPointPNDBoundaryAABB(int dim, double re2, int nP, int *Typ, int fld, double *Pos, 
+void mesh::closestPointPNDBoundaryAABB(int dim, double re2, int nP, int wijType, int *Typ, int fld, double *Pos, 
 	double *wallPos, double *mirrorPos, double *niw, int *numNeigh, std::vector<int>& particlesNearMesh) {
 
   	// MPS -> libigl
@@ -224,10 +309,10 @@ void mesh::closestPointPNDBoundaryAABB(int dim, double re2, int nP, int *Typ, in
 					//particlesNearMesh.push_back(i);
 
 					// PND due wall weight Z(xij)
-					niw[i] = interpolate(dim, 0, re, x, true);
+					niw[i] = interpolateWij(dim, wijType, re, x, true);
 					//printf("niw: %f\n",niw[i]);
 					// PND due wall weight Z(xij) to Gradient
-					//niw2[i] = interpolate(dim, 2, re, x, true);
+					//niw2[i] = interpolateWij(dim, 2, re, x, true);
 
 					/*
 					if (dim == 2) {
