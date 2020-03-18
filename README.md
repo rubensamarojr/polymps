@@ -8,7 +8,7 @@ Explicit Moving Particle Semi-implicit method with Polygon wall
 ## Usage
 Build the source code.
 ```bash
-make
+make all
 ```
 
 Run example codes as
