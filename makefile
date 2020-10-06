@@ -8,6 +8,7 @@
 # Copyright (c) 2017 Shota SUGIHARA
 # Distributed under the MIT License.
 
+# Directories
 BINARY_DIR := bin
 SOURCE_DIR := src
 OBJECT_DIR := obj
@@ -17,12 +18,20 @@ TARGET_DIR := src
 TARGET := $(wildcard $(TARGET_DIR)/*.cpp)
 LIB_DIR := lib
 
+# C compiler (GNU/INTEL) (g++) or (icpc)
 CC := g++
 CXX := g++
 DEBUGS := -O3
+
+# Got some preprocessor flags to pass ?
+# -I is a preprocessor flag, not a compiler flag
+
 #CXXFLAGS := $(DEBUGS) -std=c++11 -Wall -Wextra -MP -MMD
 CXXFLAGS := $(DEBUGS) -std=c++11 -Wextra -MP -MMD -fopenmp -lm
 CPPFLAGS := -I $(INCLUDE_DIR) -Iinclude/eigen
+
+# Got some linker flags ?
+# -L is a linker flag
 LDFLAGS := -L $(LIB_DIR)
 #LDLIBS := -lboost_regex
 LDLIBS :=
@@ -45,12 +54,19 @@ objects := $(target_objects) $(lib_objects)
 dependencies := $(objects:.o=.d)
 targets := $(addprefix $(BINARY_DIR)/, $(notdir $(target_objects:.o=)))
 
+# You should indicate whenever a rule does not produce any target output
+# with the .PHONY sepcial rule
 .PHONY: all
 all: $(targets)
 
+# List the prerequisites for building your executable, and fill its
+# recipe to tell make what to do with these
 $(BINARY_DIR)/%: $(OBJECT_LIB_DIR)/%.o $(lib_objects)
 	$(LINK.cpp) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
+# Since your source and object files don't share the same prefix, you
+# need to tell make exactly what to do since its built-in rules don't
+# cover your specific case
 $(OBJECT_LIB_DIR)/%.o: $(SOURCE_DIR)/%.cpp
 	$(COMPILE.cpp) $(OUTPUT_OPTION) $<
 
@@ -75,6 +91,3 @@ help:
 	@echo 'all     Compile and link all source files.'
 	@echo 'clean   Remove all intermediate files.'
 	@echo 'help    Display this information.'
-	@echo
-	@echo 'Copyright (c) 2017 Shota SUGIHARA'
-	@echo 'Distributed under the MIT License.'
