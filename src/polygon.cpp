@@ -1,275 +1,471 @@
 // Copyright (c) 2019 Rubens AMARO
 // Distributed under the MIT License.
-#include "polygon.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <iostream>
-#include <chrono>
+#include "polygon.h"
 
+mesh::mesh()
+{
+}
 
-mesh::mesh(const std::string& path, const int nP) {
-  //xWall = Eigen::MatrixXd::Zero(getSize(), 3);
-  // If closestPointPNDBoundaryAABB is used then comment 2 lines bellow ??
+mesh::~mesh()
+{
+}
+
+void mesh::initMesh(const int nP) {
+	//xWall = Eigen::MatrixXd::Zero(getSize(), 3);
+	// If closestPointPNDBoundaryAABB is used then comment 2 lines bellow ??
 	sqr_distance = Eigen::VectorXd::Zero(nP);
 	element_indice = Eigen::VectorXi::Zero(nP);
-  /////////////////////////////////////////////////
-	mirror_temporary_position = Eigen::Matrix3Xd::Zero(3, nP);
-	wall_temporary_position = Eigen::Matrix3Xd::Zero(3, nP);
-	r_iwall = Eigen::Matrix3Xd::Ones(3, nP);
-  
+/////////////////////////////////////////////////
+//mirror_temporary_position = Eigen::Matrix3Xd::Zero(3, nP);
+//wall_temporary_position = Eigen::Matrix3Xd::Zero(3, nP);
+//r_iwall = Eigen::Matrix3Xd::Ones(3, nP);
+
 	temporary_position = Eigen::MatrixXd::Zero(nP, 3);
 //	wall_temporary_position = Eigen::VectorXd::Zero(getSize());
 //	Xwall_position = Eigen::Matrix3Xd::Zero(3, getSize());
 //	Xim_position = Eigen::Matrix3Xd::Zero(3, getSize()); // Tanaka source
-//  meshV = Eigen::MatrixXd::Zero(getSize()*3, 3);
-//  meshF = Eigen::MatrixXi::Zero(getSize(), 3);
-//  meshN = Eigen::MatrixXd::Zero(getSize(), 3);
-//  readMeshFile(path);
-//  updateParticleNumberDensity();
-//  setInitialParticleNumberDensity();
-//  setLaplacianLambda();
-//  checkSurfaceParticles();
+//	meshV = Eigen::MatrixXd::Zero(getSize()*3, 3);
+//	meshF = Eigen::MatrixXi::Zero(getSize(), 3);
+//	meshN = Eigen::MatrixXd::Zero(getSize(), 3);
+//	readMeshFile(path);
+//	updateParticleNumberDensity();
+//	setInitialParticleNumberDensity();
+//	setLaplacianLambda();
+//	checkSurfaceParticles();
 }
 
 void mesh::readMeshFile(const std::string& path) {
-  // Load a mesh
-  igl::readSTL(path, meshVertices, meshFaces, meshNormals);
-  // Find the bounding box
-  Eigen::Vector3d m = meshVertices.colwise().minCoeff();
-  Eigen::Vector3d M = meshVertices.colwise().maxCoeff();
-  std::cout << "m: " << m << std::endl;
-  std::cout << "M: " << M << std::endl;
-  // Static mesh V, F
-  treeMesh.init(meshVertices, meshFaces);
+	// Load a mesh
+	igl::readSTL(path, meshVertices, meshFaces, meshNormals);
+	// Find the bounding box
+	Eigen::Vector3d m = meshVertices.colwise().minCoeff();
+	Eigen::Vector3d M = meshVertices.colwise().maxCoeff();
+	std::cout << "Minimum mesh limit: " << m.transpose() << std::endl;
+	std::cout << "Maximum mesh limit: " << M.transpose() << std::endl;
+	// Static mesh V, F
+	//treeMesh.init(meshVertices, meshFaces);
+
+	for(int mf=0;mf<meshFaces.rows();mf++) {
+		int node0 = meshFaces(mf,0);
+		int node1 = meshFaces(mf,1);
+		int node2 = meshFaces(mf,2);
+
+		Eigen::Vector3d a0, a1, a2;
+		a0 << meshVertices(node0,0) , meshVertices(node0,1) , meshVertices(node0,2);
+		a1 << meshVertices(node1,0) , meshVertices(node1,1) , meshVertices(node1,2);
+		a2 << meshVertices(node2,0) , meshVertices(node2,1) , meshVertices(node2,2);
+		//std::cout << "mf: " << mf << std::endl;
+		//std::cout << "a0: " << a0 << std::endl;
+		//std::cout << "a1: " << a1 << std::endl;
+		//std::cout << "a2: " << a2 << std::endl;
+	}
+
+	std::cout << " Mesh file name " << path << std::endl;
+	std::cout << " original  mesh containts " << meshVertices.rows() << " vertices and " << meshFaces.rows() << " faces" << std::endl;
+
+	// Remove duplicated vertices
+	//Eigen::MatrixXi SVI, SVJ;
+	Eigen::VectorXi VI;
+	//igl::remove_duplicate_vertices(meshVertices, meshFaces, 0.0, SV, SVI, SVJ, SF);
+	//igl::remove_duplicate_vertices(meshVertices, 0.0, SV, SVI, SVJ);
+	igl::remove_duplicates(meshVertices, meshFaces, NV, NF, VI, 2.0e-15);
+
+	//Eigen::MatrixXd NormalAux;
+	//NNormals = Eigen::MatrixXd::Zero(NF.rows(), 3);
+	// Compute face normals via vertex position list, face list
+	igl::per_face_normals(NV, NF, NNormals);
+	//igl::per_face_normals(NV, NF, NormalAux);
+
+	// Forces on nodes
+	//FN = Eigen::MatrixXd::Zero(NF.rows(), 3);
+	//igl::per_face_normals(NV, NF, FN);
+
+	// Static mesh V, F
+	treeMesh.init(NV, NF);
+	//std::cout << "nVertices: " << meshVertices.rows() << std::endl;
+}
+
+void mesh::writeMeshFile(const int mesh_ID, const std::string& path, const int iF) {
+
+	char numstr[21], mesh_IDstr[21]; // enough to hold all numbers up to 64-bits
+	sprintf(numstr, "%05d", iF);
+	sprintf(mesh_IDstr, "%02d", mesh_ID);
+	std::string outout_filename = path + "/mesh" + mesh_IDstr + "_" + numstr + ".stl";
+
+//  #include <sstream>
+
+	//std::ostringstream outout_filename;
+	//outout_filename << path << "select logged from login where id = " << iF;
+	//std::string query(outout_filename.str());
+
+	//char outout_filename[256];
+
+	//sprintf(outout_filename, path"/mesh%05d",iF);
+
+	//sprintf(outout_filename, OUT_FOLDER"/output%05d.vtu",iF);
+	//Eigen::Transform<double,3,Eigen::Affine> t = Eigen::Transform<double,3,Eigen::Affine>::Identity();
+	//t.rotate(Eigen::AngleAxisd(0.5 * M_PI * timer.getCurrentDeltaTime(), Eigen::Vector3d::UnitZ()));
+	//t.translate(Eigen::Vector3d(0, 0, 0)) ;
+	//meshVertices = (t * meshVertices.transpose().colwise().homogeneous()).transpose();
+	//std::cout << "mVertices: " << meshVertices << " \n";
+
+	//std::string output_index = ;
+	//std::string output_index2 = (boost::format(path) % output_index).str();
+
+	//std::string output_index3 = (boost::format(path + "output_%1%.stl") % output_index).str();
+
+	igl::writeSTL(outout_filename,NV,NF,NNormals);
+	//igl::writeSTL(outout_filename,NV,NF); 
+}
+
+// Update node positions based on Finite Element Method computation - NOT WORKING !!!
+void mesh::updateMesh(double *nodeX, double *nodeY, double *nodeZ, double *nodeDX, double *nodeDY, double *nodeDZ) {
+	// Update node positions
+	int nNodes = NV.rows();
+#pragma omp parallel for
+	for(int nn=0;nn<nNodes;nn++) {
+		nodeX[nn] += nodeDX[nn];
+		nodeY[nn] += nodeDY[nn];
+		nodeZ[nn] += nodeDZ[nn];
+		NV(nn,0) = nodeX[nn];
+		NV(nn,1) = nodeY[nn];
+		NV(nn,2) = nodeZ[nn];
+	}
+
+	Eigen::MatrixXd NormalAux;
+	// Compute face normals via vertex position list, face list
+	igl::per_face_normals(NV, NF, NormalAux);
+#pragma omp parallel for
+	for(int ff=0;ff<NF.rows();ff++) {
+		NNormals(ff,0) = NormalAux(ff,0);
+		NNormals(ff,1) = NormalAux(ff,1);
+		NNormals(ff,2) = NormalAux(ff,2);
+	}
+}
+
+// Update forced motion rigid wall
+void mesh::updateForcedMesh(double *nodeX, double *nodeY, double *nodeZ, double *velVWall, const double dt, const double time) {
+	// Update node positions
+	// Set the motion here
+	// Liao 2015
+	double f1 = -300.0*time*time*time + 75.0*time*time;
+	double f2 = -300.0*(time+dt)*(time+dt)*(time+dt) + 75.0*(time+dt)*(time+dt);
+	double vel = (f2 - f1)/dt;
+
+	if(time > 0.13)
+		vel = 0.0;
+
+	velVWall[0] = 0.0;
+	velVWall[1] = 0.0;
+	velVWall[2] = vel;
+
+	double dx = 0.0;
+	double dy = 0.0;
+	double dz = vel*dt;
+
+	int nNodes = NV.rows();
+#pragma omp parallel for
+	for(int nn=0;nn<nNodes;nn++) {
+		nodeX[nn] += dx;
+		nodeY[nn] += dy;
+		nodeZ[nn] += dz;
+		NV(nn,0) = nodeX[nn];
+		NV(nn,1) = nodeY[nn];
+		NV(nn,2) = nodeZ[nn];
+	}
+
+	Eigen::MatrixXd NormalAux;
+	// Compute face normals via vertex position list, face list
+	igl::per_face_normals(NV, NF, NormalAux);
+#pragma omp parallel for
+	for(int ff=0;ff<NF.rows();ff++) {
+		NNormals(ff,0) = NormalAux(ff,0);
+		NNormals(ff,1) = NormalAux(ff,1);
+		NNormals(ff,2) = NormalAux(ff,2);
+	}
+}
+
+// Creation of the wall weight (Zij) and number of neighboors functions (numNeighWall)
+double mesh::initWijnNeigh(int dim, int wijType, double lo, double reL, double reS) {
+	double reS2 = reS*reS;
+	double reL2 = reL*reL;
+	// Number of points of the functions
+	int n = 50;
+
+	// Tangent wall surface
+	double X0 = 0.0;	double Y0 = 0.0;	double Z0 = 0.0;
+
+	int limiteS = ceil(reS/lo);
+	int limiteL = ceil(reL/lo);
+	// Position of "i" changing along the verical axis (distance from the plane wall)
+	for(int i=1;i<=n;i++) {
+		if(dim == 2) {
+			double xi, yi, riw, riw_re;
+			xi=0.0;	yi=i*reS/n;
+			// Distance to wall surface
+			riw = sqrt((X0-xi)*(X0-xi) + (Y0-yi)*(Y0-yi));
+			// Ratio rij/re
+			riw_re = riw/reS;
+			xDataPND.push_back(riw_re);
+			riw_re = riw/reL;
+			xDataNeigh.push_back(riw_re);
+
+			double n0 = 0.0;
+			// Neighborhood
+			for(int ix= -limiteS;ix<=limiteS;ix++) {
+			for(int iy= -limiteS;iy<=0;iy++) {
+				double xj = lo * (double)ix;
+				double yj = lo * (double)(iy - 0.5);
+				double rij2 = (xj-xi)*(xj-xi)+(yj-yi)*(yj-yi);
+				if(rij2 < reS2) {
+					if(rij2 == 0.0) continue;
+					double rij = sqrt(rij2);
+					if(wijType == 0)
+						n0 += reS/rij - 1;
+					if(wijType == 1)
+						n0 += reS/rij + rij/reS - 2;
+					if(wijType == 2)
+						n0 += reS/rij - rij/reS;
+					if(wijType == 3)
+						n0 += pow(1-rij/reS,3.0);
+				}
+			}}
+			// Particle number density due wall
+			Zij.push_back(n0);
+
+			int nNeigh = 0;
+			n0 = 0.0;
+			// Neighborhood
+			for(int ix= -limiteL;ix<=limiteL;ix++) {
+			for(int iy= -limiteL;iy<=0;iy++) {
+				double xj = lo * (double)ix;
+				double yj = lo * (double)(iy - 0.5);
+				double rij2 = (xj-xi)*(xj-xi)+(yj-yi)*(yj-yi);
+				if(rij2 < reL2) {
+					if(rij2 == 0.0) continue;
+					nNeigh += 1;
+				}
+			}}
+			// Number of neighboors due wall
+			nNeighWall.push_back(nNeigh);
+		}
+		if(dim == 3) {
+			double xi, yi, zi, riw, riw_re;
+			xi=0.0;	yi=i*reS/n;	zi=0.0;
+			// Distance to wall surface
+			riw = sqrt((X0-xi)*(X0-xi) + (Y0-yi)*(Y0-yi) + (Z0-zi)*(Z0-zi));
+			// Ratio rij/re
+			riw_re = riw/reS;
+			riw_re = riw/reS;
+			xDataPND.push_back(riw_re);
+			riw_re = riw/reL;
+			xDataNeigh.push_back(riw_re);
+			
+			//std::cout << " xData[" << i << "]: " << riw << std::endl;
+
+			double n0 = 0.0;
+			// Neighborhood
+			for(int ix= -limiteS;ix<=limiteS;ix++) {
+			for(int iy= -limiteS;iy<=0      ;iy++) {
+			for(int iz= -limiteS;iz<=limiteS;iz++) {
+				double xj = lo * (double)ix;
+				double yj = lo * (double)(iy - 0.5);
+				double zj = lo * (double)iz;
+				double rij2 = (xj-xi)*(xj-xi)+(yj-yi)*(yj-yi)+(zj-zi)*(zj-zi);
+				if(rij2 < reS2) {
+					if(rij2 == 0.0) continue;
+					double rij = sqrt(rij2);
+					if(wijType == 0)
+						n0 += reS/rij - 1;
+					if(wijType == 1)
+						n0 += reS/rij + rij/reS - 2;
+					if(wijType == 2)
+						n0 += reS/rij - rij/reS;
+					if(wijType == 3)
+						n0 += pow(1-rij/reS,3.0);
+				}
+			}}}
+			// Particle number density due wall
+			Zij.push_back(n0);
+
+			int nNeigh = 0;
+			n0 = 0.0;
+			// Neighborhood
+			for(int ix= -limiteL;ix<=limiteL;ix++) {
+			for(int iy= -limiteL;iy<=0      ;iy++) {
+			for(int iz= -limiteL;iz<=limiteL;iz++) {
+				double xj = lo * (double)ix;
+				double yj = lo * (double)(iy - 0.5);
+				double zj = lo * (double)iz;
+				double rij2 = (xj-xi)*(xj-xi)+(yj-yi)*(yj-yi)+(zj-zi)*(zj-zi);
+				if(rij2 < reL2) {
+					if(rij2 == 0.0) continue;
+					nNeigh += 1;
+				}
+			}}}
+			// Number of neighboors due wall
+			nNeighWall.push_back(nNeigh);
+		}
+	}
+
+	// Auxiliary print
+	int printData = 0;
+	
+	if(printData == 1){
+		std::cout << " xDataPND" << std::endl;
+		for(int i=0;i<xDataPND.size();i++)
+			std::cout << xDataPND[i] << ", ";
+		std::cout << std::endl;
+		std::cout << " Zij" << std::endl;
+		for(int i=0;i<Zij.size();i++)
+			std::cout << Zij[i] << ", ";
+		std::cout << std::endl;
+		std::cout << " xDataNeigh" << std::endl;
+		for(int i=0;i<xDataNeigh.size();i++)
+			std::cout << xDataNeigh[i] << ", ";
+		std::cout << std::endl;
+		std::cout << " nNeighWall" << std::endl;
+		for(int i=0;i<nNeighWall.size();i++)
+			std::cout << nNeighWall[i] << ", ";
+		std::cout << std::endl;
+	}
 }
 
 // Weight function (Zij)
-// Returns interpolated value at x from parallel arrays ( xData, yData )
+// Returns interpolated value at x from parallel arrays ( xData, Zij )
 // Assumes that xData has at least two elements, is sorted and is strictly monotonic increasing
 // boolean argument extrapolate determines behaviour beyond ends of array (if needed)
-double mesh::interpolateWij(int dim, int wijType, double re, double x, bool extrapolate)
+double mesh::interpolateWij(double re, double x, bool extrapolate)
 {
-   	// Ratio rij/re
-   	std::vector<double> xData = {2.000000e-02,4.000000e-02,6.000000e-02,8.000000e-02,1.000000e-01,1.200000e-01,1.400000e-01,1.600000e-01,1.800000e-01,2.000000e-01,
-   								2.200000e-01,2.400000e-01,2.600000e-01,2.800000e-01,3.000000e-01,3.200000e-01,3.400000e-01,3.600000e-01,3.800000e-01,4.000000e-01,
-   								4.200000e-01,4.400000e-01,4.600000e-01,4.800000e-01,5.000000e-01,5.200000e-01,5.400000e-01,5.600000e-01,5.800000e-01,6.000000e-01,
-   								6.200000e-01,6.400000e-01,6.600000e-01,6.800000e-01,7.000000e-01,7.200000e-01,7.400000e-01,7.600000e-01,7.800000e-01,8.000000e-01,
-   								8.200000e-01,8.400000e-01,8.600000e-01,8.800000e-01,9.000000e-01,9.200000e-01,9.400000e-01,9.600000e-01,9.800000e-01,1 };
-   	/*
-   	// Mesh surface at center of wall particle
-   	// Weight function (Zij)
-   	std::vector<double> yData;
-   	if (condition_.dimension == 2) {
-   		yData= {5.324775e+01,2.807619e+01,1.958352e+01,1.526405e+01,1.260999e+01,1.078801e+01,9.441093e+00,8.390885e+00,7.538466e+00,6.824641e+00,
-				6.211883e+00,5.675301e+00,5.197765e+00,4.767128e+00,4.374544e+00,4.022795e+00,3.701045e+00,3.402413e+00,3.123826e+00,2.862821e+00,
-				2.646657e+00,2.448958e+00,2.262829e+00,2.087143e+00,1.920942e+00,1.763403e+00,1.629744e+00,1.506469e+00,1.389248e+00,1.277630e+00,
-				1.171215e+00,1.069645e+00,9.725965e-01,8.797768e-01,7.909196e-01,7.057820e-01,6.241412e-01,5.457926e-01,4.705477e-01,3.982322e-01,
-				3.286849e-01,2.617561e-01,1.973067e-01,1.363636e-01,1.111111e-01,8.695652e-02,6.382979e-02,4.166667e-02,2.040816e-02,0};
-   	}
-   	else {
-   		yData= {5.324775e+01,2.807619e+01,1.958352e+01,1.526405e+01,1.260999e+01,1.078801e+01,9.441093e+00,8.390885e+00,7.538466e+00,6.824641e+00,
-				6.211883e+00,5.675301e+00,5.197765e+00,4.767128e+00,4.374544e+00,4.022795e+00,3.701045e+00,3.402413e+00,3.123826e+00,2.862821e+00,
-				2.646657e+00,2.448958e+00,2.262829e+00,2.087143e+00,1.920942e+00,1.763403e+00,1.629744e+00,1.506469e+00,1.389248e+00,1.277630e+00,
-				1.171215e+00,1.069645e+00,9.725965e-01,8.797768e-01,7.909196e-01,7.057820e-01,6.241412e-01,5.457926e-01,4.705477e-01,3.982322e-01,
-				3.286849e-01,2.617561e-01,1.973067e-01,1.363636e-01,1.111111e-01,8.695652e-02,6.382979e-02,4.166667e-02,2.040816e-02,0};
+	int sizeData = xDataPND.size();
+	double rij_re = x/re;
+
+	int i = 0;									// find left end of interval for interpolation
+	if(rij_re >= xDataPND[sizeData - 2]) {		// special case: beyond right end
+		i = sizeData - 2;
 	}
-	*/
-	// Mesh surface tangent of wall particle
-   	// Weight function (Zij)
-   	std::vector<double> yData;
-   	yData.clear();
-   	if (dim == 2) {
-   		if (wijType == 0){
-   			yData={5.241062e+00,4.806382e+00,4.410487e+00,4.054778e+00,3.730637e+00,3.429948e+00,3.149566e+00,2.886979e+00,2.666136e+00,2.467269e+00,
-   				2.280089e+00,2.103452e+00,1.936385e+00,1.778054e+00,1.641818e+00,1.517942e+00,1.400164e+00,1.288030e+00,1.181136e+00,1.079119e+00,
-   				9.816527e-01,8.884420e-01,7.992183e-01,7.137363e-01,6.317716e-01,5.531178e-01,4.775850e-01,4.049977e-01,3.351934e-01,2.680213e-01,
-   				2.033415e-01,1.410236e-01,1.134677e-01,8.921162e-02,6.598985e-02,4.373757e-02,2.239533e-02,1.908397e-03,0.000000e+00,0.000000e+00,
-   				0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00};
-		}
-   		else if (wijType == 1){}
-   		else if (wijType == 2){}
-   	}
-   	else {
-   		if (wijType == 0){
-   			// wij = re/r - 1
-   			yData={8.806738e+00,8.181128e+00,7.606205e+00,7.077553e+00,6.583733e+00,6.113077e+00,5.662959e+00,5.231327e+00,4.868527e+00,4.537055e+00,
-   				4.218042e+00,3.910643e+00,3.614143e+00,3.327929e+00,3.065546e+00,2.817415e+00,2.577400e+00,2.345152e+00,2.120345e+00,1.902679e+00,
-   				1.691872e+00,1.487658e+00,1.289784e+00,1.098012e+00,9.121101e-01,7.871401e-01,6.699803e-01,5.570121e-01,4.480352e-01,3.428608e-01,
-   				2.413113e-01,1.432186e-01,1.134677e-01,8.921162e-02,6.598985e-02,4.373757e-02,2.239533e-02,1.908397e-03,0.000000e+00,0.000000e+00,
-   				0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00};
-		}
-		else if (wijType == 1){
-			// wij = re/r + r/re - 2
-			yData={4.283453e+00,3.870382e+00,3.499389e+00,3.164078e+00,2.859517e+00,2.582070e+00,2.328922e+00,2.097837e+00,1.886323e+00,1.691247e+00,
-				1.511369e+00,1.345706e+00,1.193412e+00,1.053747e+00,9.258529e-01,8.086067e-01,7.014818e-01,6.040244e-01,5.158145e-01,4.364597e-01,
-				3.655917e-01,3.028630e-01,2.479442e-01,2.005228e-01,1.603010e-01,1.262202e-01,9.705254e-02,7.255457e-02,5.250003e-02,3.667598e-02,
-				2.488189e-02,1.692868e-02,1.156289e-02,7.306856e-03,4.085086e-03,1.832813e-03,4.905643e-04,3.635042e-06,0.000000e+00,0.000000e+00,
-				0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00};
-		}
-		else if (wijType == 2){
-			// wij = re/r - r/re
-			yData={1.333002e+01,1.249187e+01,1.171302e+01,1.099103e+01,1.030795e+01,9.644084e+00,8.996997e+00,8.364818e+00,7.850731e+00,7.382863e+00,
-				6.924716e+00,6.475580e+00,6.034875e+00,5.602110e+00,5.205239e+00,4.826222e+00,4.453319e+00,4.086279e+00,3.724876e+00,3.368899e+00,
-				3.018153e+00,2.672453e+00,2.331625e+00,1.995500e+00,1.663919e+00,1.448060e+00,1.242908e+00,1.041470e+00,8.435703e-01,6.490457e-01,
-				4.577407e-01,2.695085e-01,2.153724e-01,1.711164e-01,1.278946e-01,8.564234e-02,4.430009e-02,3.813159e-03,0.000000e+00,0.000000e+00,
-				0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00};
-		}
-		else if (wijType == 3){
-			// wij = (1 - r/re)^3
-			yData={9.067981e-01,8.370517e-01,7.701090e-01,7.060559e-01,6.449566e-01,5.868508e-01,5.317509e-01,4.796413e-01,4.304862e-01,3.843025e-01,
-				3.411226e-01,3.009548e-01,2.637830e-01,2.295669e-01,1.982462e-01,1.697668e-01,1.440694e-01,1.210741e-01,1.006813e-01,8.277293e-02,
-				6.721277e-02,5.384792e-02,4.250950e-02,3.301353e-02,2.516181e-02,1.875377e-02,1.363023e-02,9.640624e-03,6.628462e-03,4.431749e-03,
-				2.883400e-03,1.811604e-03,1.058238e-03,5.494491e-04,2.372314e-04,7.358514e-05,1.051031e-05,6.910701e-09,0.000000e+00,0.000000e+00,
-				0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00};
-		}
-   	}
-	
-   	int sizeData = xData.size();
-   	double rij_re = x/re;
+	else {
+		while(rij_re > xDataPND[i+1]) i++;
+	}
+	double xL = xDataPND[i], yL = Zij[i], xR = xDataPND[i+1], yR = Zij[i+1];	// points on either side (unless beyond ends)
+	if(!extrapolate) {							// if beyond ends of array and not extrapolating
+		if (rij_re < xL) yR = yL;
+		if (rij_re > xR) yL = yR;
+	}
 
-   	int i = 0;                                                                  // find left end of interval for interpolation
-   	if ( rij_re >= xData[sizeData - 2] )										// special case: beyond right end
-   	{
-   		i = sizeData - 2;
-   	}
-   	else
-   	{
-		while ( rij_re > xData[i+1] ) i++;
-   	}
-   	double xL = xData[i], yL = yData[i], xR = xData[i+1], yR = yData[i+1];      // points on either side (unless beyond ends)
-   	if ( !extrapolate )                                                         // if beyond ends of array and not extrapolating
-   	{
-		if ( rij_re < xL ) yR = yL;
-		if ( rij_re > xR ) yL = yR;
-   	}
+	double dydx = ( yR - yL ) / ( xR - xL );	// gradient
 
-   	double dydx = ( yR - yL ) / ( xR - xL );                                    // gradient
-
-   	return yL + dydx * ( rij_re - xL );                                         // linear interpolation
+	return yL + dydx * ( rij_re - xL );			// linear interpolation
 }
 
-// First-order derivative of Weight function (DZij)
-// Returns interpolated value at x from parallel arrays ( xData, yData )
+// Number of neighboors due wall (numNeighWall)
+// Returns interpolated value at x from parallel arrays ( xData, numNeighWall )
 // Assumes that xData has at least two elements, is sorted and is strictly monotonic increasing
 // boolean argument extrapolate determines behaviour beyond ends of array (if needed)
-double mesh::interpolateDwij(int dim, int wijType, double re, double x, bool extrapolate)
+int mesh::interpolateNumNeighWall(double re, double x, bool extrapolate)
 {
-   	// Ratio rij/re
-   	std::vector<double> xData = {2.000000e-02,4.000000e-02,6.000000e-02,8.000000e-02,1.000000e-01,1.200000e-01,1.400000e-01,1.600000e-01,1.800000e-01,2.000000e-01,
-   								2.200000e-01,2.400000e-01,2.600000e-01,2.800000e-01,3.000000e-01,3.200000e-01,3.400000e-01,3.600000e-01,3.800000e-01,4.000000e-01,
-   								4.200000e-01,4.400000e-01,4.600000e-01,4.800000e-01,5.000000e-01,5.200000e-01,5.400000e-01,5.600000e-01,5.800000e-01,6.000000e-01,
-   								6.200000e-01,6.400000e-01,6.600000e-01,6.800000e-01,7.000000e-01,7.200000e-01,7.400000e-01,7.600000e-01,7.800000e-01,8.000000e-01,
-   								8.200000e-01,8.400000e-01,8.600000e-01,8.800000e-01,9.000000e-01,9.200000e-01,9.400000e-01,9.600000e-01,9.800000e-01,1 };
-   	/*
-   	// Mesh surface at center of wall particle
-   	// Weight function (Zij)
-   	std::vector<double> yData;
-   	if (condition_.dimension == 2) {
-   		yData= {5.324775e+01,2.807619e+01,1.958352e+01,1.526405e+01,1.260999e+01,1.078801e+01,9.441093e+00,8.390885e+00,7.538466e+00,6.824641e+00,
-				6.211883e+00,5.675301e+00,5.197765e+00,4.767128e+00,4.374544e+00,4.022795e+00,3.701045e+00,3.402413e+00,3.123826e+00,2.862821e+00,
-				2.646657e+00,2.448958e+00,2.262829e+00,2.087143e+00,1.920942e+00,1.763403e+00,1.629744e+00,1.506469e+00,1.389248e+00,1.277630e+00,
-				1.171215e+00,1.069645e+00,9.725965e-01,8.797768e-01,7.909196e-01,7.057820e-01,6.241412e-01,5.457926e-01,4.705477e-01,3.982322e-01,
-				3.286849e-01,2.617561e-01,1.973067e-01,1.363636e-01,1.111111e-01,8.695652e-02,6.382979e-02,4.166667e-02,2.040816e-02,0};
-   	}
-   	else {
-   		yData= {5.324775e+01,2.807619e+01,1.958352e+01,1.526405e+01,1.260999e+01,1.078801e+01,9.441093e+00,8.390885e+00,7.538466e+00,6.824641e+00,
-				6.211883e+00,5.675301e+00,5.197765e+00,4.767128e+00,4.374544e+00,4.022795e+00,3.701045e+00,3.402413e+00,3.123826e+00,2.862821e+00,
-				2.646657e+00,2.448958e+00,2.262829e+00,2.087143e+00,1.920942e+00,1.763403e+00,1.629744e+00,1.506469e+00,1.389248e+00,1.277630e+00,
-				1.171215e+00,1.069645e+00,9.725965e-01,8.797768e-01,7.909196e-01,7.057820e-01,6.241412e-01,5.457926e-01,4.705477e-01,3.982322e-01,
-				3.286849e-01,2.617561e-01,1.973067e-01,1.363636e-01,1.111111e-01,8.695652e-02,6.382979e-02,4.166667e-02,2.040816e-02,0};
+	int sizeData = xDataNeigh.size();
+	double rij_re = x/re;
+
+	int i = 0;									// find left end of interval for interpolation
+	if(rij_re >= xDataNeigh[sizeData - 2]) {	// special case: beyond right end
+		i = sizeData - 2;
 	}
-	*/
-	// Mesh surface tangent of wall particle
-   	// First-order derivative of Weight function (DZij)
-   	std::vector<double> yData;
-   	yData.clear();
-   	if (dim == 2) {
-   		if (wijType == 0){}
-   		else if (wijType == 1){}
-   		else if (wijType == 2){}
-   	}
-   	else {
-   		if (wijType == 0){
-   			// wij = re/r - 1
-		}
-		else if (wijType == 1){
-			// wij = re/r + r/re - 2
-		}
-		else if (wijType == 2){
-			// wij = re/r - r/re
-		}
-		else if (wijType == 3){
-			// dwij/drij = -3/re*(1 - r/re)^2
-			yData={-2.622022e+02,-2.468348e+02,-2.318073e+02,-2.171684e+02,-2.029474e+02,-1.891979e+02,-1.759739e+02,-1.633278e+02,-1.512109e+02,-1.394243e+02,
-				-1.279979e+02,-1.169713e+02,-1.063819e+02,-9.626575e+01,-8.662764e+01,-7.741953e+01,-6.866748e+01,-6.040059e+01,-5.264642e+01,-4.543104e+01,
-				-3.877909e+01,-3.271386e+01,-2.725737e+01,-2.243040e+01,-1.825256e+01,-1.463019e+01,-1.143514e+01,-8.674935e+00,-6.356975e+00,-4.488191e+00,
-				-3.075063e+00,-2.123654e+00,-1.483511e+00,-9.583414e-01,-5.474571e-01,-2.508584e-01,-6.854551e-02,-5.183026e-04,0.000000e+00,0.000000e+00,
-				0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00};
-		}
-   	}
+	else {
+		while(rij_re > xDataNeigh[i+1]) i++;
+	}
+	double xL = xDataNeigh[i], yL = (double)nNeighWall[i], xR = xDataNeigh[i+1], yR = (double)nNeighWall[i+1];  // points on either side (unless beyond ends)
+	if (!extrapolate) {							// if beyond ends of array and not extrapolating
+		if (rij_re < xL) yR = yL;
+		if (rij_re > xR) yL = yR;
+	}
 
-   	int sizeData = xData.size();
-   	double rij_re = x/re;
+	double dydx = ( yR - yL ) / ( xR - xL );	// gradient
 
-   	int i = 0;                                                                  // find left end of interval for interpolation
-   	if ( rij_re >= xData[sizeData - 2] )										// special case: beyond right end
-   	{
-   		i = sizeData - 2;
-   	}
-   	else
-   	{
-		while ( rij_re > xData[i+1] ) i++;
-   	}
-   	double xL = xData[i], yL = yData[i], xR = xData[i+1], yR = yData[i+1];      // points on either side (unless beyond ends)
-   	if ( !extrapolate )                                                         // if beyond ends of array and not extrapolating
-   	{
-		if ( rij_re < xL ) yR = yL;
-		if ( rij_re > xR ) yL = yR;
-   	}
-
-   	double dydx = ( yR - yL ) / ( xR - xL );                                    // gradient
-
-   	return yL + dydx * ( rij_re - xL );                                         // linear interpolation
+	return (int) (yL + dydx * ( rij_re - xL ));	// linear interpolation
 }
 
 // Find closest point on the mesh from a particle and corrects the PND and number of neighboors
 // Libigl
-void mesh::closestPointPNDBoundaryAABB(int dim, double re2, int nP, int wijType, int *Typ, int fld, double *Pos, 
-	double *wallPos, double *mirrorPos, double *niw, int *numNeigh, std::vector<int>& particlesNearMesh) {
+void mesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int gst, int msh_id, int sta_id, 
+	int fem_id, int frw_id, double *Pos, double *wallPos, double *mirrorPos, double *riw2, int *elementID, int *meshID, double *NormalWall) {
+//  double *Pos, double *wallPos, double *mirrorPos, double *riw2, double *niw, int *numNeighw, int *elementID, std::vector<int>& particlesNearMesh) {
 
-  	// MPS -> libigl
+	// MPS -> libigl
 #pragma omp parallel for
-	for(int i=0;i<nP;i++){
-		if(Typ[i] == fld){
-//			temporary_position.row(i).x() = Pos[i*3  ];
-//			temporary_position.row(i).y() = Pos[i*3+1];
-//			temporary_position.row(i).z() = Pos[i*3+2];
+	for(int i=0;i<nP;i++) {
+//		if(Typ[i] == fld) {
+		if(Typ[i] != gst) {
+//		temporary_position.row(i).x() = Pos[i*3  ];
+//		temporary_position.row(i).y() = Pos[i*3+1];
+//		temporary_position.row(i).z() = Pos[i*3+2];
 
 			temporary_position(i,0) = Pos[i*3  ];
 			temporary_position(i,1) = Pos[i*3+1];
 			temporary_position(i,2) = Pos[i*3+2];
 		}
 	}
-  
-  //position_transpose = position.transpose(); // Tanaka - position instead of temporary !!!
 
-  // Find closest point Xwall_temporary_position in element "element_indice"
-  //igl::point_mesh_squared_distance(temporary_position,meshVertices,meshFaces,sqr_distance,element_indice,xWall);
-  // Static mesh
-  treeMesh.squared_distance(meshVertices,meshFaces,temporary_position,sqr_distance,element_indice,xWall);
-  
-  // libigl -> MPS
+	//position_transpose = position.transpose(); // Tanaka - position instead of temporary !!!
+
+	// Find closest point Xwall_temporary_position in element "element_indice"
+	// The search is faster for Static Mesh using threeMesh
+	// Dynamic mesh
+	if(msh_id == fem_id || msh_id == frw_id)
+		igl::point_mesh_squared_distance(temporary_position,NV,NF,sqr_distance,element_indice,xWall);
+	// Static mesh
+	if(msh_id == sta_id)
+		treeMesh.squared_distance(NV,NF,temporary_position,sqr_distance,element_indice,xWall);
+
+	// libigl -> MPS
 #pragma omp parallel for
-	for(int i=0;i<nP;i++){
-		if(Typ[i] == fld){
-			// Point on the mesh
-			wallPos[i*3  ] = xWall.row(i).x();
-			wallPos[i*3+1] = xWall.row(i).y();
-			wallPos[i*3+2] = xWall.row(i).z();
-			// Mirror particle position Xm = Xi + 2*(Xw - Xi)
-			mirrorPos[i*3  ] = Pos[i*3  ] + 2*(wallPos[i*3  ] - Pos[i*3  ]);
-			mirrorPos[i*3+1] = Pos[i*3+1] + 2*(wallPos[i*3+1] - Pos[i*3+1]);
-			mirrorPos[i*3+2] = Pos[i*3+2] + 2*(wallPos[i*3+2] - Pos[i*3+2]);
+	for(int i=0;i<nP;i++) {
+//    if(Typ[i] == fld) {
+		if(Typ[i] != gst) {
+
+			// Squared distance of particle to triangle mesh
+			if(sqr_distance(i) < riw2[i]) {
+
+				riw2[i] = sqr_distance(i);
+				// Point on the mesh
+				wallPos[i*3  ] = xWall.row(i).x();
+				wallPos[i*3+1] = xWall.row(i).y();
+				wallPos[i*3+2] = xWall.row(i).z();
+				// Mirror particle position Xm = Xi + 2*(Xw - Xi)
+				mirrorPos[i*3  ] = Pos[i*3  ] + 2*(wallPos[i*3  ] - Pos[i*3  ]);
+				mirrorPos[i*3+1] = Pos[i*3+1] + 2*(wallPos[i*3+1] - Pos[i*3+1]);
+				mirrorPos[i*3+2] = Pos[i*3+2] + 2*(wallPos[i*3+2] - Pos[i*3+2]);
+
+				// Set if particle is close to a deformable, fixed or forced mesh
+				if(msh_id == fem_id)
+					meshID[i] = 1;
+				else if (msh_id == frw_id)
+					meshID[i] = 2;
+				else
+					meshID[i] = 0;
+
+				// If is deformable mesh
+				// Element ID
+				if(msh_id == fem_id)
+					elementID[i] = element_indice(i);
+				// Polygon normal
+				int eID = element_indice(i);
+				//NormalWall[i*3  ] = meshNormals(eID,0);
+				//NormalWall[i*3+1] = meshNormals(eID,1);
+				//NormalWall[i*3+2] = meshNormals(eID,2);
+
+				NormalWall[i*3  ] = NNormals(eID,0);
+				NormalWall[i*3+1] = NNormals(eID,1);
+				NormalWall[i*3+2] = NNormals(eID,2);
+
+				//printf("i:%d riw2:%lf\n", i,riw2[i]);
+				//  double dd = sqrt((pow(0.5*(Pos[i*3]-mirrorPos[i*3]),2)+pow(0.5*(Pos[i*3+1]-mirrorPos[i*3+1]),2)+pow(0.5*(Pos[i*3+2]-mirrorPos[i*3+2]),2)));
+				//  printf("dist: %f %f\n",sqrt(sqr_distance(i)), dd);
+			}
 		}
 	}
   // Point on the mesh
@@ -278,78 +474,130 @@ void mesh::closestPointPNDBoundaryAABB(int dim, double re2, int nP, int wijType,
 //  mirror_temporary_position = temporary_position + 2*(wall_temporary_position - temporary_position);
   // Vector distance between i and wall
 //  r_iwall = temporary_position - wall_temporary_position;
+/*
+  // PND and Neighboorhood correction
+	//voxel_ratio.setZero();
+	particlesNearMesh.clear();
+// The following code for example fills std::vectors in parallel and then combines them in the end. 
+// As long as your main loop/fill function is the bottleneck this should work well in general and be thread safe.
+// https://stackoverflow.com/questions/18669296/c-openmp-parallel-for-loop-alternatives-to-stdvector/18671256#18671256
+#pragma omp parallel
+  {
+	  std::vector<int> particlesNearMesh_private;
+#pragma omp for nowait //fill vec_private in parallel
+	for(int i=0;i<nP;i++) {
+	  niw[i] = 0;
+	  numNeighw[i] = 0;
+//      if(Typ[i] == fld) {
+	  if(Typ[i] != gst) {
+		// Compute wall weight function Z(xij)
+		//if(i==6) {
+		//  printf("x:%lf y:%lf z:%lf x:%lf y:%lf z:%lf\n", Pos[i*3],Pos[i*3+1],Pos[i*3+2],mirrorPos[i*3],mirrorPos[i*3+1],mirrorPos[i*3+2]);
+		//  double dd = sqrt((pow(0.5*(Pos[i*3]-mirrorPos[i*3]),2)+pow(0.5*(Pos[i*3+1]-mirrorPos[i*3+1]),2)+pow(0.5*(Pos[i*3+2]-mirrorPos[i*3+2]),2)));
+		//  printf("dist: %f %f\n",sqrt(sqr_distance(i)), dd);
+		//}
+//        double x2 = sqr_distance(i);
+		double x2 = riw2[i];
+		//printf("x: %f \n",x);
+		if (x2 < reL2) {
 
-	// PND and Neighboorhood correction
-  	//voxel_ratio.setZero();
-  	particlesNearMesh.clear();
+		  double x = sqrt(x2);
+		  double reS = sqrt(reS2);
+		  // Add particle ID
+		  particlesNearMesh_private.push_back(i);
+		  //particlesNearMesh.push_back(i);
+
+		  // PND due wall weight Z(xij)
+		  niw[i] = interpolateWij(reS, x, true);
+		  //printf("niw: %f\n",niw[i]);
+		  // PND due wall weight Z(xij) to Gradient
+		  //niw2[i] = interpolateWij(dim, 2, re, x, true);
+
+		  double reL = sqrt(reL2);
+		  // Number of neighboors due wall (numNeighWall)
+		  numNeighw[i] = interpolateNumNeighWall(reL, x, true);
+		  }
+	  }
+	}
+#pragma omp critical
+	  particlesNearMesh.insert(particlesNearMesh.end(), particlesNearMesh_private.begin(), particlesNearMesh_private.end());
+  }
+*/
+}
+
+// Update vector with ID of particles near the mesh
+void mesh::updateparticlesNearMesh(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int gst, double *riw2,
+	double *niw, int *numNeighw, std::vector<int>& particlesNearMesh, int *Nw) {
+
+	particlesNearMesh.clear();
+
 // The following code for example fills std::vectors in parallel and then combines them in the end. 
 // As long as your main loop/fill function is the bottleneck this should work well in general and be thread safe.
 // https://stackoverflow.com/questions/18669296/c-openmp-parallel-for-loop-alternatives-to-stdvector/18671256#18671256
 #pragma omp parallel
 	{
-	  	std::vector<int> particlesNearMesh_private;
+		std::vector<int> particlesNearMesh_private;
 #pragma omp for nowait //fill vec_private in parallel
-		for(int i=0;i<nP;i++){
+		for(int i=0;i<nP;i++) {
 			niw[i] = 0;
-			if(Typ[i] == fld){
-				// Compute wall weight function Z(xij)
-				//if(i==6){
-				//	printf("x:%lf y:%lf z:%lf x:%lf y:%lf z:%lf\n", Pos[i*3],Pos[i*3+1],Pos[i*3+2],mirrorPos[i*3],mirrorPos[i*3+1],mirrorPos[i*3+2]);
-				//	double dd = sqrt((pow(0.5*(Pos[i*3]-mirrorPos[i*3]),2)+pow(0.5*(Pos[i*3+1]-mirrorPos[i*3+1]),2)+pow(0.5*(Pos[i*3+2]-mirrorPos[i*3+2]),2)));
-				//	printf("dist: %f %f\n",sqrt(sqr_distance(i)), dd);
-				//}
-				double x2 = sqr_distance(i);
-				//printf("x: %f \n",x);
-				if (x2 < re2) {
-
+			numNeighw[i] = 0;
+		//      if(Typ[i] == fld) {
+			if(Typ[i] != gst) {
+				double x2 = riw2[i];
+				if (x2 < reL2) {
+					Nw[i]=1; // Only to show particles near polygon
 					double x = sqrt(x2);
-					double re = sqrt(re2);
+					double reS = sqrt(reS2);
 					// Add particle ID
 					particlesNearMesh_private.push_back(i);
 					//particlesNearMesh.push_back(i);
 
 					// PND due wall weight Z(xij)
-					niw[i] = interpolateWij(dim, wijType, re, x, true);
+					niw[i] = interpolateWij(reS, x, true);
 					//printf("niw: %f\n",niw[i]);
 					// PND due wall weight Z(xij) to Gradient
 					//niw2[i] = interpolateWij(dim, 2, re, x, true);
 
+					double reL = sqrt(reL2);
+					// Number of neighboors due wall (numNeighWall)
+					numNeighw[i] = interpolateNumNeighWall(reL, x, true);
+
 					/*
 					if (dim == 2) {
-				      	// Mesh surface tangent of wall particle
-				      	if (x <= 0.1403*re)
-				          numNeigh[i] += 8;
-				        else if (x <= 0.3466*re)
-				          numNeigh[i] += 6;
-				        else if (x <= 0.6*re)
-				          numNeigh[i] += 4;
-				        else if (x <= 1.3466*re)
-				          numNeigh[i] += 3;
-				        else if (x <= 1.6*re)
-				          numNeigh[i] += 1;
-			  		}
-			    	else {
-				    	// Mesh surface tangent of wall particle
-				      	if (x <= 0.0524*re)
-				          numNeigh[i] += 22;
-				        else if (x <= 0.1403*re)
-				          numNeigh[i] += 18;
-				        else if (x <= 0.3466*re)
-				          numNeigh[i] += 14;
-				        else if (x <= 0.6*re)
-				          numNeigh[i] += 10;
-				      	else if (x <= 1.0524*re)
-				          numNeigh[i] += 9;
-				        else if (x <= 1.3466*re)
-				          numNeigh[i] += 5;
-				        else if (x <= 1.6*re)
-				          numNeigh[i] += 1;
-			    	}
-			    	*/
-			    }
+						// Mesh surface tangent of wall particle
+						if (x <= 0.1403*re)
+							numNeighw[i] += 8;
+						else if (x <= 0.3466*re)
+							numNeighw[i] += 6;
+						else if (x <= 0.6*re)
+							numNeighw[i] += 4;
+						else if (x <= 1.3466*re)
+							numNeighw[i] += 3;
+						else if (x <= 1.6*re)
+							numNeighw[i] += 1;
+					}
+					else {
+						// Mesh surface tangent of wall particle
+						if (x <= 0.0524*re)
+							numNeighw[i] += 22;
+						else if (x <= 0.1403*re)
+							numNeighw[i] += 18;
+						else if (x <= 0.3466*re)
+							numNeighw[i] += 14;
+						else if (x <= 0.6*re)
+							numNeighw[i] += 10;
+						else if (x <= 1.0524*re)
+							numNeighw[i] += 9;
+						else if (x <= 1.3466*re)
+							numNeighw[i] += 5;
+						else if (x <= 1.6*re)
+							numNeighw[i] += 1;
+					}
+					*/
+				}
 			}
 		}
 #pragma omp critical
-    	particlesNearMesh.insert(particlesNearMesh.end(), particlesNearMesh_private.begin(), particlesNearMesh_private.end());
+	particlesNearMesh.insert(particlesNearMesh.end(), particlesNearMesh_private.begin(), particlesNearMesh_private.end());
 	}
 }
