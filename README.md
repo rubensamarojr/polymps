@@ -6,7 +6,7 @@ Explicit Moving Particle Semi-implicit method with Polygon wall
 - libigl (https://github.com/libigl/libigl)
 
 ## Usage
-Build the source code.
+Build the source code
 ```bash
 make all
 ```
