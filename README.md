@@ -1,5 +1,5 @@
 # EMPS_MESH
-Explicit Moving Particle Semi-implicit method with Polygon wall
+Explicit and Weakly Compressible Moving Particle Semi-implicit method with Polygon wall
 
 ## Requirements
 - Eigen (http://eigen.tuxfamily.org/)
