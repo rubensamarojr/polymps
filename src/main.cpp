@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#include "polygon.h"
+#include "PolygonMesh.h"
 
 //Comment below to simulate only particles (fluid and wall particles)
 #define POLYGON_ON
