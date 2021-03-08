@@ -4,7 +4,7 @@
 #include <chrono>
 #include <cmath>
 #include <iostream>
-#include "polygon.h"
+#include "PolygonMesh.h"
 
 mesh::mesh()
 {
