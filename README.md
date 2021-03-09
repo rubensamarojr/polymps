@@ -24,7 +24,7 @@ Code compiled and tested on Linux CentOS 7.
 
 You can build the project in GNU/Linux using the makefile. Follow these steps (CPU version):
 
-Clone this repository into your system `git clone https://github.com/rubensaaj/EMPS_GIR.git`
+Clone this repository into your system `git clone https://github.com/rubensaaj/EMPS_MESH.git`
 
 In a terminal, go to the folder **EMPS_MESH**.
 
