@@ -27,7 +27,8 @@ DEBUGS := -O3
 # -I is a preprocessor flag, not a compiler flag
 
 #CXXFLAGS := $(DEBUGS) -std=c++11 -Wall -Wextra -MP -MMD
-CXXFLAGS := $(DEBUGS) -std=c++11 -Wextra -MP -MMD -fopenmp -lm
+#CXXFLAGS := $(DEBUGS) -std=c++11 -Wextra -MP -MMD -fopenmp -lm
+CXXFLAGS := $(DEBUGS) -std=c++11 -MP -MMD -fopenmp -lm
 CPPFLAGS := -I $(INCLUDE_DIR) -Iinclude/eigen
 
 # Got some linker flags ?
