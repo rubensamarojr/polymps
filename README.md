@@ -28,7 +28,7 @@ Clone this repository into your system `git clone https://github.com/rubensaaj/E
 
 In a terminal, go to the folder **EMPS_MESH**.
 
-Edit the `Makefile` file with a text editor.
+Edit the `Makefile` file (if necessary) with a text editor.
 
 Make sure the environment is clean and ready to compile
 ```bash
