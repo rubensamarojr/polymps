@@ -40,7 +40,7 @@ make all
 ```
 Run the code as
 ```bash
-./bin/mps
+./bin/main
 ```
 Type the name of the json input file (located in input directory)
 
