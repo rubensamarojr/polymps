@@ -21,18 +21,18 @@
 #include <igl/writeSTL.h>
 
 // Polygon walls class
-class mesh {
+class PolygonMesh {
 public:
 
-	mesh();
-	//mesh(const std::string& path, const int nP);
-	virtual ~mesh();
+	PolygonMesh();
+	//PolygonMesh(const std::string& path, const int nP);
+	virtual ~PolygonMesh();
 	// Initi elements of the class
-	void initMesh(const int nP);
+	void initPolygonMesh(const int nP);
 	// Read mesh file (STL)
-	void readMeshFile(const std::string& path);
+	void readPolygonMeshFile(const std::string& path);
 	// Write mesh file (STL)
-	void writeMeshFile(const int mesh_ID, const std::string& path, const int iF);
+	void writePolygonMeshFile(const int mesh_ID, const std::string& path, const int iF);
 	// Create wall weight and number of neighboors functions
 	double initWijnNeigh(int dim, int wijType, double lo, double reL, double reS);
 	// Interpolate the value of wall weight function from a given data
@@ -49,8 +49,8 @@ public:
 	int fem_id, int frw_id, double *Pos, double *wallPos, double *mirrorPos, double *riw2, int *elementID, int *meshID, double *NormalWall);
 	//	double *wallPos, double *mirrorPos, double *riw2, double *niw, int *numNeighw, int *elementID, std::vector<int>& particlesNearMesh);
 	// Update vector with ID of particles near the mesh
-	void updateparticlesNearMesh(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int gst, double *riw2,
-	double *niw, int *numNeighw, std::vector<int>& meshParticlesNeighbors, int *Nw);
+	void updateParticlesNearPolygonMesh(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int gst, double *riw2,
+	double *niw, int *numNeighw, std::vector<int>& meshParticlesNeighbors, bool *Nw);
 	// Correction of velocity due the wall gradient of pressure
 	void correctVelocityWallPressure(const double timer);
 	void correctVelocityWallWithTensorPressure(const double timer);
@@ -58,9 +58,9 @@ public:
 	void correctVelocityWallViscositySlip(const double timer);
 	void correctVelocityWallViscosityNoSlip(const double timer);
 	// Update node positions
-	void updateMesh(double *nodeX, double *nodeY, double *nodeZ, double *nodeDX, double *nodeDY, double *nodeDZ);
+	void updatePolygonMesh(double *nodeX, double *nodeY, double *nodeZ, double *nodeDX, double *nodeDY, double *nodeDZ);
 	// Update forced rigid wall
-	void updateForcedMesh(double *nodeX, double *nodeY, double *nodeZ, double *velVWall, const double dt, const double time);
+	void updateForcedPolygonMesh(double *nodeX, double *nodeY, double *nodeZ, double *velVWall, const double dt, const double time);
 
 	igl::AABB<Eigen::MatrixXd,3> treeMesh;
 	Eigen::MatrixXd meshVertices;	// Mesh Vertices

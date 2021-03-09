@@ -6,15 +6,15 @@
 #include <iostream>
 #include "PolygonMesh.h"
 
-mesh::mesh()
+PolygonMesh::PolygonMesh()
 {
 }
 
-mesh::~mesh()
+PolygonMesh::~PolygonMesh()
 {
 }
 
-void mesh::initMesh(const int nP) {
+void PolygonMesh::initPolygonMesh(const int nP) {
 	//xWall = Eigen::MatrixXd::Zero(getSize(), 3);
 	// If closestPointPNDBoundaryAABB is used then comment 2 lines bellow ??
 	sqr_distance = Eigen::VectorXd::Zero(nP);
@@ -38,7 +38,7 @@ void mesh::initMesh(const int nP) {
 //	checkSurfaceParticles();
 }
 
-void mesh::readMeshFile(const std::string& path) {
+void PolygonMesh::readPolygonMeshFile(const std::string& path) {
 	// Load a mesh
 	igl::readSTL(path, meshVertices, meshFaces, meshNormals);
 	// Find the bounding box
@@ -89,7 +89,7 @@ void mesh::readMeshFile(const std::string& path) {
 	//std::cout << "nVertices: " << meshVertices.rows() << std::endl;
 }
 
-void mesh::writeMeshFile(const int mesh_ID, const std::string& path, const int iF) {
+void PolygonMesh::writePolygonMeshFile(const int mesh_ID, const std::string& path, const int iF) {
 
 	char numstr[21], mesh_IDstr[21]; // enough to hold all numbers up to 64-bits
 	sprintf(numstr, "%05d", iF);
@@ -123,7 +123,7 @@ void mesh::writeMeshFile(const int mesh_ID, const std::string& path, const int i
 }
 
 // Update node positions based on Finite Element Method computation - NOT WORKING !!!
-void mesh::updateMesh(double *nodeX, double *nodeY, double *nodeZ, double *nodeDX, double *nodeDY, double *nodeDZ) {
+void PolygonMesh::updatePolygonMesh(double *nodeX, double *nodeY, double *nodeZ, double *nodeDX, double *nodeDY, double *nodeDZ) {
 	// Update node positions
 	int nNodes = NV.rows();
 #pragma omp parallel for
@@ -148,7 +148,7 @@ void mesh::updateMesh(double *nodeX, double *nodeY, double *nodeZ, double *nodeD
 }
 
 // Update forced motion rigid wall
-void mesh::updateForcedMesh(double *nodeX, double *nodeY, double *nodeZ, double *velVWall, const double dt, const double time) {
+void PolygonMesh::updateForcedPolygonMesh(double *nodeX, double *nodeY, double *nodeZ, double *velVWall, const double dt, const double time) {
 	// Update node positions
 	// Set the motion here
 	// Liao 2015
@@ -190,7 +190,7 @@ void mesh::updateForcedMesh(double *nodeX, double *nodeY, double *nodeZ, double 
 }
 
 // Creation of the wall weight (Zij) and number of neighboors functions (numNeighWall)
-double mesh::initWijnNeigh(int dim, int wijType, double lo, double reL, double reS) {
+double PolygonMesh::initWijnNeigh(int dim, int wijType, double lo, double reL, double reS) {
 	double reS2 = reS*reS;
 	double reL2 = reL*reL;
 	// Number of points of the functions
@@ -339,7 +339,7 @@ double mesh::initWijnNeigh(int dim, int wijType, double lo, double reL, double r
 // Returns interpolated value at x from parallel arrays ( xData, Zij )
 // Assumes that xData has at least two elements, is sorted and is strictly monotonic increasing
 // boolean argument extrapolate determines behaviour beyond ends of array (if needed)
-double mesh::interpolateWij(double re, double x, bool extrapolate)
+double PolygonMesh::interpolateWij(double re, double x, bool extrapolate)
 {
 	int sizeData = xDataPND.size();
 	double rij_re = x/re;
@@ -366,7 +366,7 @@ double mesh::interpolateWij(double re, double x, bool extrapolate)
 // Returns interpolated value at x from parallel arrays ( xData, numNeighWall )
 // Assumes that xData has at least two elements, is sorted and is strictly monotonic increasing
 // boolean argument extrapolate determines behaviour beyond ends of array (if needed)
-int mesh::interpolateNumNeighWall(double re, double x, bool extrapolate)
+int PolygonMesh::interpolateNumNeighWall(double re, double x, bool extrapolate)
 {
 	int sizeData = xDataNeigh.size();
 	double rij_re = x/re;
@@ -391,7 +391,7 @@ int mesh::interpolateNumNeighWall(double re, double x, bool extrapolate)
 
 // Find closest point on the mesh from a particle and corrects the PND and number of neighboors
 // Libigl
-void mesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int gst, int msh_id, int sta_id, 
+void PolygonMesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int gst, int msh_id, int sta_id, 
 	int fem_id, int frw_id, double *Pos, double *wallPos, double *mirrorPos, double *riw2, int *elementID, int *meshID, double *NormalWall) {
 //  double *Pos, double *wallPos, double *mirrorPos, double *riw2, double *niw, int *numNeighw, int *elementID, std::vector<int>& particlesNearMesh) {
 
@@ -440,7 +440,7 @@ void mesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, int wij
 				mirrorPos[i*3+1] = Pos[i*3+1] + 2*(wallPos[i*3+1] - Pos[i*3+1]);
 				mirrorPos[i*3+2] = Pos[i*3+2] + 2*(wallPos[i*3+2] - Pos[i*3+2]);
 
-				// Set if particle is close to a deformable, fixed or forced mesh
+				// Set if particle is close to a deformable, forced or fixed mesh
 				if(msh_id == fem_id)
 					meshID[i] = 1;
 				else if (msh_id == frw_id)
@@ -526,8 +526,8 @@ void mesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, int wij
 }
 
 // Update vector with ID of particles near the mesh
-void mesh::updateparticlesNearMesh(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int gst, double *riw2,
-	double *niw, int *numNeighw, std::vector<int>& particlesNearMesh, int *Nw) {
+void PolygonMesh::updateParticlesNearPolygonMesh(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int gst, double *riw2,
+	double *niw, int *numNeighw, std::vector<int>& particlesNearMesh, bool *Nw) {
 
 	particlesNearMesh.clear();
 
@@ -545,7 +545,7 @@ void mesh::updateparticlesNearMesh(double reS2, double reL2, int nP, int wijType
 			if(Typ[i] != gst) {
 				double x2 = riw2[i];
 				if (x2 < reL2) {
-					Nw[i]=1; // Only to show particles near polygon
+					Nw[i]=true; // Only to show particles near polygon
 					double x = sqrt(x2);
 					double reS = sqrt(reS2);
 					// Add particle ID
