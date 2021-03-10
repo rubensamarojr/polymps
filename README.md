@@ -27,7 +27,9 @@ You can build the project in GNU/Linux using the makefile. Follow these steps (C
 Clone this repository into your system `git clone https://github.com/rubensaaj/EMPS_MESH.git`
 
 In a terminal, go to the folder **EMPS_MESH**.
-
+```bash
+cd EMPS_MESH
+```
 Edit the `Makefile` file (if necessary) with a text editor.
 
 Make sure the environment is clean and ready to compile
