@@ -190,7 +190,7 @@ void PolygonMesh::updateForcedPolygonMesh(double *nodeX, double *nodeY, double *
 }
 
 // Creation of the wall weight (Zij) and number of neighboors functions (numNeighWall)
-double PolygonMesh::initWijnNeigh(int dim, int wijType, double lo, double reL, double reS) {
+void PolygonMesh::initWijnNeigh(int dim, int wijType, double lo, double reL, double reS) {
 	double reS2 = reS*reS;
 	double reL2 = reL*reL;
 	// Number of points of the functions

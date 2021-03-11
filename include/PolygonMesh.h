@@ -34,7 +34,7 @@ public:
 	// Write mesh file (STL)
 	void writePolygonMeshFile(const int mesh_ID, const std::string& path, const int iF);
 	// Create wall weight and number of neighboors functions
-	double initWijnNeigh(int dim, int wijType, double lo, double reL, double reS);
+	void initWijnNeigh(int dim, int wijType, double lo, double reL, double reS);
 	// Interpolate the value of wall weight function from a given data
 	double interpolateWij(double re, double x, bool extrapolate);
 	// Interpolate the value of number of neighboors function from a given data
