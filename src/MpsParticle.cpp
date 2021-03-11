@@ -58,13 +58,15 @@ void MpsParticle::displayInfo(const int intervalIter) {
 double MpsParticle::weight(const double dst, const double re, const int wijType) {
 	switch (wijType) {
 		case 0:
-		return re/dst - 1.0;
+			return re/dst - 1.0;
 		case 1:
-		return re/dst + dst/re - 2;
+			return re/dst + dst/re - 2;
 		case 2:
-		return re/dst - dst/re;
+			return re/dst - dst/re;
 		case 3:
-		return (1-dst/re)*(1-dst/re)*(1-dst/re);
+			return (1-dst/re)*(1-dst/re)*(1-dst/re);
+		default:
+			return re/dst - 1.0;
 	}
 }
 
@@ -72,13 +74,15 @@ double MpsParticle::weight(const double dst, const double re, const int wijType)
 double MpsParticle::weightGradient(const double dst, const double re, const int wijType) {
 	switch (wijType) {
 		case 0:
-		return re/dst - 1.0;
+			return re/dst - 1.0;
 		case 1:
-		return re/dst + dst/re - 2;
+			return re/dst + dst/re - 2;
 		case 2:
-		return re/dst - dst/re;
+			return re/dst - dst/re;
 		case 3:
-		return (1-dst/re)*(1-dst/re)*(1-dst/re);
+			return (1-dst/re)*(1-dst/re)*(1-dst/re);
+		default:
+			return re/dst - 1.0;
 	}
 }
 
@@ -86,13 +90,15 @@ double MpsParticle::weightGradient(const double dst, const double re, const int 
 double MpsParticle::delWeight(const double dst, const double re, const int wijType) {
 	switch (wijType) {
 		case 0:
-		return -re/(dst*dst);
+			return -re/(dst*dst);
 		case 1:
-		return -re/(dst*dst) + 1/re;
+			return -re/(dst*dst) + 1/re;
 		case 2:
-		return -re/(dst*dst) - 1/re;
+			return -re/(dst*dst) - 1/re;
 		case 3:
-		return -3/re*(1-dst/re)*(1-dst/re);
+			return -3/re*(1-dst/re)*(1-dst/re);
+		default:
+			return -re/(dst*dst);
 	}
 }
 
