@@ -5,7 +5,7 @@
 # clean   Remove all intermediate files.
 # help    Display this information.
 #
-# Copyright (c) 2017 Shota SUGIHARA
+# Copyright (c) 2021 Rubens AMARO
 # Distributed under the MIT License.
 
 # Directories
