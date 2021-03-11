@@ -9,7 +9,7 @@ Explicit and Weakly Compressible Moving Particle Semi-implicit method with Polyg
 Eigen, libigl and JSON for Modern C++ are header-only libraries already located in folder **include**.
 
 ## MPS input files
-1. It is necessary to create a file (extension **.grid**) with:
+1. It is necessary to create a file (extension **.grid**) with informations about the initial geometry and some numerical and physical parameters:
 - First line: **0**
 - Second line: **number of particles**
 - Next lines in the columns: **material ID** coordinates of particles **X** **Y** **Z** the initial fluid velocities (generally 0.0) **VX** **VY** **VZ** the initial particle pressure (generally 0.0) **P** and presure average (generally 0.0) **PAV**
@@ -18,9 +18,8 @@ Eigen, libigl and JSON for Modern C++ are header-only libraries already located 
 
 There are some examples in the folder **input**.
 
-## Usage
-
-Code compiled and tested on Linux CentOS 7.
+## Compile
+Code compiled and tested on Linux CentOS 7 and Ubuntu64.
 
 You can build the project in GNU/Linux using the makefile. Follow these steps (CPU version):
 
@@ -40,6 +39,10 @@ Execute make
 ```bash
 make all
 ```
+
+This should create a binary `main` in folder **bin**
+
+## Run
 Run the code as
 ```bash
 ./bin/main
@@ -48,3 +51,16 @@ Type the name of the json input file (located in input directory)
 
 This code writes pvd (header file) and corresponding vtu files as output.
 You can visualize them by open the pvd file with [Paraview](https://www.paraview.org).
+
+## Directories
+The EMPS_MESH contains several files and directories:
+
+| File/Folder | Description |
+| --- | --- |
+| Makefile | set of tasks to compile the program |
+| README |text file |
+| LICENSE |	MIT License |
+| include | header files |
+| input |	simple input examples (json, grid and stl files) |
+| output |ouput files (pvd, vtu and txt files) |
+| src |	source files |
