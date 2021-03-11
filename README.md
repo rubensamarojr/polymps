@@ -1,7 +1,9 @@
 # EMPS_MESH
+
 Explicit and Weakly Compressible Moving Particle Semi-implicit method with Polygon wall
 
 ## Requirements
+
 - [Eigen](http://eigen.tuxfamily.org/)
 - [libigl](https://github.com/libigl/libigl)
 - [JSON for Modern C++](https://github.com/nlohmann/json)
@@ -9,6 +11,7 @@ Explicit and Weakly Compressible Moving Particle Semi-implicit method with Polyg
 Eigen, libigl and JSON for Modern C++ are header-only libraries already located in folder **include**.
 
 ## MPS input files
+
 1. It is necessary to create a file (extension **.grid**) with informations about the initial geometry and some numerical and physical parameters:
 - First line: **0**
 - Second line: **number of particles**
@@ -19,6 +22,7 @@ Eigen, libigl and JSON for Modern C++ are header-only libraries already located 
 There are some examples in the folder **input**.
 
 ## Compile
+
 Code compiled and tested on Linux CentOS 7 and Ubuntu64.
 
 You can build the project in GNU/Linux using the makefile. Follow these steps (CPU version):
@@ -53,6 +57,7 @@ This code writes pvd (header file) and corresponding vtu files as output.
 You can visualize them by open the pvd file with [Paraview](https://www.paraview.org).
 
 ## Directories
+
 The EMPS_MESH contains several files and directories:
 
 | File/Folder | Description |
@@ -64,3 +69,7 @@ The EMPS_MESH contains several files and directories:
 | input |	simple input examples (json, grid and stl files) |
 | output |ouput files (pvd, vtu and txt files) |
 | src |	source files |
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
