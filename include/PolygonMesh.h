@@ -15,8 +15,8 @@
 #include <igl/per_vertex_normals.h>
 #include <igl/point_mesh_squared_distance.h>
 #include <igl/readSTL.h>
-#include <igl/remove_duplicates.h>
-//#include <igl/remove_duplicate_vertices.h>
+//#include <igl/remove_duplicates.h>
+#include <igl/remove_duplicate_vertices.h>
 #include <igl/writePLY.h>
 #include <igl/writeSTL.h>
 

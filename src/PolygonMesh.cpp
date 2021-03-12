@@ -39,8 +39,16 @@ void PolygonMesh::initPolygonMesh(const int nP) {
 }
 
 void PolygonMesh::readPolygonMeshFile(const std::string& path) {
+
+	FILE * filename = fopen(path.c_str(),"rb");
+	if(NULL==filename)
+	{
+		fprintf(stderr,"IOError: %s could not be opened...\n", path.c_str());
+		return;
+	}
 	// Load a mesh
-	igl::readSTL(path, meshVertices, meshFaces, meshNormals);
+	bool success = igl::readSTL(filename, meshVertices, meshFaces, meshNormals);
+
 	// Find the bounding box
 	Eigen::Vector3d m = meshVertices.colwise().minCoeff();
 	Eigen::Vector3d M = meshVertices.colwise().maxCoeff();
@@ -67,26 +75,30 @@ void PolygonMesh::readPolygonMeshFile(const std::string& path) {
 	std::cout << " Mesh file name " << path << std::endl;
 	std::cout << " original  mesh containts " << meshVertices.rows() << " vertices and " << meshFaces.rows() << " faces" << std::endl;
 
-	// Remove duplicated vertices
-	//Eigen::MatrixXi SVI, SVJ;
-	Eigen::VectorXi VI;
+	// Remove duplicated vertices upto a uniqueness tolerance (epsilon)
+	Eigen::MatrixXi SVI, SVJ;
+	//Eigen::VectorXi VI;
 	//igl::remove_duplicate_vertices(meshVertices, meshFaces, 0.0, SV, SVI, SVJ, SF);
 	//igl::remove_duplicate_vertices(meshVertices, 0.0, SV, SVI, SVJ);
-	igl::remove_duplicates(meshVertices, meshFaces, NV, NF, VI, 2.0e-15);
+	//igl::remove_duplicates(meshVertices, meshFaces, NV, NF, VI, 2.0e-15);
 
+	// Mesh in (meshVertices, meshFaces)
+	//igl::remove_duplicate_vertices(meshVertices, 2.0e-15, NV, SVI, SVJ);
+	igl::remove_duplicate_vertices(meshVertices, meshFaces, 2.0e-15, NV, SVI, SVJ, NF);
+	
 	//Eigen::MatrixXd NormalAux;
 	//NNormals = Eigen::MatrixXd::Zero(NF.rows(), 3);
 	// Compute face normals via vertex position list, face list
 	igl::per_face_normals(NV, NF, NNormals);
 	//igl::per_face_normals(NV, NF, NormalAux);
-
+	
 	// Forces on nodes
 	//FN = Eigen::MatrixXd::Zero(NF.rows(), 3);
 	//igl::per_face_normals(NV, NF, FN);
 
 	// Static mesh V, F
 	treeMesh.init(NV, NF);
-	//std::cout << "nVertices: " << meshVertices.rows() << std::endl;
+	std::cout << "nVertices: " << meshVertices.rows() << std::endl;
 }
 
 void PolygonMesh::writePolygonMeshFile(const int mesh_ID, const std::string& path, const int iF) {
