@@ -74,13 +74,16 @@ The EMPS_MESH contains several files and directories:
 
 | File/Folder | Description |
 | --- | --- |
-| Makefile | set of tasks to compile the program |
-| README |text file |
-| LICENSE |	MIT License |
+| eigen | library for linear algebra: matrices, vectors, numerical solvers, and related algorithms |
 | include | header files |
 | input |	simple input examples (json, grid and stl files) |
+| libigl | geometry processing library |
+| json | file that uses human-readable text to store and transmit data objects |
 | output |ouput files (pvd, vtu and txt files) |
 | src |	source files |
+| LICENSE |	MIT License |
+| Makefile | set of tasks to compile the program |
+| README |text file |
 
 ## License
 
