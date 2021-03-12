@@ -8,7 +8,7 @@ Explicit and Weakly Compressible Moving Particle Semi-implicit method with Polyg
 - [libigl](https://github.com/libigl/libigl)
 - [JSON for Modern C++](https://github.com/nlohmann/json)
 
-Eigen, libigl and JSON for Modern C++ are header-only libraries already located in folder **include**.
+Eigen, libigl and JSON for Modern C++ are third party header-only libraries.
 
 ## MPS input files
 
