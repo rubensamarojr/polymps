@@ -98,7 +98,7 @@ void PolygonMesh::readPolygonMeshFile(const std::string& path) {
 
 	// Static mesh V, F
 	treeMesh.init(NV, NF);
-	std::cout << "nVertices: " << meshVertices.rows() << std::endl;
+	//std::cout << "nVertices: " << meshVertices.rows() << std::endl;
 }
 
 void PolygonMesh::writePolygonMeshFile(const int mesh_ID, const std::string& path, const int iF) {
