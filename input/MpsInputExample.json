@@ -22,10 +22,10 @@
 	},
 	// Paths of input and output files/folders
 	"pathNames": {
-		"particle_grid_file":	"input/dam1610_3D_fluid_lo0p010_mps.grid",
-		"mesh_rigid_file": 		"input/dam1610.stl",
-		"mesh_deformable_file": "input/elastic_beam_16.stl", // (NOT WORKING !!)
-		"mesh_forced_file": 	"input/tank_liao_forced_gate.stl",
+		"particle_grid_file":	"input/grid/dam1610_3D_fluid_lo0p010_mps.grid",
+		"mesh_rigid_file": 		"input/stl/dam1610.stl",
+		"mesh_deformable_file": "input/stl/elastic_beam_16.stl", // (NOT WORKING !!)
+		"mesh_forced_file": 	"input/stl/tank_liao_forced_gate.stl",
 		"vtu_output_folder":	"output/dambreak01",
 		"forceTxt_file":		"output/dambreak01_force.txt",
 		"pressTxt_file":		"output/dambreak01_press.txt"
