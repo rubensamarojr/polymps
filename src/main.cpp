@@ -46,7 +46,7 @@ void mainLoopOfSimulation(MpsParticle &part, PolygonMesh* &mesh) {
 	strcpy (output_folder_char, part.vtuOutputFoldername.c_str());
 
 	// Break if simulation reaches the final time
-	while(1) {
+	while(true) {
 
 		// Display simulation informations at each 10 iterations
 		part.displayInfo(10);

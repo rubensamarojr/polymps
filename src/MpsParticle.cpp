@@ -520,13 +520,13 @@ void MpsParticle::readMpsParticleFile(const std::string& grid_file) {
 		if(pos[i*3+2] <= 0.3) {
 			PTYPE[i]=2;
 			RHO[i] = DNS_FL2;
-			// CHANGED Only for the first time step
+			// CHANGED Only at the first time step
 			MEU[i] = KNM_VS2 * DNS_FL2;
 		}
 		else {
 			PTYPE[i]=1;
 			RHO[i] = DNS_FL1;
-			// CHANGED Only for the first time step
+			// CHANGED Only at the first time step
 			MEU[i] = KNM_VS1 * DNS_FL1;
 		}
 		*/
@@ -537,20 +537,20 @@ void MpsParticle::readMpsParticleFile(const std::string& grid_file) {
 
 		/*
 		// ATTENTION !!!
-		// Simulações com multifase
+		// Multiphase simulations
 		// Assign type and density
 		if(particleType[i] == 1) {
 			particleType[i] = 0;
 			PTYPE[i] = 2;
 			RHO[i] = DNS_FL1;
-			// CHANGED Only for the first time step
+			// CHANGED Only at the first time step
 			MEU[i] = KNM_VS2 * DNS_FL2;
 		}
 		else {
 			particleType[i] = 0;
 			PTYPE[i] = 1;
 			RHO[i] = DNS_FL1;
-			// CHANGED Only for the first time step
+			// CHANGED Only at the first time step
 			MEU[i] = KNM_VS1 * DNS_FL1;
 		}
 		*/
@@ -595,17 +595,12 @@ void MpsParticle::allocateBuckets() {
 	bucketSide2 = bucketSide*bucketSide;
 	invBucketSide = 1.0/bucketSide;
 
-
-	// printf("MPS:%f :%f :%f :%f :%f ;%f :%f :%f :%f\n", domainMaxX, domainMinX, domainMaxY, domainMinY, domainMaxZ, domainMinZ,
-	// 	bucketSide, bucketSide2, invBucketSide);
-
 	numBucketsX = (int)((domainMaxX - domainMinX)*invBucketSide) + 3;		// Number of buckets in the x direction in the analysis domain
 	numBucketsY = (int)((domainMaxY - domainMinY)*invBucketSide) + 3;		// Number of buckets in the y direction in the analysis domain
 	numBucketsZ = (int)((domainMaxZ - domainMinZ)*invBucketSide) + 3;		// Number of buckets in the z direction in the analysis domain
 	numBucketsXY = numBucketsX*numBucketsY;
 	numBucketsXYZ = numBucketsX*numBucketsY*numBucketsZ;					// Number of buckets in analysis area
-	// printf("numBucketsX:%d  numBucketsY:%d  numBucketsZ:%d  numBucketsXY:%d  numBucketsXYZ:%d\n", numBucketsX, numBucketsY, numBucketsZ,
-		// numBucketsXY,numBucketsXYZ);
+	
 	firstParticleInBucket = 	(int*)malloc(sizeof(int) * numBucketsXYZ);	// First particle number stored in the bucket
 	lastParticleInBucket = 		(int*)malloc(sizeof(int) * numBucketsXYZ);	// Last particle number stored in the bucket
 	nextParticleInSameBucket  = (int*)malloc(sizeof(int) * numParticles);	// Next particle number in the same bucket
@@ -622,9 +617,9 @@ void MpsParticle::setParameters() {
 		flag2D = 1;
 		flag3D = 0;
 	}
-	for(int ix= -lmin;ix<lmax;ix++) {
-	for(int iy= -lmin;iy<lmax;iy++) {
-	for(int iz= -lmin*flag3D;iz<lmax*flag3D+flag2D;iz++) {
+	for(int ix= -lmin; ix<lmax; ix++) {
+	for(int iy= -lmin; iy<lmax; iy++) {
+	for(int iz= -lmin*flag3D; iz<lmax*flag3D+flag2D; iz++) {
 		double x = partDist* (double)ix;
 		double y = partDist* (double)iy;
 		double z = partDist* (double)iz;
@@ -680,7 +675,7 @@ void MpsParticle::setInitialPndNumberOfNeigh() {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					// Particle distance r_ij = Xj - Xi_temporary_position
 					double v0ij = pos[j*3  ] - posXi;
 					double v1ij = pos[j*3+1] - posYi;
@@ -755,7 +750,7 @@ void MpsParticle::updateBuckets() {
 	for(int i=0; i<numBucketsXYZ ;i++) 	{	lastParticleInBucket[i] = -1;	}
 	for(int i=0; i<numParticles ;i++) 	{	nextParticleInSameBucket[i] = -1;	}
 	for(int i=0; i<numParticles; i++) {
-		if(particleType[i] == ghost)continue;
+		if(particleType[i] == ghost) continue;
 		int ix = (int)((pos[i*3  ] - domainMinX)*invBucketSide) + 1;
 		int iy = (int)((pos[i*3+1] - domainMinY)*invBucketSide) + 1;
 		int iz = (int)((pos[i*3+2] - domainMinZ)*invBucketSide) + 1;
@@ -787,7 +782,7 @@ void MpsParticle::calcViscosityGravity() {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					// Particle distance r_ij = Xj - Xi_temporary_position
 					double v0ij = pos[j*3  ] - posXi;
 					double v1ij = pos[j*3+1] - posYi;
@@ -865,7 +860,7 @@ void MpsParticle::predictionPressGradient() {
 					int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 					int j = firstParticleInBucket[jb];
 					if(j == -1) continue;
-					for(;;) {
+					while(true) {
 						// Particle distance r_ij = Xj - Xi_temporary_position
 						double v0ij = pos[j*3  ] - posXi;
 						double v1ij = pos[j*3+1] - posYi;
@@ -897,7 +892,7 @@ void MpsParticle::predictionPressGradient() {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					// Particle distance r_ij = Xj - Xi_temporary_position
 					double v0ij = pos[j*3  ] - posXi;
 					double v1ij = pos[j*3+1] - posYi;
@@ -999,7 +994,7 @@ void MpsParticle::predictionWallPressGradient() {
 					int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 					int j = firstParticleInBucket[jb];
 					if(j == -1) continue;
-					for(;;) {
+					while(true) {
 						// Particle distance r_ij = Xj - Xi_temporary_position
 						double v0ij = pos[j*3  ] - posXi;
 						double v1ij = pos[j*3+1] - posYi;
@@ -1030,7 +1025,7 @@ void MpsParticle::predictionWallPressGradient() {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					// Particle distance r_ij = Xj - Xi_temporary_position
 					double v0ij = pos[j*3  ] - posXi;
 					double v1ij = pos[j*3+1] - posYi;
@@ -1231,7 +1226,7 @@ void MpsParticle::checkCollisions() {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					// Particle distance r_ij = Xj - Xi_temporary_position
 					double v0ij = pos[j*3  ] - posXi;
 					double v1ij = pos[j*3+1] - posYi;
@@ -1354,7 +1349,7 @@ void MpsParticle::calcWallNPCD() {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					// Particle distance r_ij = Xj - Xi_temporary_position
 					double v0ij = pos[j*3  ] - posXi;
 					double v1ij = pos[j*3+1] - posYi;
@@ -1424,7 +1419,7 @@ void MpsParticle::calcPnd() {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					// Particle distance r_ij = Xj - Xi_temporary_position
 					double v0ij = pos[j*3  ] - posXi;
 					double v1ij = pos[j*3+1] - posYi;
@@ -1563,7 +1558,7 @@ void MpsParticle::calcPndDiffusiveTerm() {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					// Particle distance r_ij = Xj - Xi_temporary_position
 					double v0ij = pos[j*3  ] - posXi;
 					double v1ij = pos[j*3+1] - posYi;
@@ -1733,7 +1728,7 @@ void MpsParticle::calcWallSlipPndDiffusiveTerm() {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					// Particle distance r_ij = Xj - Xi_temporary_position
 					double v0ij = pos[j*3  ] - posXi;
 					double v1ij = pos[j*3+1] - posYi;
@@ -1870,7 +1865,7 @@ void MpsParticle::calcWallNoSlipPndDiffusiveTerm() {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					// Particle distance r_ij = Xj - Xi_temporary_position
 					double v0ij = pos[j*3  ] - posXi;
 					double v1ij = pos[j*3+1] - posYi;
@@ -1988,7 +1983,7 @@ void MpsParticle::meanPndParticlesWallDummySurface() {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					// Particle distance r_ij = Xj - Xi_temporary_position
 					double v0ij = pos[j*3  ] - posXi;
 					double v1ij = pos[j*3+1] - posYi;
@@ -2067,7 +2062,7 @@ void MpsParticle::meanWallPnd() {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					// Particle distance r_ij = Xj - Xi_temporary_position
 					double v0ij = pos[j*3  ] - posXi;
 					double v1ij = pos[j*3+1] - posYi;
@@ -2132,7 +2127,7 @@ void MpsParticle::meanPnd() {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					// Particle distance r_ij = Xj - Xi_temporary_position
 					double v0ij = pos[j*3  ] - posXi;
 					double v1ij = pos[j*3+1] - posYi;
@@ -2205,7 +2200,7 @@ void MpsParticle::calcPressEMPSandParticleBC() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -2344,7 +2339,7 @@ void MpsParticle::calcPressWCMPSandParticleBC() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -2515,7 +2510,7 @@ void MpsParticle::extrapolatePressParticlesWallDummy() {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					double v0 = pos[j*3  ] - posXi;
 					double v1 = pos[j*3+1] - posYi;
 					double v2 = pos[j*3+2] - posZi;
@@ -2570,7 +2565,7 @@ void MpsParticle::extrapolatePressParticlesNearPolygonWall() {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					// Particle distance r_ij = Xj - Xi_temporary_position
 					double v0ij = pos[j*3  ] - posXi;
 					double v1ij = pos[j*3+1] - posYi;
@@ -2699,7 +2694,7 @@ void MpsParticle::correctionMatrix() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -2766,7 +2761,7 @@ void MpsParticle::calcPressGradient() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -2796,7 +2791,7 @@ void MpsParticle::calcPressGradient() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -2928,7 +2923,7 @@ void MpsParticle::calcWallPressGradient() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -2959,7 +2954,7 @@ void MpsParticle::calcWallPressGradient() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -3123,7 +3118,7 @@ void MpsParticle::calcVolumeFraction()
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					double v0 = pos[j*3  ] - posXi;
 					double v1 = pos[j*3+1] - posYi;
 					double v2 = pos[j*3+2] - posZi;
@@ -3158,7 +3153,7 @@ void MpsParticle::calcVolumeFraction()
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 				int j = firstParticleInBucket[jb];
 				if(j == -1) continue;
-				for(;;) {
+				while(true) {
 					double v0 = pos[j*3  ] - posXi;
 					double v1 = pos[j*3+1] - posYi;
 					double v2 = pos[j*3+2] - posZi;
@@ -3274,7 +3269,7 @@ void MpsParticle::calcViscosityInteractionVal() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -3651,7 +3646,7 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -4067,7 +4062,7 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -4379,7 +4374,7 @@ void MpsParticle::calcWallSlipViscosity() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -4549,7 +4544,7 @@ void MpsParticle::calcWallNoSlipViscosity() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -5052,7 +5047,7 @@ void MpsParticle::calcShifting() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -5131,7 +5126,7 @@ void MpsParticle::calcNormalParticles() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -5245,7 +5240,7 @@ void MpsParticle::calcWallShifting() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -5341,7 +5336,7 @@ void MpsParticle::calcConcAndConcGradient() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -5392,7 +5387,7 @@ void MpsParticle::calcConcAndConcGradient() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -5525,7 +5520,7 @@ void MpsParticle::calcWallConcAndConcGradient() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				// Particle distance r_ij = Xj - Xi_temporary_position
 				double v0ij = pos[j*3  ] - posXi;
 				double v1ij = pos[j*3+1] - posYi;
@@ -5631,7 +5626,7 @@ void MpsParticle::updateVelocityParticlesWallDummy() {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
 			int j = firstParticleInBucket[jb];
 			if(j == -1) continue;
-			for(;;) {
+			while(true) {
 				double v0 = pos[j*3  ] - posXi;
 				double v1 = pos[j*3+1] - posYi;
 				double v2 = pos[j*3+2] - posZi;
