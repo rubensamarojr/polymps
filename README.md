@@ -4,9 +4,12 @@ Explicit and Weakly Compressible Moving Particle Semi-implicit method with Polyg
 
 ## Requirements
 
+- [GCC (GNU Compiler Collection)](https://gcc.gnu.org/)
 - [Eigen](http://eigen.tuxfamily.org/)
 - [libigl](https://github.com/libigl/libigl)
 - [JSON for Modern C++](https://github.com/nlohmann/json)
+
+In order to install C++ compiler (GCC) on **windows**, you could either install Cygwin GCC, MinGW GCC or MinGW-W64 GCC. You can find [here](https://www3.ntu.edu.sg/home/ehchua/programming/howto/Cygwin_HowTo.html) how to install Cygwin or MinGW.
 
 Eigen, libigl and JSON for Modern C++ are third party header-only libraries.
 
@@ -23,15 +26,15 @@ There are some examples in the folder **input**.
 
 ## Compile
 
-Code compiled and tested on Linux CentOS 7 and Ubuntu64.
+Code compiled and tested on Windows 7, and Linux CentOS 7 and Ubuntu64.
 
 You can build the project in GNU/Linux using the makefile. Follow these steps (CPU version):
 
-Clone this repository into your system
+Clone this repository into your system using `terminal in Linux`, and [Git BASH](https://gitforwindows.org/) `or command prompt (cmd) in Windows`
 ```bash
 git clone https://github.com/rubensaaj/EMPS_MESH.git
 ```
-In a terminal, go to the folder **EMPS_MESH**.
+Go to the folder **EMPS_MESH**
 ```bash
 cd EMPS_MESH
 ```
@@ -60,10 +63,20 @@ This should create a binary `main` in folder **bin**
 
 ## Run
 Run the code as
+- LINUX
 ```bash
 ./bin/main
 ```
-Type the name of the json input file (located in input directory)
+- WINDOWS
+```bash
+bin\main.exe
+```
+
+Type the name of the json input file (located in input directory), e.g.
+
+```bash
+MpsInputExample
+```
 
 This code writes pvd (header file) and corresponding vtu files as output.
 You can visualize them by open the pvd file with [Paraview](https://www.paraview.org).
