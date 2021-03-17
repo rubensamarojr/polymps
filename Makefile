@@ -28,7 +28,7 @@ DEBUGS := -O3
 
 #CXXFLAGS := $(DEBUGS) -std=c++11 -Wall -Wextra -MP -MMD
 #CXXFLAGS := $(DEBUGS) -std=c++11 -Wextra -MP -MMD -fopenmp -lm
-CXXFLAGS := $(DEBUGS) -std=c++11 -MP -MMD -fopenmp -lm
+CXXFLAGS := $(DEBUGS) -std=c++11 -MP -MMD -fopenmp -lm -D_GNU_SOURCE
 CPPFLAGS := -I $(INCLUDE_DIR) -Ieigen -Ijson/single_include/nlohmann -Ilibigl/include
 
 # Got some linker flags ?
