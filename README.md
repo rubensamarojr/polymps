@@ -2,6 +2,8 @@
 
 Explicit and Weakly Compressible Moving Particle Semi-implicit method with Polygon wall
 
+<img src='/output/dambreak01_movie.gif' width="500">
+
 ## Requirements
 
 - [GCC (GNU Compiler Collection)](https://gcc.gnu.org/)
