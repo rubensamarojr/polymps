@@ -144,7 +144,7 @@ void MpsParticle::readInputFile() {
 		//tries to read the input json file
 		fp = fopen(json_path_char, "r");
 		if (fp == NULL) {
-			printf("Error reading the input file %s. Try again.\n", json_file_char);
+			printf("Error reading the input file %s. Try again.\n", json_path_char);
 		}
 		else {
 			readOK = true;
