@@ -80,7 +80,7 @@ In the terminal, type
 ```
 - WINDOWS
 
-You can do it in two ways:
+You can do this in two ways:
 
 1st way - In the command prompt, type
 ```bash
@@ -95,6 +95,7 @@ Type the name of the json input file (located in input directory), e.g.
 MpsInputExample
 ```
 
+## Output
 This code writes pvd (header file) and corresponding vtu files as output.
 You can visualize them by open the pvd file with [Paraview](https://www.paraview.org).
 
