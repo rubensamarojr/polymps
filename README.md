@@ -72,16 +72,23 @@ make all
 This should create a binary `main` in folder **bin**
 
 ## Run
-Run the code as
 - LINUX
+
+In the terminal, type
 ```bash
 ./bin/main
 ```
 - WINDOWS
+
+You can do it in two ways:
+
+1st way - In the command prompt, type
 ```bash
 bin\main.exe
 ```
+2nd way - Move the *main.exe* from the folder **bin** to the root folder **EMPS_MESH**. After that, double click on *main.exe*.
 
+## Input
 Type the name of the json input file (located in input directory), e.g.
 
 ```bash
