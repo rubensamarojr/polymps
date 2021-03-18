@@ -6,15 +6,16 @@ Explicit and Weakly Compressible Moving Particle Semi-implicit method with Polyg
 
 ## Requirements
 
-- [GCC (GNU Compiler Collection)](https://gcc.gnu.org/)
-- [Eigen](http://eigen.tuxfamily.org/)
+- [GCC (GNU Compiler Collection)](https://gcc.gnu.org)
+- [Eigen](http://eigen.tuxfamily.org)
 - [libigl](https://github.com/libigl/libigl)
 - [JSON for Modern C++](https://github.com/nlohmann/json)
 
-In order to install C++ compiler (GCC) on **windows**, we recommend to install [Cygwin](https://cygwin.com/). You can find [here](https://www3.ntu.edu.sg/home/ehchua/programming/howto/Cygwin_HowTo.html) how to install Cygwin. 
-The following Packages should be installed:
+In order to install C++ compiler (GCC) on **windows**, we recommend to install [Cygwin](https://cygwin.com). You can find [here](https://www3.ntu.edu.sg/home/ehchua/programming/howto/Cygwin_HowTo.html) how to install Cygwin. 
+The following Packages should be selected during the Cygwin installation:
 - automake
-- gcc
+- gcc-core
+- gcc-fortran
 - gcc-c++
 - gdb
 - libstdc++
