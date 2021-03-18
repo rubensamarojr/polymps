@@ -655,7 +655,7 @@ void MpsParticle::setParameters() {
 	numOfIterations = 0;											// Number of iterations
 	fileNumber = 0;													// File number
 	timeCurrent = 0.0;												// Simulation time
-
+	velMax = 0.0;													// Maximum flow velocity
 	// cout << "lo: " << partDist << " m, dt: " << timeStep << " s, PND0Small: " << pndSmallZero << " PND0Large: " << pndLargeZero << " PND0Grad: " << pndGradientZero << " lambda: " << lambdaZero << std::endl;
 }
 
@@ -4987,7 +4987,7 @@ void MpsParticle::transform2Dto3D(double *P1, double *RM) {
 
 // Update velocity and positions
 void MpsParticle::updateVelocityPosition2nd() {
-	velMax = 0.0;						// Maximum velocity
+	velMax = 0.0;						// Maximum flow velocity
 	double auxiliar[5] = {1.2, -3.3, 4.3, -0.3, 5.6};
 
 	// https://stackoverflow.com/questions/39989473/use-openmp-in-c11-to-find-the-maximum-of-the-calculated-values
