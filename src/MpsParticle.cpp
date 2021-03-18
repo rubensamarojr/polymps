@@ -656,6 +656,7 @@ void MpsParticle::setParameters() {
 	fileNumber = 0;													// File number
 	timeCurrent = 0.0;												// Simulation time
 	velMax = 0.0;													// Maximum flow velocity
+	CFLcurrent = cflNumber;											// Current Courant number
 	// cout << "lo: " << partDist << " m, dt: " << timeStep << " s, PND0Small: " << pndSmallZero << " PND0Large: " << pndLargeZero << " PND0Grad: " << pndGradientZero << " lambda: " << lambdaZero << std::endl;
 }
 
