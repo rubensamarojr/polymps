@@ -142,8 +142,8 @@ void MpsParticle::readInputFile() {
 		snprintf(json_path_char, 1000, "%s%s", json_folder, json_file_char);
 
 		//tries to read the input json file
-		fp = fopen(json_path_char, "r");
-		if (fp == NULL) {
+		js = fopen(json_path_char, "r");
+		if (js == NULL) {
 			printf("Error reading the input file %s. Try again.\n", json_path_char);
 		}
 		else {
@@ -373,6 +373,8 @@ void MpsParticle::readInputFile() {
 	// cout << "numParticles: " << numPartTypes << endl;
 		
 	// // cout << endl;
+	// Close .json file
+	fclose(js);
 
 }
 
