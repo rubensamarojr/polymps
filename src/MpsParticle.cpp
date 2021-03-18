@@ -10,8 +10,12 @@
 #include <string>
 // input file
 #include "json.hpp"
-// mkdir
+// mkdir for Linux
 #include <sys/stat.h>
+// mkdir for Windows
+#if defined (_WIN32)
+#include <direct.h>
+#endif
 #include <sys/time.h>
 
 #include "MpsParticle.h"
@@ -6960,8 +6964,14 @@ void MpsParticle::writePvd()
 		vtuOutputFoldername_copy.erase(0,found+1);
 	}
 
-	// Creating a directory 
-	if(mkdir(output_folder_char, 0777) == -1) {
+	int mkdirOK;
+	// Creating a directory
+#if defined (_WIN32)
+	mkdirOK = _mkdir(output_folder_char);
+#else
+	mkdirOK = mkdir(output_folder_char, 0777);
+#endif
+	if(mkdirOK == -1) {
 		printf("Unable to create directory.\n");
 	}
 	else {
