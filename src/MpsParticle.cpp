@@ -13,7 +13,7 @@
 // mkdir for Linux
 #include <sys/stat.h>
 // mkdir for Windows
-#if defined(_WIN32) || defined(WIN32) || defined(__CYGWIN__) || defined(__MINGW32__) || defined(__BORLANDC__)
+#if defined(_WIN32) || defined(WIN32) || defined(__MINGW32__) || defined(__BORLANDC__)
 #include <direct.h>
 #endif
 #include <sys/time.h>
@@ -6965,7 +6965,7 @@ void MpsParticle::writePvd()
 
 	int mkdirOK;
 	// Creating a directory
-#if defined(_WIN32) || defined(WIN32) || defined(__CYGWIN__) || defined(__MINGW32__) || defined(__BORLANDC__)
+#if defined(_WIN32) || defined(WIN32) || defined(__MINGW32__) || defined(__BORLANDC__)
 	mkdirOK = _mkdir(output_folder_char);
 #else
 	mkdirOK = mkdir(output_folder_char, 0777);
