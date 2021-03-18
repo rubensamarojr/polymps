@@ -139,12 +139,12 @@ void MpsParticle::readInputFile() {
 		// strcpy (json_file_char, json_file.c_str());
 		// json_file_char now contains a c-string copy of json_file
 		strcat(json_file_char, ".json");
-		snprintf(json_path_char, 1000, "%s%s", json_folder,json_file_char);
+		snprintf(json_path_char, 1000, "%s%s", json_folder, json_file_char);
 
 		//tries to read the input json file
 		fp = fopen(json_path_char, "r");
 		if (fp == NULL) {
-			printf("Error reading the input file. Try again.\n");
+			printf("Error reading the input file %s. Try again.\n", json_file_char);
 		}
 		else {
 			readOK = true;
