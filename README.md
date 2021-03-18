@@ -11,7 +11,14 @@ Explicit and Weakly Compressible Moving Particle Semi-implicit method with Polyg
 - [libigl](https://github.com/libigl/libigl)
 - [JSON for Modern C++](https://github.com/nlohmann/json)
 
-In order to install C++ compiler (GCC) on **windows**, you could either install Cygwin GCC, MinGW GCC or MinGW-W64 GCC. You can find [here](https://www3.ntu.edu.sg/home/ehchua/programming/howto/Cygwin_HowTo.html) how to install Cygwin or MinGW.
+In order to install C++ compiler (GCC) on **windows**, we recommend to install [Cygwin](https://cygwin.com/). You can find [here](https://www3.ntu.edu.sg/home/ehchua/programming/howto/Cygwin_HowTo.html) how to install Cygwin. 
+The following Packages should be installed:
+- automake
+- gcc
+- gcc-c++
+- gdb
+- libstdc++
+- make
 
 Eigen, libigl and JSON for Modern C++ are third party header-only libraries.
 
