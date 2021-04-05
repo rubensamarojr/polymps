@@ -15,7 +15,7 @@ OBJECT_DIR := obj
 OBJECT_LIB_DIR := $(OBJECT_DIR)/lib
 INCLUDE_DIR := include
 TARGET_DIR := src
-TARGET := $(wildcard $(TARGET_DIR)/*.cpp)
+TARGET := main.cpp
 LIB_DIR := lib
 
 # C compiler (GNU/INTEL) (g++) or (icpc)
