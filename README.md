@@ -21,7 +21,7 @@ The following Packages should be selected during the Cygwin installation:
 - libstdc++
 - make
 
-Eigen, libigl and JSON for Modern C++ are third party header-only libraries.
+Eigen, libigl and JSON for Modern C++ are third party [header-only](https://en.wikipedia.org/wiki/Header-only) libraries.
 
 ## MPS input files
 
