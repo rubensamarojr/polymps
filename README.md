@@ -1,6 +1,6 @@
 # EMPS_MESH
 
-Explicit and Weakly Compressible Moving Particle Semi-implicit method with Polygon wall
+Explicit and Weakly Compressible Moving Particle Semi-implicit method with Boundary polygon walls
 
 <img src='/output/dambreak01_movie.gif' width="96%">
 
