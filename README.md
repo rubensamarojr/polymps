@@ -16,7 +16,7 @@ The following Packages should be selected during the Cygwin installation:
 - automake
 - gcc-core
 - gcc-fortran
-- gcc-c++
+- gcc-g++
 - gdb
 - libstdc++
 - make
