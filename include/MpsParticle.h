@@ -10,7 +10,9 @@ enum boundaryWallType {
 
 enum calcPressType {
 	EXPLICIT = 0,
-	WEAKLY = 1
+	WEAKLY = 1,
+	IMPLICIT_PND = 2,
+	IMPLICIT_PND_DIVU = 3
 };
 
 enum calcPNDType {
@@ -121,10 +123,12 @@ public:
 	void meanWallPnd();
 	// Mean PND (pndType = calcPNDType:MEAN_SUM_WIJ)
 	void meanPnd();
-	// Compute pressure EMPS (mpsType = calcPressType::EXPLICIT) and type of particle
-	void calcPressEMPSandParticleBC();
-	// Compute pressure WCMPS (mpsType = calcPressType::WEAKLY) and type of particle
-	void calcPressWCMPSandParticleBC();
+	// Compute type of particle
+	void updateParticleBC();
+	// Compute pressure EMPS (mpsType = calcPressType::EXPLICIT)
+	void calcPressEMPS();
+	// Compute pressure WCMPS (mpsType = calcPressType::WEAKLY)
+	void calcPressWCMPS();
 	// Extrapolate pressure to wall and dummy particles
 	void extrapolatePressParticlesWallDummy();
 	// Extrapolate pressure to inner particles near polygon walls

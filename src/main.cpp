@@ -150,12 +150,14 @@ void mainLoopOfSimulation(MpsParticle &part, PolygonMesh* &mesh) {
 			part.meanPnd();
 		}
 
-		// Pressure calculation and type of particle
+		// Update type of particle
+		part.updateParticleBC();
+		// Pressure calculation
 		if(part.mpsType == calcPressType::EXPLICIT) {
-			part.calcPressEMPSandParticleBC();
+			part.calcPressEMPS();
 		}
 		else if(part.mpsType == calcPressType::WEAKLY) {
-			part.calcPressWCMPSandParticleBC();
+			part.calcPressWCMPS();
 		}
 		if(part.wallType == boundaryWallType::PARTICLE) {
 			part.extrapolatePressParticlesWallDummy(); // Extrapolate pressure to wall and dummy particles
@@ -363,15 +365,17 @@ int main( int argc, char** argv) {
 	}
 	// Mean of PND
 	particles.meanPnd();
-	// Compute pressure and type of particle
+	// Update type of particle
+	particles.updateParticleBC();
+	// Compute pressure
 	if(particles.mpsType == calcPressType::EXPLICIT) {
-		particles.calcPressEMPSandParticleBC();
+		particles.calcPressEMPS();
 	}
 	else if(particles.mpsType == calcPressType::WEAKLY) {
-		particles.calcPressWCMPSandParticleBC();
+		particles.calcPressWCMPS();
 	}
 	// Write header for vtu files
-	 particles.writePvd();
+	particles.writePvd();
 
 	///////////////////////////
 	//////// Main loop ////////

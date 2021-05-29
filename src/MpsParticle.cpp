@@ -2183,147 +2183,8 @@ void MpsParticle::meanPnd() {
 	}
 }
 
-// Compute pressure EMPS (mpsType = calcPressType::EXPLICIT) and type of particle
-void MpsParticle::calcPressEMPSandParticleBC() {
-// Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
-//#pragma omp parallel for schedule(dynamic,64)
-#pragma omp parallel for
-	for(int i=0; i<numParticles; i++) {
-		if(particleType[i] != ghost) {
-/*
-		double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
-		double posMirrorXi = mirrorParticlePos[i*3  ];	double posMirrorYi = mirrorParticlePos[i*3+1];	double posMirrorZi = mirrorParticlePos[i*3+2];
-		double ni = 0.0;
-		numNeigh[i] = 0;
-		// Add Number of neighboors due Wall polygon
-		numNeigh[i] += numNeighWallContribution[i];
-		int ix = (int)((posXi - domainMinX)*invBucketSide) + 1;
-		int iy = (int)((posYi - domainMinY)*invBucketSide) + 1;
-		int iz = (int)((posZi - domainMinZ)*invBucketSide) + 1;
-		for(int jz=iz-1;jz<=iz+1;jz++) {
-		for(int jy=iy-1;jy<=iy+1;jy++) {
-		for(int jx=ix-1;jx<=ix+1;jx++) {
-			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
-			int j = firstParticleInBucket[jb];
-			if(j == -1) continue;
-			while(true) {
-				// Particle distance r_ij = Xj - Xi_temporary_position
-				double v0ij = pos[j*3  ] - posXi;
-				double v1ij = pos[j*3+1] - posYi;
-				double v2ij = pos[j*3+2] - posZi;
-
-				double dstij2 = v0ij*v0ij+v1ij*v1ij+v2ij*v2ij;
-
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
-				double v0imj = pos[j*3  ] - posMirrorXi;
-				double v1imj = pos[j*3+1] - posMirrorYi;
-				double v2imj = pos[j*3+2] - posMirrorZi;
-
-				double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
-				// If j is inside the neighborhood of i and 
-				// is not at the same side of im (avoid real j in the virtual neihborhood)
-				if(dstij2 < reL2 && dstij2 < dstimj2) {
-				if(j != i && particleType[j] != ghost) {
-					numNeigh[i] += 1;
-					if(dstij2 < reS2) {
-						double dst = sqrt(dstij2);
-						double wS = weight(dst, reS, weightType);
-						ni += wS;
-						npcdDeviation[i*3  ] += v0ij*wS;
-						npcdDeviation[i*3+1] += v1ij*wS;
-						npcdDeviation[i*3+2] += v2ij*wS;
-				}}}
-				j = nextParticleInSameBucket[j];
-				if(j == -1) break;
-			}
-		}}}
-
-		//		double mi = Dns[particleType[i]];
-		double mi;
-		if(PTYPE[i] == 1) mi = DNS_FL1;
-		else mi = DNS_FL2;
-
-		if(pndType == calcPNDType::SUM_WIJ || pndType == calcPNDType::MEAN_SUM_WIJ)
-//		if(pndType == calcPNDType::SUM_WIJ)
-		{
-			// PND due particles and Wall polygon
-			pndi[i] = ni + pndWallContribution[i];
-		}
-//		if(particleType[i] == wall) {
-			// PND due particles and Wall polygon
-//			pndi[i] = ni + pndWallContribution[i];
-//			if(pndi[i] < pndSmallZero)
-//				pndi[i] = pndSmallZero;
-
-//				pndi[i] = pndSmallZero*(press[i]/(mi*coeffPressWCMPS)+1);
-//		}
-		// Add PND due Wall polygon
-		pndSmall[i] = ni + pndWallContribution[i];
-		// Prevent pndSmall[i] = 0
-		if(numNeigh[i] > 1) {
-			npcdDeviation[i*3  ] /= pndSmall[i];
-			npcdDeviation[i*3+1] /= pndSmall[i];
-			npcdDeviation[i*3+2] /= pndSmall[i];
-		}
-		npcdDeviation2[i] = npcdDeviation[i*3]*npcdDeviation[i*3]+npcdDeviation[i*3+1]*npcdDeviation[i*3+1]+npcdDeviation[i*3+2]*npcdDeviation[i*3+2];
-
-		
-		if(npcdDeviation[i*3]*polygonNormal[i*3]+npcdDeviation[i*3+1]*polygonNormal[i*3+1]+npcdDeviation[i*3+2]*polygonNormal[i*3+2] < 0.0)
-			deviationDotPolygonNormal[i] = 1;
-		//coeffPressEMPS = soundSpeed*soundSpeed/pndSmallZero
-//		double pressure = 0.0;
-*/
-			// First check based on particle number density
-			if(pndSmall[i] < pndThreshold*pndSmallZero)
-				particleBC[i] = surface;
-			else
-				particleBC[i] = inner;
-
-			// Boundary particle verification based on relative distance and weight (NPCD)
-			if(particleBC[i] == surface) {
-				double delta2 = npcdThreshold*npcdThreshold*partDist*partDist;
-				if(numNeigh[i] > 4 && npcdDeviation2[i] < delta2)
-					particleBC[i] = inner;
-			}
-
-			//		double mi = Dns[particleType[i]];
-			double mi;
-			if(PTYPE[i] == 1) mi = DNS_FL1;
-			else mi = DNS_FL2;
-
-			double pressure = 0.0;
-			if(particleBC[i] == inner) {
-				pressure = (pndi[i] - pndSmallZero) * coeffPressEMPS * mi;
-			}
-
-//		if(pndSmall[i] < pndThreshold*pndSmallZero && numNeigh[i] < neighThreshold*numNeighZero)
-//			particleBC[i] = surface;
-//		else
-//		{
-//			particleBC[i] = inner;
-//			pressure = (pndi[i] - pndSmallZero) * coeffPressEMPS * mi;
-//		}
-//		if(wallType == boundaryWallType::POLYGON) {
-//			if(pndi[i] > pndThreshold*pndSmallZero) {
-//				pressure = -mi*gravityZ*(0.3-posZi);
-//			}
-//		}
-//		else if(wallType == boundaryWallType::PARTICLE) {
-//			if(pndi[i] > pndThreshold*pndSmallZero || numNeigh[i] > neighThreshold*numNeighZero) {
-//				pressure = -mi*gravityZ*(0.3-posZi);
-//			}
-//		}
-
-			if(pressure < 0.0) {
-				pressure = 0.0;
-			}
-			press[i] = pressure;
-		}
-	}
-}
-
-// Compute pressure WCMPS (mpsType = calcPressType::WEAKLY) and type of particle
-void MpsParticle::calcPressWCMPSandParticleBC() {
+// Update type of particle
+void MpsParticle::updateParticleBC() {
 // Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
 //#pragma omp parallel for schedule(dynamic,64)
 #pragma omp parallel for
@@ -2448,7 +2309,6 @@ void MpsParticle::calcPressWCMPSandParticleBC() {
 				}
 			}
 
-
 			if(pndSmall[i] < pndThreshold*pndSmallZero && numNeigh[i] < neighThreshold*numNeighZero) {
 			// if(pndi[i] < pndThreshold*pndSmallZero && numNeigh[i] < neighThreshold*numNeighZero)
 				particleBC[i] = surface;
@@ -2456,6 +2316,61 @@ void MpsParticle::calcPressWCMPSandParticleBC() {
 			else {
 				particleBC[i] = inner;
 			}
+		}
+	}
+}
+
+// Compute pressure EMPS (mpsType = calcPressType::EXPLICIT)
+void MpsParticle::calcPressEMPS() {
+// Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
+//#pragma omp parallel for schedule(dynamic,64)
+#pragma omp parallel for
+	for(int i=0; i<numParticles; i++) {
+		if(particleType[i] != ghost) {
+
+			//		double mi = Dns[particleType[i]];
+			double mi;
+			if(PTYPE[i] == 1) mi = DNS_FL1;
+			else mi = DNS_FL2;
+
+			double pressure = 0.0;
+			if(particleBC[i] == inner) {
+				pressure = (pndi[i] - pndSmallZero) * coeffPressEMPS * mi;
+			}
+
+//		if(pndSmall[i] < pndThreshold*pndSmallZero && numNeigh[i] < neighThreshold*numNeighZero)
+//			particleBC[i] = surface;
+//		else
+//		{
+//			particleBC[i] = inner;
+//			pressure = (pndi[i] - pndSmallZero) * coeffPressEMPS * mi;
+//		}
+//		if(wallType == boundaryWallType::POLYGON) {
+//			if(pndi[i] > pndThreshold*pndSmallZero) {
+//				pressure = -mi*gravityZ*(0.3-posZi);
+//			}
+//		}
+//		else if(wallType == boundaryWallType::PARTICLE) {
+//			if(pndi[i] > pndThreshold*pndSmallZero || numNeigh[i] > neighThreshold*numNeighZero) {
+//				pressure = -mi*gravityZ*(0.3-posZi);
+//			}
+//		}
+
+			if(pressure < 0.0) {
+				pressure = 0.0;
+			}
+			press[i] = pressure;
+		}
+	}
+}
+
+// Compute pressure WCMPS (mpsType = calcPressType::WEAKLY)
+void MpsParticle::calcPressWCMPS() {
+// Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
+//#pragma omp parallel for schedule(dynamic,64)
+#pragma omp parallel for
+	for(int i=0; i<numParticles; i++) {
+		if(particleType[i] != ghost) {
 
 			//		double mi = Dns[particleType[i]];
 			double mi;
@@ -2491,11 +2406,11 @@ void MpsParticle::calcPressWCMPSandParticleBC() {
 //				}
 //			}
 			
-				if(pressure < 0.0) {
-					pressure = 0.0;
-				}
-				press[i] = pressure;
+			if(pressure < 0.0) {
+				pressure = 0.0;
 			}
+			press[i] = pressure;
+		}
 	}
 }
 
