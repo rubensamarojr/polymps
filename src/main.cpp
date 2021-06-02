@@ -159,6 +159,11 @@ void mainLoopOfSimulation(MpsParticle &part, PolygonMesh* &mesh) {
 		else if(part.mpsType == calcPressType::WEAKLY) {
 			part.calcPressWCMPS();
 		}
+		else if(part.mpsType == calcPressType::IMPLICIT_PND)
+		{
+			part.solvePressurePoissonPnd();
+		}
+		
 		if(part.wallType == boundaryWallType::PARTICLE) {
 			part.extrapolatePressParticlesWallDummy(); // Extrapolate pressure to wall and dummy particles
 		}
@@ -373,6 +378,10 @@ int main( int argc, char** argv) {
 	}
 	else if(particles.mpsType == calcPressType::WEAKLY) {
 		particles.calcPressWCMPS();
+	}
+	else if(particles.mpsType == calcPressType::IMPLICIT_PND)
+	{
+		particles.solvePressurePoissonPnd();
 	}
 	// Write header for vtu files
 	particles.writePvd();

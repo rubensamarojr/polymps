@@ -1,6 +1,10 @@
 // Copyright (c) 2021 Rubens AMARO
 // Distributed under the MIT License.
 
+#include <Eigen/Dense>
+#include <Eigen/Core>
+#include <Eigen/SparseCore>
+
 #pragma once
 
 enum boundaryWallType {
@@ -13,6 +17,11 @@ enum calcPressType {
 	WEAKLY = 1,
 	IMPLICIT_PND = 2,
 	IMPLICIT_PND_DIVU = 3
+};
+
+enum solvPressType{
+	CG = 0,
+	BICGSTAB = 1
 };
 
 enum calcPNDType {
@@ -129,6 +138,12 @@ public:
 	void calcPressEMPS();
 	// Compute pressure WCMPS (mpsType = calcPressType::WEAKLY)
 	void calcPressWCMPS();
+	// Linear system solver PPE (mpsType = calcPressType::IMPLICIT_PND)
+	void solvePressurePoissonPnd();
+	// Linear system solver PPE (mpsType = calcPressType::IMPLICIT_PND_DIVU)
+	void solvePressurePoissonPndDivU();
+	// Set pressure negative to zero
+	void setZeroOnNegativePressure();
 	// Extrapolate pressure to wall and dummy particles
 	void extrapolatePressParticlesWallDummy();
 	// Extrapolate pressure to inner particles near polygon walls
@@ -435,7 +450,14 @@ public:
  	// Forced rigid wall
 	double velVWall[3]; // Uniform wall velocity 
 
+protected:
+	// Solve linear system using Conjugate Gradient (solverType = solvPressType::CG)
+	void solveConjugateGradient(Eigen::SparseMatrix<double> p_mat);
+	// Solve linear system using Bi Conjugate Gradient Stabiçized (solverType = solvPressType::BICGSTAB)
+	void solveBiConjugateGradientStabilized(Eigen::SparseMatrix<double> p_mat);
+
 private:
+
 	// Files
 	// MpsParticle data json file
 	FILE* js;
@@ -560,6 +582,14 @@ private:
  	// int numOfRigidMesh;		// Number of fixed rigid meshs
  	// int numOfDeformableMesh;// Number of deformable meshs
  	// int numOfForcedMesh;	// Number of forced meshs
+ 	double relaxPND;		// Relaxation coefficent for pressure source term PND
+ 	double alphaCompressibility;	// Compressibility leads to a diagonal dominant matrix
+
+ 	int solverType;					// Solver type
+ 	int solverIter;					// Solver number of iterations
+ 	double solverError;				// Solver estimated error
+ 	Eigen::VectorXd sourceTerm;		// Solver source term
+ 	Eigen::VectorXd pressurePPE;	// Solver pressure
 
 	///////////// INPUTS /////////////
 
@@ -591,6 +621,8 @@ private:
 	double distCollisionLimit;	// A distance that does not allow further access between particles
 	double distCollisionLimit2;	// distCollisionLimit to square
 	double restitutionCollision;
+	double coeffPPE;			// Coefficient used to PPE
+	double coeffPPESource;		// Coefficient used to PPE source term
 	
 	// Scalars
 	// int numParticles;		// Number of particles

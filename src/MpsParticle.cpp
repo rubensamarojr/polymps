@@ -19,6 +19,11 @@
 #include <sys/time.h>
 #include "MpsParticle.h"
 
+#include <Eigen/Core>
+#include <Eigen/SparseCore>
+#include <Eigen/IterativeLinearSolvers>
+#include <Eigen/LU>
+
 using namespace std;
 
 MpsParticle::MpsParticle()
@@ -53,6 +58,9 @@ void MpsParticle::displayInfo(const int intervalIter) {
 		hours = minutes / 60;
 		printf("Iteration: %5dth Time: %lfsec Number of Particles: %d Maximum Velocity: %lfm/s Courant: %lf", 
 			numOfIterations, timeCurrent, numberOfParticles, velMax, CFLcurrent);
+		if(mpsType == calcPressType::IMPLICIT_PND){
+			printf(" Solver iterations: %3d Estimated error: %.2e", solverIter, solverError);
+		}
 		printf(" RunTime: %02dh%02dm%02dsec\n", int(hours), int(minutes%60), int(seconds%60));
 	}
 }
@@ -121,9 +129,9 @@ void MpsParticle::readInputFile() {
 	bool readOK = false;
 	printf(" ____________________________________________________________ \n");
 	printf("|                                                            |\n");
-	printf("|                      E-MPS/WC-MPS                          |\n");
-	printf("|                                                            |\n");
-	printf("|  Explicit/Weakly-compressible Moving Particle Simulation   |\n");
+	printf("|                      E-MPS/WC-MPS/MPS                      |\n");
+	printf("|         Explicit/Weakly-compressible/Semi-implicit         |\n");
+	printf("|                Moving Particle Simulation                  |\n");
 	printf("|                                                            |\n");
 	printf("|               University of Sao Paulo - Brazil             |\n");
 	printf("|                                                            |\n");
@@ -236,7 +244,6 @@ void MpsParticle::readInputFile() {
 	timeSimulation = je.at("numerical").value("final_time", 1.0);
 	iterOutput = je.at("numerical").value("iter_output", 80);
 	cflNumber = je.at("numerical").value("CFL_number", 0.2);
-	mpsType = je.at("numerical").value("mps_type", 1);
 	weightType = je.at("numerical").value("weight_type", 0);
 	slipCondition = je.at("numerical").value("slip_condition", 0);
 	reS = je.at("numerical").at("effective_radius").value("small", 2.1);
@@ -244,8 +251,12 @@ void MpsParticle::readInputFile() {
 	gradientType = je.at("numerical").at("gradient").value("type", 3);
 	gradientCorrection = je.at("numerical").at("gradient").value("correction", false);
 	relaxPress = je.at("numerical").at("gradient").value("relax_fact", 1.0);
-	soundSpeed = je.at("numerical").at("equation_state").value("speed_sound", 15.0);
-	gamma = je.at("numerical").at("equation_state").value("gamma", 7.0);
+	mpsType = je.at("numerical").value("mps_type", 1);
+	soundSpeed = je.at("numerical").at("explicit_mps").at("equation_state").value("speed_sound", 15.0);
+	gamma = je.at("numerical").at("explicit_mps").at("equation_state").value("gamma", 7.0);
+	solverType = je.at("numerical").at("semi_implicit_mps").value("solver_type", 0);
+	alphaCompressibility = je.at("numerical").at("semi_implicit_mps").at("weak_compressibility").value("alpha", 1.0e-6);
+	relaxPND = je.at("numerical").at("semi_implicit_mps").at("source_term").value("relax_pnd", 0.001);
 	shiftingType = je.at("numerical").at("particle_shifting").value("type", 2);
 	dri = je.at("numerical").at("particle_shifting").value("DRI", 0.01);
 	coefA = je.at("numerical").at("particle_shifting").value("coef_A", 2.0);
@@ -345,7 +356,9 @@ void MpsParticle::readInputFile() {
 	// cout << "gradientCorrection: " << gradientCorrection << " | ";
 	// cout << "relaxPress: " << relaxPress << " | ";
 	// cout << "soundSpeed: " << soundSpeed << " | ";
-	// cout << "gamma: " << gamma << endl;
+	// cout << "solverType: " << solverType << endl;
+	// cout << "alphaCompressibility: " << alphaCompressibility << " | ";
+	// cout << "relaxPND: " << relaxPND << endl;
 	// cout << "shiftingType: " << shiftingType << " | ";
 	// cout << "dri: " << dri << " | ";
 	// cout << "coefA: " << coefA << " | ";
@@ -470,6 +483,10 @@ void MpsParticle::readMpsParticleFile(const std::string& grid_file) {
 	// Vectors
 	forceWall = (double*)malloc(sizeof(double)*numParticles*3);	// Force on wall
 
+	// Solver PPE
+	pressurePPE = Eigen::VectorXd::Zero(numParticles);
+	sourceTerm = Eigen::VectorXd::Zero(numParticles);
+
 	// Set values from .grid file
 	for(int i=0; i<numParticles; i++) {
 		int a[2];
@@ -584,6 +601,9 @@ void MpsParticle::checkParticleOutDomain(const int i) {
 		correcMatrixRow3[i*3]=correcMatrixRow3[i*3+1]=correcMatrixRow3[i*3+2]=0.0;
 		wallParticleForce1[i*3]=wallParticleForce1[i*3+1]=wallParticleForce1[i*3+2]=0.0;
 		wallParticleForce2[i*3]=wallParticleForce2[i*3+1]=wallParticleForce2[i*3+2]=0.0;
+
+		pressurePPE(i) = 0.0;
+		sourceTerm(i) = 0.0;
 	}
 }
 
@@ -649,6 +669,8 @@ void MpsParticle::setParameters() {
 	coeffPressWCMPS = soundSpeed*soundSpeed;						// Coefficient used to calculate pressure WC-MPS
 	coeffShifting1 = dri*partDist/pndSmallZero;						// Coefficient used to adjust velocity type 1
 	coeffShifting2 = coefA*partDist*partDist*cflNumber*machNumber;	// Coefficient used to adjust velocity type 2
+	coeffPPE = 2.0*dim/(pndSmallZero*lambdaZero);					// Coefficient used to PPE
+	coeffPPESource = relaxPND/(timeStep*timeStep*pndSmallZero);		// Coefficient used to PPE source term
 	Dns[fluid]=densityFluid;			Dns[wall]=densityWall;
 	invDns[fluid]=1.0/densityFluid;	invDns[wall]=1.0/densityWall;
 	distCollisionLimit = partDist*distLimitRatio;					// A distance that does not allow further access between particles
@@ -2413,6 +2435,163 @@ void MpsParticle::calcPressWCMPS() {
 		}
 	}
 }
+
+// Solve linear system solver PPE (mpsType = calcPressType::IMPLICIT_PND)
+// Perform conjugate gradient method on symmetry matrix A to solve Ax=b
+// matA			symmetric (sparse) matrix
+// sourceTerm	vector
+void MpsParticle::solvePressurePoissonPnd() {
+
+	using T = Eigen::Triplet<double>;
+	double lap_r = reL/partDist;
+	int n_size = (int)(pow(lap_r * 2, dim)); // maximum number of neighboors
+	Eigen::SparseMatrix<double> matA(numParticles, numParticles); // declares a column-major sparse matrix type of double
+	sourceTerm.setZero(); // Right hand side-vector set to zero
+	vector<T> coeffs(numParticles * n_size); // list of non-zeros coefficients
+
+// Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
+//#pragma omp parallel for schedule(dynamic,64)
+	for(int i=0; i<numParticles; i++) {
+		//if(particleType[i] != ghost) {
+		if(particleBC[i] == other || particleBC[i] == surface) {
+			coeffs.push_back(T(i, i, 1.0));
+			continue;
+		}
+
+		double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
+		double posMirrorXi = mirrorParticlePos[i*3  ];	double posMirrorYi = mirrorParticlePos[i*3+1];	double posMirrorZi = mirrorParticlePos[i*3+2];
+		double ni = pndSmall[i];
+		double sum = 0.0;
+
+		int ix = (int)((posXi - domainMinX)*invBucketSide) + 1;
+		int iy = (int)((posYi - domainMinY)*invBucketSide) + 1;
+		int iz = (int)((posZi - domainMinZ)*invBucketSide) + 1;
+		for(int jz=iz-1;jz<=iz+1;jz++) {
+		for(int jy=iy-1;jy<=iy+1;jy++) {
+		for(int jx=ix-1;jx<=ix+1;jx++) {
+			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
+			int j = firstParticleInBucket[jb];
+			if(j == -1) continue;
+			while(true) {
+				// Particle distance r_ij = Xj - Xi_temporary_position
+				double v0ij = pos[j*3  ] - posXi;
+				double v1ij = pos[j*3+1] - posYi;
+				double v2ij = pos[j*3+2] - posZi;
+
+				double dstij2 = v0ij*v0ij+v1ij*v1ij+v2ij*v2ij;
+
+				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				double v0imj = pos[j*3  ] - posMirrorXi;
+				double v1imj = pos[j*3+1] - posMirrorYi;
+				double v2imj = pos[j*3+2] - posMirrorZi;
+
+				double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
+
+				// If j is inside the neighborhood of i and 
+				// is not at the same side of im (avoid real j in the virtual neihborhood)
+				if(dstij2 < reL2 && dstij2 < dstimj2) {
+				if(j != i && particleType[j] != ghost) {
+					double dst = sqrt(dstij2);
+					double wL = weight(dst, reL, weightType);
+					// coeffPPE = 2.0*dim/(pndSmallZero*lambdaZero)
+					double mat_ij = wL*coeffPPE;
+					sum -= mat_ij;
+					if (particleBC[j] == inner) {
+						coeffs.push_back(T(i, j, mat_ij));
+					}
+				}}
+				
+				j = nextParticleInSameBucket[j];
+				if(j == -1) break;
+			}
+		}}}
+
+		double density = DNS_FL1;
+		if(PTYPE[i] != 1) density = DNS_FL2;
+
+		double ddt = density/(timeStep*timeStep);
+		// Increase diagonal
+		sum -= alphaCompressibility*ddt;
+
+		coeffs.push_back(T(i, i, sum));
+		sourceTerm(i) = - relaxPND*ddt*(ni - pndSmallZero)/pndSmallZero;
+	}
+
+	// Finished setup matrix
+	matA.setFromTriplets(coeffs.begin(), coeffs.end());
+	// Solve PPE
+	if(solverType = solvPressType::CG)
+		solveConjugateGradient(matA);
+	else if (solverType = solvPressType::BICGSTAB)
+		solveBiConjugateGradientStabilized(matA);
+	// Set zero to negative pressures
+	setZeroOnNegativePressure();
+}
+
+// Solve linear system solver PPE (mpsType = calcPressType::IMPLICIT_PND_DIVU)
+void MpsParticle::solvePressurePoissonPndDivU() {
+// Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
+//#pragma omp parallel for schedule(dynamic,64)
+#pragma omp parallel for
+	for(int i=0; i<numParticles; i++) {
+		if(particleType[i] != ghost) {
+
+		}
+	}
+}
+
+// Solve linear system using Conjugate Gradient (solverType = solvPressType::CG)
+void MpsParticle::solveConjugateGradient(Eigen::SparseMatrix<double> p_mat) {
+	//Eigen::ConjugateGradient<Eigen::SparseMatrix<double>> cg;
+	Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower|Eigen::Upper> cg;
+	cg.compute(p_mat);
+	if (cg.info() != Eigen::ComputationInfo::Success) {
+		cerr << "Error: Failed decompostion." << endl;
+	}
+	//pressurePPE = cg.solve(sourceTerm);
+	pressurePPE = cg.solveWithGuess(sourceTerm,pressurePPE);
+
+#pragma omp parallel for
+	for(int i=0; i<numParticles; i++) {
+		press[i] = pressurePPE(i);
+	}
+
+	if (cg.info() != Eigen::ComputationInfo::Success) {
+		cerr << "Error: Failed solving." << endl;
+	}
+	solverIter = cg.iterations();
+	solverError = cg.error();
+}
+
+// Solve linear system using Bi Conjugate Gradient Stabiçized (solverType = solvPressType::BICGSTAB)
+void MpsParticle::solveBiConjugateGradientStabilized(Eigen::SparseMatrix<double> p_mat) {
+	Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> bicg;
+	bicg.compute(p_mat);
+	if (bicg.info() != Eigen::ComputationInfo::Success) {
+		cerr << "Error: Failed decompostion." << endl;
+	}
+
+	pressurePPE = bicg.solveWithGuess(sourceTerm,pressurePPE);
+
+#pragma omp parallel for
+	for(int i=0; i<numParticles; i++) {
+		press[i] = pressurePPE(i);
+	}
+
+	if (bicg.info() != Eigen::ComputationInfo::Success) {
+		cerr << "Error: Failed solving." << endl;
+	}
+	solverIter = bicg.iterations();
+	solverError = bicg.error();
+}
+
+void MpsParticle::setZeroOnNegativePressure(){
+#pragma omp parallel for
+	for(int i=0; i<numParticles; i++) {
+		if (press[i] < 0) press[i] = 0.0;
+	}
+}
+
 
 // Extrapolate pressure to wall and dummy particles
 void MpsParticle::extrapolatePressParticlesWallDummy() {

@@ -26,7 +26,7 @@
 		"mesh_rigid_file": 		"input/stl/dam1610.stl",
 		"mesh_deformable_file": "input/stl/elastic_beam_16.stl", // (NOT WORKING !!)
 		"mesh_forced_file": 	"input/stl/tank_liao_forced_gate.stl",
-		"vtu_output_folder":	"output/dambreak01",
+		"vtu_output_folder":	"output/dambreak01_INC",
 		"forceTxt_file":		"output/dambreak01_force.txt",
 		"pressTxt_file":		"output/dambreak01_press.txt"
 	},
@@ -126,7 +126,7 @@
 		// 1:Weakly compressible
 		// 2:Incompressible PND
 		// 3:Incompressible PND + DivU
-		"mps_type":			1,
+		"mps_type":			2,
 		// Explicit or Weakly compressible MPS
 		"explicit_mps": {
 			"equation_state": {
@@ -147,7 +147,7 @@
 			}
 		},
 		"particle_shifting": {
-			"type": 		2,			// 0: OFF; 1: DW*Uij; 2: GradCi
+			"type": 		0,			// 0: OFF; 1: DW*Uij; 2: GradCi
 			"DRI": 			0.01,		// Type 1: Adjusted velocity paramater (DW*Uij) DRI <= 0.01
 			"coef_A":		1.0,		// Type 2: Dimensionless number 1-6 (GradCi) coef_A = 2.0 provide a good compromise
 			"mach_number":	0.1,		// Type 2: Mach number Ma~0.1 (GradCi)
@@ -156,7 +156,7 @@
 		},
 		// Particle number density
 		"pnd": {
-			"type":			2,			// 0: ni = Soma(wij); 1: ni = soma(PNDj)*wij/soma(wij); 2: ni = Div(u)i + Diffusive term
+			"type":			0,			// 0: ni = Soma(wij); 1: ni = soma(PNDj)*wij/soma(wij); 2: ni = Div(u)i + Diffusive term
 			"diffusive_coeff": 	0.35
 		},
 		"wall_repulsive_force": {
