@@ -409,11 +409,13 @@ void MpsParticle::readMpsParticleFile(const std::string& grid_file) {
 	// Scalars
 	particleType = (int*)malloc(sizeof(int)*numParticles);			// Particle type
 	particleBC = (int*)malloc(sizeof(int)*numParticles);			// BC particle type
-	numNeigh = (int*)malloc(sizeof(int)*numParticles);				// Number of neighboors
+	numNeigh = (int*)malloc(sizeof(int)*numParticles);				// Number of neighbors
 
 	press = (double*)malloc(sizeof(double)*numParticles);			// Particle pressure
 	pressAverage = (double*)malloc(sizeof(double)*numParticles);	// Time averaged particle pressure
 	pndi = (double*)malloc(sizeof(double)*numParticles);			// PND
+	pndki = (double*)malloc(sizeof(double)*numParticles);			// PND step k
+	pndski = (double*)malloc(sizeof(double)*numParticles);			// Mean fluid neighbor PND step k
 	pndSmall = (double*)malloc(sizeof(double)*numParticles);		// PND small = sum(wij)
 	npcdDeviation2 = (double*)malloc(sizeof(double)*numParticles);	// NPCD deviation modulus
 	concentration = (double*)malloc(sizeof(double)*numParticles);	// Concentration
@@ -528,10 +530,10 @@ void MpsParticle::readMpsParticleFile(const std::string& grid_file) {
 		particleNearWall[i]=false;
 		nearMeshType[i]=meshType::FIXED;
 
-		pndi[i]=0.0;pndSmall[i]=0.0;npcdDeviation2[i]=0.0;concentration[i]=0.0;velDivergence[i]=0.0;diffusiveTerm[i]=0.0;
-		pndWallContribution[i]=0.0;deviationDotPolygonNormal[i]=0.0;numNeighborsSurfaceParticles[i]=0.0;
-		Cv[i]=0.0;II[i]=0.0;MEU_Y[i]=0.0;Inertia[i]=0.0;pnew[i]=0.0;p_rheo_new[i]=0.0;
-		p_smooth[i]=0.0;VF[i]=0.0;S12[i]=0.0;S13[i]=0.0;S23[i]=0.0;S11[i]=0.0;S22[i]=0.0;S33[i]=0.0;
+		pndi[i]=0.0;pndki[i]=0.0;pndski[i]=0.0;pndSmall[i]=0.0;npcdDeviation2[i]=0.0;concentration[i]=0.0;
+		velDivergence[i]=0.0;diffusiveTerm[i]=0.0;pndWallContribution[i]=0.0;deviationDotPolygonNormal[i]=0.0;
+		numNeighborsSurfaceParticles[i]=0.0;Cv[i]=0.0;II[i]=0.0;MEU_Y[i]=0.0;Inertia[i]=0.0;pnew[i]=0.0;
+		p_rheo_new[i]=0.0;p_smooth[i]=0.0;VF[i]=0.0;S12[i]=0.0;S13[i]=0.0;S23[i]=0.0;S11[i]=0.0;S22[i]=0.0;S33[i]=0.0;
 
 		distParticleWall2[i]=10e8*partDist;
 	}
@@ -588,7 +590,7 @@ void MpsParticle::checkParticleOutDomain(const int i) {
 		particleType[i] = ghost; particleBC[i] = other; particleNearWall[i]=false; nearMeshType[i] = meshType::FIXED;
 
 		numNeigh[i]=numNeighWallContribution[i]=0;
-		press[i]=pressAverage[i]=pndi[i]=pndSmall[i]=npcdDeviation2[i]=concentration[i]= 0.0;
+		press[i]=pressAverage[i]=pndi[i]=pndki[i]=pndski[i]=pndSmall[i]=npcdDeviation2[i]=concentration[i]=0.0;
 		pndWallContribution[i]=velDivergence[i]=diffusiveTerm[i]=numNeighborsSurfaceParticles[i]=0.0;
 		
 		acc[i*3]=acc[i*3+1]=acc[i*3+2]=0.0;
@@ -654,7 +656,7 @@ void MpsParticle::setParameters() {
 			double dst = sqrt(dst2);
 			pndLargeZero += weight(dst, reL, weightType);			// Initial particle number density (large)
 			lambdaZero += dst2 * weight(dst, reL, weightType);
-			numNeighZero += 1;										// Initial number of neighboors
+			numNeighZero += 1;										// Initial number of neighbors
 			if(dst2 <= reS2) {
 				pndSmallZero += weight(dst, reS, weightType);		// Initial particle number density (small)
 				pndGradientZero += weightGradient(dst, reS, weightType);	// Initial particle number density (gradient operator)
@@ -669,7 +671,7 @@ void MpsParticle::setParameters() {
 	coeffPressWCMPS = soundSpeed*soundSpeed;						// Coefficient used to calculate pressure WC-MPS
 	coeffShifting1 = dri*partDist/pndSmallZero;						// Coefficient used to adjust velocity type 1
 	coeffShifting2 = coefA*partDist*partDist*cflNumber*machNumber;	// Coefficient used to adjust velocity type 2
-	coeffPPE = 2.0*dim/(pndSmallZero*lambdaZero);					// Coefficient used to PPE
+	coeffPPE = 2.0*dim/(pndLargeZero*lambdaZero);					// Coefficient used to PPE
 	coeffPPESource = relaxPND/(timeStep*timeStep*pndSmallZero);		// Coefficient used to PPE source term
 	Dns[fluid]=densityFluid;			Dns[wall]=densityWall;
 	invDns[fluid]=1.0/densityFluid;	invDns[wall]=1.0/densityWall;
@@ -743,7 +745,8 @@ void MpsParticle::setInitialPndNumberOfNeigh() {
 			if(particleType[i] == wall)
 				pndi[i] = pndSmallZero;
 			pndSmall[i] = pndi[i];
-			// Add Number of neighboors due wall polygon
+			pndki[i] = pndi[i];
+			// Add Number of neighbors due wall polygon
 			numNeigh[i] += numNeighWallContribution[i];
 
 			if(wSum > 0.0001) {
@@ -1098,7 +1101,7 @@ void MpsParticle::predictionWallPressGradient() {
 					if(j == -1) break;
 				}
 			}}}
-			// Add "i" contribution ("i" is a neighboor of "mirror i")
+			// Add "i" contribution ("i" is a neighbor of "mirror i")
 		  	double v0imi = posXi - posMirrorXi;
 			double v1imi = posYi - posMirrorYi;
 			double v2imi = posZi - posMirrorZi;
@@ -1408,7 +1411,7 @@ void MpsParticle::calcWallNPCD() {
 				}
 
 			}}}
-			// Add "i" contribution ("i" is a neighboor of "mirror i")
+			// Add "i" contribution ("i" is a neighbor of "mirror i")
 			double v0imi = posXi - posMirrorXi;
 			double v1imi = posYi - posMirrorYi;
 			double v2imi = posZi - posMirrorZi;
@@ -1436,7 +1439,7 @@ void MpsParticle::calcPnd() {
 			double posMirrorXi = mirrorParticlePos[i*3  ];	double posMirrorYi = mirrorParticlePos[i*3+1];	double posMirrorZi = mirrorParticlePos[i*3+2];
 			double ni = 0.0; double wSum = 0.0;
 			numNeigh[i] = 0;
-			// Add Number of neighboors due Wall polygon
+			// Add Number of neighbors due Wall polygon
 			numNeigh[i] += numNeighWallContribution[i];
 			int ix = (int)((posXi - domainMinX)*invBucketSide) + 1;
 			int iy = (int)((posYi - domainMinY)*invBucketSide) + 1;
@@ -1497,6 +1500,8 @@ void MpsParticle::calcPnd() {
 
 			if(pndType == calcPNDType::SUM_WIJ || pndType == calcPNDType::MEAN_SUM_WIJ) {
 	//		if(pndType == calcPNDType::SUM_WIJ) {
+				// PND at initial of step k
+				pndki[i] = pndi[i];
 				// PND due particles and Wall polygon
 				pndi[i] = ni + pndWallContribution[i];
 			}
@@ -1788,7 +1793,7 @@ void MpsParticle::calcWallSlipPndDiffusiveTerm() {
 				}
 			}}}
 
-			// Add "i" contribution ("i" is a neighboor of "mirror i")
+			// Add "i" contribution ("i" is a neighbor of "mirror i")
 			double v0imi = posXi - posMirrorXi;
 			double v1imi = posYi - posMirrorYi;
 			double v2imi = posZi - posMirrorZi;
@@ -1929,7 +1934,7 @@ void MpsParticle::calcWallNoSlipPndDiffusiveTerm() {
 					}
 			}}}
 
-			// Add "i" contribution ("i" is a neighboor of "mirror i")
+			// Add "i" contribution ("i" is a neighbor of "mirror i")
 			double v0imi = posXi - posMirrorXi;
 			double v1imi = posYi - posMirrorYi;
 			double v2imi = posZi - posMirrorZi;
@@ -2120,7 +2125,7 @@ void MpsParticle::meanWallPnd() {
 				}
 
 			}}}
-			// Add "i" contribution ("i" is a neighboor of "mirror i")
+			// Add "i" contribution ("i" is a neighbor of "mirror i")
 			double v0imi = posXi - posMirrorXi;
 			double v1imi = posYi - posMirrorYi;
 			double v2imi = posZi - posMirrorZi;
@@ -2205,6 +2210,62 @@ void MpsParticle::meanPnd() {
 	}
 }
 
+// Mean Fluid PND (pndType = calcPNDType::MEAN_SUM_WIJ) // CHANGED
+void MpsParticle::meanNeighFluidPnd() {
+#pragma omp parallel for schedule(dynamic,64)
+	for(int i=0; i<numParticles; i++) {
+		if(particleType[i] != ghost) {
+			double PNDup = 0.0;
+			double PNDdo = 0.0;
+			double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
+			double posMirrorXi = mirrorParticlePos[i*3  ];	double posMirrorYi = mirrorParticlePos[i*3+1];	double posMirrorZi = mirrorParticlePos[i*3+2];
+			int ix = (int)((posXi - domainMinX)*invBucketSide) + 1;
+			int iy = (int)((posYi - domainMinY)*invBucketSide) + 1;
+			int iz = (int)((posZi - domainMinZ)*invBucketSide) + 1;
+			for(int jz=iz-1;jz<=iz+1;jz++) {
+			for(int jy=iy-1;jy<=iy+1;jy++) {
+			for(int jx=ix-1;jx<=ix+1;jx++) {
+				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
+				int j = firstParticleInBucket[jb];
+				if(j == -1) continue;
+				while(true) {
+					// Particle distance r_ij = Xj - Xi_temporary_position
+					double v0ij = pos[j*3  ] - posXi;
+					double v1ij = pos[j*3+1] - posYi;
+					double v2ij = pos[j*3+2] - posZi;
+
+					double dstij2 = v0ij*v0ij+v1ij*v1ij+v2ij*v2ij;
+
+					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					double v0imj = pos[j*3  ] - posMirrorXi;
+					double v1imj = pos[j*3+1] - posMirrorYi;
+					double v2imj = pos[j*3+2] - posMirrorZi;
+
+					double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
+					// If j is inside the neighborhood of i and 
+					// is not at the same side of im (avoid real j in the virtual neihborhood)
+					if(dstij2 < reS2 && dstij2 < dstimj2) {
+						if(j != i && particleType[j] != ghost) {
+							double dst = sqrt(dstij2);
+							double wS = weight(dst, reS, weightType);
+							PNDup += pndki[j]*wS;
+							PNDdo += wS;
+						}
+					}
+					j = nextParticleInSameBucket[j];
+					if(j == -1) break;
+				}
+			}}}
+			if(numNeigh[i] < 1) {
+				pndski[i] = PNDup;
+			}
+			else {
+				pndski[i] = PNDup/PNDdo;
+			}
+		}
+	}
+}
+
 // Update type of particle
 void MpsParticle::updateParticleBC() {
 // Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
@@ -2217,7 +2278,7 @@ void MpsParticle::updateParticleBC() {
 		double posMirrorXi = mirrorParticlePos[i*3  ];	double posMirrorYi = mirrorParticlePos[i*3+1];	double posMirrorZi = mirrorParticlePos[i*3+2];
 		double ni = 0.0; double wSum = 0.0;
 		numNeigh[i] = 0;
-		// Add Number of neighboors due Wall polygon
+		// Add Number of neighbors due Wall polygon
 		numNeigh[i] += numNeighWallContribution[i];
 		int ix = (int)((posXi - domainMinX)*invBucketSide) + 1;
 		int iy = (int)((posYi - domainMinY)*invBucketSide) + 1;
@@ -2444,7 +2505,7 @@ void MpsParticle::solvePressurePoissonPnd() {
 
 	using T = Eigen::Triplet<double>;
 	double lap_r = reL/partDist;
-	int n_size = (int)(pow(lap_r * 2, dim)); // maximum number of neighboors
+	int n_size = (int)(pow(lap_r * 2, dim)); // maximum number of neighbors
 	Eigen::SparseMatrix<double> matA(numParticles, numParticles); // declares a column-major sparse matrix type of double
 	sourceTerm.setZero(); // Right hand side-vector set to zero
 	vector<T> coeffs(numParticles * n_size); // list of non-zeros coefficients
@@ -2493,7 +2554,7 @@ void MpsParticle::solvePressurePoissonPnd() {
 				if(j != i && particleType[j] != ghost) {
 					double dst = sqrt(dstij2);
 					double wL = weight(dst, reL, weightType);
-					// coeffPPE = 2.0*dim/(pndSmallZero*lambdaZero)
+					// coeffPPE = 2.0*dim/(pndLargeZero*lambdaZero)
 					double mat_ij = wL*coeffPPE;
 					sum -= mat_ij;
 					if (particleBC[j] == inner) {
@@ -2509,12 +2570,35 @@ void MpsParticle::solvePressurePoissonPnd() {
 		double density = DNS_FL1;
 		if(PTYPE[i] != 1) density = DNS_FL2;
 
-		double ddt = density/(timeStep*timeStep);
 		// Increase diagonal
-		sum -= alphaCompressibility*ddt;
+		sum -= alphaCompressibility*density/(timeStep*timeStep);
+
+		//double Cdiag = 1.0;
+		//double beta = 0.9;
+		//double DI2 = Cdiag*beta*coeffPPE*relaxPND*pndWallContribution[i]*density;
+		//sum -= DI2;
 
 		coeffs.push_back(T(i, i, sum));
-		sourceTerm(i) = - relaxPND*ddt*(ni - pndSmallZero)/pndSmallZero;
+
+		//coeffPPESource = relaxPND/(timeStep*timeStep*pndSmallZero)
+		sourceTerm(i) = - coeffPPESource*density*(ni - pndSmallZero);
+
+		// 2019 - Enhancement of stabilization of MPS to arbitrary geometries with a generic wall boundary condition
+		//double pndc = 0.0;
+		//if(ni > 0)
+		//	pndc = (ni - pndWallContribution[i])/ni;
+		//sourceTerm(i) = pndc*((1-relaxPND)*(pndki[i] - ni) + relaxPND*(pndSmallZero - pndski[i]))*ddt/pndSmallZero;
+		//sourceTerm(i) = - relaxPND*ddt*(pndski[i] - pndSmallZero)/pndSmallZero;
+
+		//double riw[3], riwSqrt;
+		// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
+		//riw[0] = 0.5*(posXi - posMirrorXi); riw[1] = 0.5*(posYi - posMirrorYi); riw[2] = 0.5*(posZi - posMirrorZi);
+		//riwSqrt = sqrt(riw[0]*riw[0] + riw[1]*riw[1] + riw[2]*riw[2]);
+		//double ST1 = - coeffPPESource*density*(ni - pndSmallZero);
+		//double ST2 = 0.0;
+		//if(riwSqrt < 0.5*partDist)
+		//	ST2 = - Cdiag*(1-beta)*2*partDist/lambdaZero*(0.5*partDist - riwSqrt)/(timeStep*timeStep);
+		//sourceTerm(i) = ST1 + ST2;
 	}
 
 	// Finished setup matrix
@@ -2974,24 +3058,24 @@ void MpsParticle::calcWallPressGradient() {
 		double Pi = press[i];
 		double ni = pndi[i];
 		// Wall gradient Mitsume`s model
-	    double Rref_i[9], normaliw[3], normaliwSqrt;
-	    // normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
-	    normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
-	    normaliwSqrt = sqrt(normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2]);
+		double Rref_i[9], normaliw[3], normaliwSqrt;
+		// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
+		normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
+		normaliwSqrt = sqrt(normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2]);
 
-	    if(normaliwSqrt > 0.00000001) {
-	    	normaliw[0] = normaliw[0]/normaliwSqrt;
-	    	normaliw[1] = normaliw[1]/normaliwSqrt;
-	    	normaliw[2] = normaliw[2]/normaliwSqrt;
-	    }
-	    else {
-	    	normaliw[0] = 0;
-	    	normaliw[1] = 0;
-	    	normaliw[2] = 0;
-	    }
+		if(normaliwSqrt > 0.00000001) {
+			normaliw[0] = normaliw[0]/normaliwSqrt;
+			normaliw[1] = normaliw[1]/normaliwSqrt;
+			normaliw[2] = normaliw[2]/normaliwSqrt;
+		}
+		else {
+			normaliw[0] = 0;
+			normaliw[1] = 0;
+			normaliw[2] = 0;
+		}
 
-	    //  Transformation matrix Rref_i = I - 2*normal_iwall*normal_iwall
-	    Rref_i[0] = 1.0 - 2*normaliw[0]*normaliw[0]; Rref_i[1] = 0.0 - 2*normaliw[0]*normaliw[1]; Rref_i[2] = 0.0 - 2*normaliw[0]*normaliw[2];
+		//  Transformation matrix Rref_i = I - 2*normal_iwall*normal_iwall
+		Rref_i[0] = 1.0 - 2*normaliw[0]*normaliw[0]; Rref_i[1] = 0.0 - 2*normaliw[0]*normaliw[1]; Rref_i[2] = 0.0 - 2*normaliw[0]*normaliw[2];
 		Rref_i[3] = 0.0 - 2*normaliw[1]*normaliw[0]; Rref_i[4] = 1.0 - 2*normaliw[1]*normaliw[1]; Rref_i[5] = 0.0 - 2*normaliw[1]*normaliw[2];
 		Rref_i[6] = 0.0 - 2*normaliw[2]*normaliw[0]; Rref_i[7] = 0.0 - 2*normaliw[2]*normaliw[1]; Rref_i[8] = 1.0 - 2*normaliw[2]*normaliw[2];
 
@@ -3101,7 +3185,7 @@ void MpsParticle::calcWallPressGradient() {
 				if(j == -1) break;
 			}
 		}}}
-		// Add "i" contribution ("i" is a neighboor of "mirror i")
+		// Add "i" contribution ("i" is a neighbor of "mirror i")
 	  	double v0imi = posXi - posMirrorXi;
 		double v1imi = posYi - posMirrorYi;
 		double v2imi = posZi - posMirrorZi;
@@ -4522,7 +4606,7 @@ void MpsParticle::calcWallSlipViscosity() {
 			}
 		}}}
 
-		// Add "i" contribution ("i" is a neighboor of "mirror i")
+		// Add "i" contribution ("i" is a neighbor of "mirror i")
 		double v0imi = posXi - posMirrorXi;
 		double v1imi = posYi - posMirrorYi;
 		double v2imi = posZi - posMirrorZi;
@@ -4703,7 +4787,7 @@ void MpsParticle::calcWallNoSlipViscosity() {
 			}
 		}}}
 
-		// Add "i" contribution ("i" is a neighboor of "mirror i")
+		// Add "i" contribution ("i" is a neighbor of "mirror i")
 		double v0imi = posXi - posMirrorXi;
 		double v1imi = posYi - posMirrorYi;
 		double v2imi = posZi - posMirrorZi;
@@ -5369,7 +5453,7 @@ void MpsParticle::calcWallShifting() {
 				if(j == -1) break;
 			}
 		}}}
-		// Add "i" contribution ("i" is a neighboor of "mirror i")
+		// Add "i" contribution ("i" is a neighbor of "mirror i")
 	  	double v0imi = posXi - posMirrorXi;
 		double v1imi = posYi - posMirrorYi;
 		double v2imi = posZi - posMirrorZi;
@@ -5650,7 +5734,7 @@ void MpsParticle::calcWallConcAndConcGradient() {
 				if(j == -1) break;
 			}
 		}}}
-		// Add "i" contribution ("i" is a neighboor of "mirror i")
+		// Add "i" contribution ("i" is a neighbor of "mirror i")
 		double v0imi = posXi - posMirrorXi;
 		double v1imi = posYi - posMirrorYi;
 		double v2imi = posZi - posMirrorZi;
@@ -6606,10 +6690,16 @@ void MpsParticle::writeVtuAscii()
 			fprintf(fp,"%f ",(float)pndi[i]);
 		}
  		fprintf(fp,"\n        </DataArray>\n");
- 		fprintf(fp,"        <DataArray type='Float32' Name='pndSmall' format='ascii'>\n");
+ 		fprintf(fp,"        <DataArray type='Float32' Name='pndk' format='ascii'>\n");
 		for(int i=0; i<numParticles; i++)
 		{
-			fprintf(fp,"%f ",(float)pndSmall[i]);
+			fprintf(fp,"%f ",(float)pndki[i]);
+		}
+ 		fprintf(fp,"\n        </DataArray>\n");
+ 		fprintf(fp,"        <DataArray type='Float32' Name='pndsk' format='ascii'>\n");
+		for(int i=0; i<numParticles; i++)
+		{
+			fprintf(fp,"%f ",(float)pndski[i]);
 		}
  		fprintf(fp,"\n        </DataArray>\n");
  	}

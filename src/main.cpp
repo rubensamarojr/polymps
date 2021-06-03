@@ -139,7 +139,7 @@ void mainLoopOfSimulation(MpsParticle &part, PolygonMesh* &mesh) {
 			}
 			// Update PND
 			part.updatePnd();
-			// PND wall and dummy
+			// Mean PND at wall and dummy
 			part.meanPndParticlesWallDummySurface();
 		}
 		// Mean PND
@@ -149,6 +149,9 @@ void mainLoopOfSimulation(MpsParticle &part, PolygonMesh* &mesh) {
 			}
 			part.meanPnd();
 		}
+
+		// Mean fluid neighbor PND
+		//part.meanNeighFluidPnd();
 
 		// Update type of particle
 		part.updateParticleBC();
@@ -365,11 +368,15 @@ int main( int argc, char** argv) {
 	// Initial PND
 	particles.setInitialPndNumberOfNeigh();
 	if(particles.wallType == boundaryWallType::POLYGON) {
-		// Contribution due polygon wall
+		// Contribution to mean PND due polygon wall
 		particles.meanWallPnd();
 	}
 	// Mean of PND
 	particles.meanPnd();
+
+	// Mean fluid neighbor PND
+	particles.meanNeighFluidPnd();
+
 	// Update type of particle
 	particles.updateParticleBC();
 	// Compute pressure

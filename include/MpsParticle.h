@@ -132,6 +132,8 @@ public:
 	void meanWallPnd();
 	// Mean PND (pndType = calcPNDType:MEAN_SUM_WIJ)
 	void meanPnd();
+	// Mean fluid neighbor PND
+	void meanNeighFluidPnd();
 	// Compute type of particle
 	void updateParticleBC();
 	// Compute pressure EMPS (mpsType = calcPressType::EXPLICIT)
@@ -317,7 +319,7 @@ public:
 // 	double repForceCoefMonaghanKajtar;	// Wall coefficent repulsive force (1-10) (Monaghan-Kajtar)
 // 	double EPS_RE;			// 
 // 	double pndThreshold;	// Surface threshold PND (2D - 0.97/ 3D - 0.93)
-// 	double neighThreshold;	// Surface threshold Neighboors
+// 	double neighThreshold;	// Surface threshold Neighbors
 // 	double npcdThreshold;	// NPCD threshold
 // 	double collisionRatio;	// Collision ratio
 // 	double distLimitRatio;	// Coefficient of distance which does not allow any further access between particles (0.9)
@@ -353,7 +355,7 @@ public:
 // 	double pndLargeZero;		// Initial particle number density (large)
 // 	double pndGradientZero;		// Initial particle number density (gradient operator)
 // 	double lambdaZero;			// Coefficient λ of Laplacian model
-// 	double numNeighZero;		// Initial number of neighboors
+// 	double numNeighZero;		// Initial number of neighbors
 // 	double coeffViscosity;		// Coefficient used to calculate viscosity term Multiphase
 // 	double coeffPressEMPS;		// Coefficient used to calculate pressure E-MPS
 // 	double coeffPressGrad;		// Coefficient used to calculate pressure gradient term
@@ -368,7 +370,7 @@ public:
  	int numParticles;		// Number of particles
  	int *particleType;		// Particle type
 // 	int *particleBC;		// BC particle type
-// 	int *numNeigh;			// Number of neighboors
+// 	int *numNeigh;			// Number of neighbors
 
 	double *press;			// Particle pressure
 	double *pressAverage;	// Time averaged particle pressure
@@ -566,7 +568,7 @@ private:
 	double repForceCoefMonaghanKajtar;	// Wall coefficent repulsive force (1-10) (Monaghan-Kajtar)
 	double EPS_RE;			// 
 	double pndThreshold;	// Surface threshold PND (2D - 0.97/ 3D - 0.93)
-	double neighThreshold;	// Surface threshold Neighboors
+	double neighThreshold;	// Surface threshold Neighbors
 	double npcdThreshold;	// NPCD threshold
 	double collisionRatio;	// Collision ratio
 	double distLimitRatio;	// Coefficient of distance which does not allow any further access between particles (0.9)
@@ -611,7 +613,7 @@ private:
 	double pndLargeZero;		// Initial particle number density (large)
 	double pndGradientZero;		// Initial particle number density (gradient operator)
 	double lambdaZero;			// Coefficient λ of Laplacian model
-	double numNeighZero;		// Initial number of neighboors
+	double numNeighZero;		// Initial number of neighbors
 	double coeffViscosity;		// Coefficient used to calculate viscosity term Multiphase
 	double coeffPressEMPS;		// Coefficient used to calculate pressure E-MPS
 	double coeffPressGrad;		// Coefficient used to calculate pressure gradient term
@@ -628,12 +630,14 @@ private:
 	// int numParticles;		// Number of particles
 	// int *particleType;		// Particle type
 	int *particleBC;		// BC particle type
-	int *numNeigh;			// Number of neighboors
+	int *numNeigh;			// Number of neighbors
 
 	// double *press;			// Particle pressure
 	// double *pressAverage;	// Time averaged particle pressure
-	double *pndi;			// PND
-	double *pndSmall;		// PND small = sum(wij)
+	double *pndi;			// Particle number density at particle i
+	double *pndki;			// Particle number density at particle i, step k
+	double *pndski;			// Mean neighbor fluid Particle number density, step k
+	double *pndSmall;		// Particle number density small = sum(wij)
 	double *npcdDeviation2;	// NPCD deviation modulus
 	double *concentration;	// Concentration
 	double *velDivergence;	// Divergence of velocity
