@@ -1,6 +1,9 @@
 // Copyright (c) 2021 Rubens AMARO
 // Distributed under the MIT License.
 
+#ifndef EMPS_INCLUDE_MPSPARTICLE_H_
+#define EMPS_INCLUDE_MPSPARTICLE_H_
+
 #include <Eigen/Dense>
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
@@ -144,7 +147,13 @@ public:
 	void solvePressurePoissonPnd();
 	// Linear system solver PPE (mpsType = calcPressType::IMPLICIT_PND_DIVU)
 	void solvePressurePoissonPndDivU();
-	// Set pressure negative to zero
+	// Divergence of velocity
+	void calcVelDivergence();
+	// Divergence of velocity (Polygon wall) - Free-slip
+	void calcWallSlipVelDivergence();
+	// Divergence of velocity (Polygon wall) - No-slip
+	void calcWallNoSlipVelDivergence();
+	// Set negative pressure to zero
 	void setZeroOnNegativePressure();
 	// Extrapolate pressure to wall and dummy particles
 	void extrapolatePressParticlesWallDummy();
@@ -714,3 +723,5 @@ private:
 	// Forced rigid wall
 	// double velVWall[3]; // Uniform wall velocity 
 };
+
+#endif // EMPS_INCLUDE_MPSPARTICLE_H_

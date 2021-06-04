@@ -1,6 +1,9 @@
 // Copyright (c) 2019 Rubens AMARO
 // Distributed under the MIT License.
 
+#ifndef EMPS_INCLUDE_POLYGONMESH_H_
+#define EMPS_INCLUDE_POLYGONMESH_H_
+
 #pragma once
 #include <math.h>
 #include <iostream>
@@ -92,3 +95,5 @@ private:
 	std::vector<double> Zij;						// Wall weight function
 	std::vector<int> nNeighWall;					// Number of neighboor
 };
+
+#endif // EMPS_INCLUDE_POLYGONMESH_H_
