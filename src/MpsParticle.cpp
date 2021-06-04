@@ -24,6 +24,9 @@
 #include <Eigen/IterativeLinearSolvers>
 #include <Eigen/LU>
 
+#include <Eigen/Sparse>
+#include <Eigen/Dense>
+
 using namespace std;
 
 MpsParticle::MpsParticle()
@@ -58,7 +61,7 @@ void MpsParticle::displayInfo(const int intervalIter) {
 		hours = minutes / 60;
 		printf("Iteration: %5dth Time: %lfsec Number of Particles: %d Maximum Velocity: %lfm/s Courant: %lf", 
 			numOfIterations, timeCurrent, numberOfParticles, velMax, CFLcurrent);
-		if(mpsType == calcPressType::IMPLICIT_PND){
+		if(mpsType == calcPressType::IMPLICIT_PND || mpsType == calcPressType::IMPLICIT_PND_DIVU){
 			printf(" Solver iterations: %3d Estimated error: %.2e", solverIter, solverError);
 		}
 		printf(" RunTime: %02dh%02dm%02dsec\n", int(hours), int(minutes%60), int(seconds%60));
@@ -1966,8 +1969,6 @@ void MpsParticle::calcWallNoSlipPndDiffusiveTerm() {
 //	}}
 }
 
-
-
 // Update PND (pndType = calcPNDType::DIFFUSIVE)
 void MpsParticle::updatePnd() {
 #pragma omp parallel for
@@ -2614,20 +2615,124 @@ void MpsParticle::solvePressurePoissonPnd() {
 
 // Solve linear system solver PPE (mpsType = calcPressType::IMPLICIT_PND_DIVU)
 void MpsParticle::solvePressurePoissonPndDivU() {
+
+	using T = Eigen::Triplet<double>;
+	double lap_r = reL/partDist;
+	int n_size = (int)(pow(lap_r * 2, dim)); // maximum number of neighbors
+	Eigen::SparseMatrix<double> matA(numParticles, numParticles); // declares a column-major sparse matrix type of double
+	sourceTerm.setZero(); // Right hand side-vector set to zero
+	vector<T> coeffs(numParticles * n_size); // list of non-zeros coefficients
+
 // Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
 //#pragma omp parallel for schedule(dynamic,64)
-#pragma omp parallel for
 	for(int i=0; i<numParticles; i++) {
-		if(particleType[i] != ghost) {
-
+		//if(particleType[i] != ghost) {
+		if(particleBC[i] == other || particleBC[i] == surface) {
+			coeffs.push_back(T(i, i, 1.0));
+			continue;
 		}
+
+		double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
+		double posMirrorXi = mirrorParticlePos[i*3  ];	double posMirrorYi = mirrorParticlePos[i*3+1];	double posMirrorZi = mirrorParticlePos[i*3+2];
+		double ni = pndSmall[i];
+		double sum = 0.0;
+
+		int ix = (int)((posXi - domainMinX)*invBucketSide) + 1;
+		int iy = (int)((posYi - domainMinY)*invBucketSide) + 1;
+		int iz = (int)((posZi - domainMinZ)*invBucketSide) + 1;
+		for(int jz=iz-1;jz<=iz+1;jz++) {
+		for(int jy=iy-1;jy<=iy+1;jy++) {
+		for(int jx=ix-1;jx<=ix+1;jx++) {
+			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
+			int j = firstParticleInBucket[jb];
+			if(j == -1) continue;
+			while(true) {
+				// Particle distance r_ij = Xj - Xi_temporary_position
+				double v0ij = pos[j*3  ] - posXi;
+				double v1ij = pos[j*3+1] - posYi;
+				double v2ij = pos[j*3+2] - posZi;
+
+				double dstij2 = v0ij*v0ij+v1ij*v1ij+v2ij*v2ij;
+
+				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				double v0imj = pos[j*3  ] - posMirrorXi;
+				double v1imj = pos[j*3+1] - posMirrorYi;
+				double v2imj = pos[j*3+2] - posMirrorZi;
+
+				double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
+
+				// If j is inside the neighborhood of i and 
+				// is not at the same side of im (avoid real j in the virtual neihborhood)
+				if(dstij2 < reL2 && dstij2 < dstimj2) {
+				if(j != i && particleType[j] != ghost) {
+					double dst = sqrt(dstij2);
+					double wL = weight(dst, reL, weightType);
+					// coeffPPE = 2.0*dim/(pndLargeZero*lambdaZero)
+					double mat_ij = wL*coeffPPE;
+					sum -= mat_ij;
+					if (particleBC[j] == inner) {
+						coeffs.push_back(T(i, j, mat_ij));
+					}
+				}}
+				
+				j = nextParticleInSameBucket[j];
+				if(j == -1) break;
+			}
+		}}}
+
+		double density = DNS_FL1;
+		if(PTYPE[i] != 1) density = DNS_FL2;
+
+		// Increase diagonal
+		sum -= alphaCompressibility*density/(timeStep*timeStep);
+
+		//double Cdiag = 1.0;
+		//double beta = 0.9;
+		//double DI2 = Cdiag*beta*coeffPPE*relaxPND*pndWallContribution[i]*density;
+		//sum -= DI2;
+
+		coeffs.push_back(T(i, i, sum));
+
+		//coeffPPESource = relaxPND/(timeStep*timeStep*pndSmallZero)
+		//sourceTerm(i) = - coeffPPESource*density*(ni - pndSmallZero) + (1-relaxPND)*density*velDivergence[i]/timeStep;
+		sourceTerm(i) = - coeffPPESource*density*(pndki[i] - pndSmallZero) + (1-relaxPND)*density*velDivergence[i]/timeStep;
+		//sourceTerm(i) = - 4*density*(ni - pndSmallZero)/(partDist*partDist*pndSmallZero) 
+		//				+ 2*density*velDivergence[i]/partDist;
+
+		// 2019 - Enhancement of stabilization of MPS to arbitrary geometries with a generic wall boundary condition
+		//double pndc = 0.0;
+		//if(ni > 0)
+		//	pndc = (ni - pndWallContribution[i])/ni;
+		//sourceTerm(i) = pndc*((1-relaxPND)*(pndki[i] - ni) + relaxPND*(pndSmallZero - pndski[i]))*ddt/pndSmallZero;
+		//sourceTerm(i) = - relaxPND*ddt*(pndski[i] - pndSmallZero)/pndSmallZero;
+
+		//double riw[3], riwSqrt;
+		// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
+		//riw[0] = 0.5*(posXi - posMirrorXi); riw[1] = 0.5*(posYi - posMirrorYi); riw[2] = 0.5*(posZi - posMirrorZi);
+		//riwSqrt = sqrt(riw[0]*riw[0] + riw[1]*riw[1] + riw[2]*riw[2]);
+		//double ST1 = - coeffPPESource*density*(ni - pndSmallZero);
+		//double ST2 = 0.0;
+		//if(riwSqrt < 0.5*partDist)
+		//	ST2 = - Cdiag*(1-beta)*2*partDist/lambdaZero*(0.5*partDist - riwSqrt)/(timeStep*timeStep);
+		//sourceTerm(i) = ST1 + ST2;
 	}
+
+	// Finished setup matrix
+	matA.setFromTriplets(coeffs.begin(), coeffs.end());
+	// Solve PPE
+	if(solverType = solvPressType::CG)
+		solveConjugateGradient(matA);
+	else if (solverType = solvPressType::BICGSTAB)
+		solveBiConjugateGradientStabilized(matA);
+	// Set zero to negative pressures
+	setZeroOnNegativePressure();
 }
 
 // Solve linear system using Conjugate Gradient (solverType = solvPressType::CG)
 void MpsParticle::solveConjugateGradient(Eigen::SparseMatrix<double> p_mat) {
 	//Eigen::ConjugateGradient<Eigen::SparseMatrix<double>> cg;
 	Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower|Eigen::Upper> cg;
+	//cg.setTolerance(1E-9);
 	cg.compute(p_mat);
 	if (cg.info() != Eigen::ComputationInfo::Success) {
 		cerr << "Error: Failed decompostion." << endl;
@@ -2650,6 +2755,7 @@ void MpsParticle::solveConjugateGradient(Eigen::SparseMatrix<double> p_mat) {
 // Solve linear system using Bi Conjugate Gradient Stabiçized (solverType = solvPressType::BICGSTAB)
 void MpsParticle::solveBiConjugateGradientStabilized(Eigen::SparseMatrix<double> p_mat) {
 	Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> bicg;
+	//bicg.setTolerance(1E-9);
 	bicg.compute(p_mat);
 	if (bicg.info() != Eigen::ComputationInfo::Success) {
 		cerr << "Error: Failed decompostion." << endl;
@@ -2669,10 +2775,315 @@ void MpsParticle::solveBiConjugateGradientStabilized(Eigen::SparseMatrix<double>
 	solverError = bicg.error();
 }
 
+// Set negative pressure to zero
 void MpsParticle::setZeroOnNegativePressure(){
 #pragma omp parallel for
 	for(int i=0; i<numParticles; i++) {
 		if (press[i] < 0) press[i] = 0.0;
+	}
+}
+
+// Divergence of velocity
+void MpsParticle::calcVelDivergence() {
+#pragma omp parallel for schedule(dynamic,64)
+	for(int i=0; i<numParticles; i++) {
+		velDivergence[i] = 0.0;
+//		if(particleType[i] == fluid) {
+		if(particleType[i] != ghost) {
+			double DivV = 0.0;
+			double ni = pndi[i];
+			double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
+			double velXi = vel[i*3  ];	double velYi = vel[i*3+1];	double velZi = vel[i*3+2];
+			double posMirrorXi = mirrorParticlePos[i*3  ];	double posMirrorYi = mirrorParticlePos[i*3+1];	double posMirrorZi = mirrorParticlePos[i*3+2];
+			int ix = (int)((posXi - domainMinX)*invBucketSide) + 1;
+			int iy = (int)((posYi - domainMinY)*invBucketSide) + 1;
+			int iz = (int)((posZi - domainMinZ)*invBucketSide) + 1;
+			for(int jz=iz-1;jz<=iz+1;jz++) {
+			for(int jy=iy-1;jy<=iy+1;jy++) {
+			for(int jx=ix-1;jx<=ix+1;jx++) {
+				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
+				int j = firstParticleInBucket[jb];
+				if(j == -1) continue;
+				while(true) {
+					// Particle distance r_ij = Xj - Xi_temporary_position
+					double v0ij = pos[j*3  ] - posXi;
+					double v1ij = pos[j*3+1] - posYi;
+					double v2ij = pos[j*3+2] - posZi;
+
+					double dstij2 = v0ij*v0ij+v1ij*v1ij+v2ij*v2ij;
+
+					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					double v0imj = pos[j*3  ] - posMirrorXi;
+					double v1imj = pos[j*3+1] - posMirrorYi;
+					double v2imj = pos[j*3+2] - posMirrorZi;
+
+					double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
+
+					// If j is inside the neighborhood of i and 
+					// is not at the same side of im (avoid real j in the virtual neihborhood)
+					if(dstij2 < reS2 && dstij2 < dstimj2) {
+						if(j != i && particleType[j] != ghost) {
+							if(particleType[i] == fluid && particleType[j] == fluid) {
+								double nj = pndi[j];
+								double vijx = vel[j*3  ]-velXi;
+								double vijy = vel[j*3+1]-velYi;
+								double vijz = vel[j*3+2]-velZi;
+								double dst = sqrt(dstij2);
+								double wS = weight(dst, reS, weightType);
+								if(ni > 0.0001)
+									DivV += (dim/pndSmallZero)*(nj/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
+							}
+						}
+					}
+					j = nextParticleInSameBucket[j];
+					if(j == -1) break;
+				}
+			}}}
+			
+			velDivergence[i] = DivV;
+		}
+	}
+}
+
+// Divergence of velocity (Polygon wall) - Free-slip
+void MpsParticle::calcWallSlipVelDivergence() {
+	//int nPartNearMesh = partNearMesh.size();
+	//printf(" Mesh %d \n", nPartNearMesh);
+	// Loop only for particles near mesh
+#pragma omp parallel for schedule(dynamic,64)
+	//for(int im=0;im<nPartNearMesh;im++) {
+	//int i = partNearMesh[im];
+	for(int i=0; i<numParticles; i++) {
+//	if(particleType[i] == fluid) {
+	//if(particleType[i] != ghost) {
+		double ni = pndi[i];
+		if(particleType[i] == fluid && particleNearWall[i] == true && ni > 0.0001) {
+			double DivV = 0.0;
+			double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
+			double velXi = vel[i*3  ];	double velYi = vel[i*3+1];	double velZi = vel[i*3+2];
+			double posMirrorXi = mirrorParticlePos[i*3  ];	double posMirrorYi = mirrorParticlePos[i*3+1];	double posMirrorZi = mirrorParticlePos[i*3+2];
+			
+			// Transformation matrix Rref_i = I - 2*normal_iwall*normal_iwall
+			double Rref_i[9], normaliw[3], normalMod2;
+			// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
+			normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
+			normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
+			if(normalMod2 > 0.00000001) {
+				double normalMod = sqrt(normalMod2);
+				normaliw[0] = normaliw[0]/normalMod;
+				normaliw[1] = normaliw[1]/normalMod;
+				normaliw[2] = normaliw[2]/normalMod;
+			}
+			else {
+				normaliw[0] = 0;
+				normaliw[1] = 0;
+				normaliw[2] = 0;
+			}
+
+			//  Transformation matrix Rref_i = I - 2*normal_iwall*normal_iwall
+			Rref_i[0] = 1.0 - 2*normaliw[0]*normaliw[0]; Rref_i[1] = 0.0 - 2*normaliw[0]*normaliw[1]; Rref_i[2] = 0.0 - 2*normaliw[0]*normaliw[2];
+			Rref_i[3] = 0.0 - 2*normaliw[1]*normaliw[0]; Rref_i[4] = 1.0 - 2*normaliw[1]*normaliw[1]; Rref_i[5] = 0.0 - 2*normaliw[1]*normaliw[2];
+			Rref_i[6] = 0.0 - 2*normaliw[2]*normaliw[0]; Rref_i[7] = 0.0 - 2*normaliw[2]*normaliw[1]; Rref_i[8] = 1.0 - 2*normaliw[2]*normaliw[2];
+
+			// Mirror particle velocity vi' = Rref_i * vi
+				double velMirrorXi = (Rref_i[0]*velXi + Rref_i[1]*velYi + Rref_i[2]*velZi);
+			double velMirrorYi = (Rref_i[3]*velXi + Rref_i[4]*velYi + Rref_i[5]*velZi);
+			double velMirrorZi = (Rref_i[6]*velXi + Rref_i[7]*velYi + Rref_i[8]*velZi);
+
+			int ix = (int)((posXi - domainMinX)*invBucketSide) + 1;
+			int iy = (int)((posYi - domainMinY)*invBucketSide) + 1;
+			int iz = (int)((posZi - domainMinZ)*invBucketSide) + 1;
+			for(int jz=iz-1;jz<=iz+1;jz++) {
+			for(int jy=iy-1;jy<=iy+1;jy++) {
+			for(int jx=ix-1;jx<=ix+1;jx++) {
+				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
+				int j = firstParticleInBucket[jb];
+				if(j == -1) continue;
+				while(true) {
+					// Particle distance r_ij = Xj - Xi_temporary_position
+					double v0ij = pos[j*3  ] - posXi;
+					double v1ij = pos[j*3+1] - posYi;
+					double v2ij = pos[j*3+2] - posZi;
+
+					double dstij2 = v0ij*v0ij+v1ij*v1ij+v2ij*v2ij;
+
+					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					double v0imj = pos[j*3  ] - posMirrorXi;
+					double v1imj = pos[j*3+1] - posMirrorYi;
+					double v2imj = pos[j*3+2] - posMirrorZi;
+
+					double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
+					// If j is inside the neighborhood of i and im (intersection) and 
+					// is not at the same side of im (avoid real j in the virtual neihborhood)
+					if(dstij2 < reS2 && dstimj2 < reS2 && dstij2 < dstimj2) {
+						if(j != i && particleType[j] != ghost) {
+							double dst = sqrt(dstimj2);
+							double wS = weight(dst, reS, weightType);
+							double nj = pndi[j];
+							double vijx = vel[j*3  ]-velMirrorXi;
+							double vijy = vel[j*3+1]-velMirrorYi;
+							double vijz = vel[j*3+2]-velMirrorZi;
+							DivV += (dim/pndSmallZero)*(nj/ni)*(vijx*v0imj+vijy*v1imj+vijz*v2imj)*wS/dstimj2;
+						}
+					}
+					j = nextParticleInSameBucket[j];
+					if(j == -1) break;
+				}
+			}}}
+
+			// Add "i" contribution ("i" is a neighbor of "mirror i")
+			double v0imi = posXi - posMirrorXi;
+			double v1imi = posYi - posMirrorYi;
+			double v2imi = posZi - posMirrorZi;
+			double dstimi2 = v0imi*v0imi+v1imi*v1imi+v2imi*v2imi;
+			if(dstimi2 < reS2) {
+				double dst = sqrt(dstimi2);
+				double wS = weight(dst, reS, weightType);
+				double nj = pndi[i];
+				double vijx = velXi-velMirrorXi;
+				double vijy = velYi-velMirrorYi;
+				double vijz = velZi-velMirrorZi;
+				DivV += (dim/pndSmallZero)*(nj/ni)*(vijx*v0imi+vijy*v1imi+vijz*v2imi)*wS/dstimi2;
+			}
+
+			velDivergence[i] += DivV;
+		}
+	}
+}
+
+
+// Divergence of velocity (Polygon wall) - No-slip
+void MpsParticle::calcWallNoSlipVelDivergence() {
+	//int nPartNearMesh = partNearMesh.size();
+	//printf(" Mesh %d \n", nPartNearMesh);
+	// Loop only for particles near mesh
+#pragma omp parallel for schedule(dynamic,64)
+	//for(int im=0;im<nPartNearMesh;im++) {
+	//int i = partNearMesh[im];
+	for(int i=0; i<numParticles; i++) {
+		double ni = pndi[i];
+		//if(particleType[i] == fluid && ni > 0.0001) {
+		if(particleType[i] == fluid && particleNearWall[i] == true && ni > 0.0001) {
+	//	if(particleType[i] == fluid) {
+			double DivV = 0.0;
+			double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
+			double velXi = vel[i*3  ];	double velYi = vel[i*3+1];	double velZi = vel[i*3+2];
+			double posMirrorXi = mirrorParticlePos[i*3  ];	double posMirrorYi = mirrorParticlePos[i*3+1];	double posMirrorZi = mirrorParticlePos[i*3+2];
+
+			// Inverse matrix Rinv_i = - I
+			double Rinv_i[9], Rref_i[9], normaliw[3], normalMod2;
+			// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
+			normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
+			normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
+			if(normalMod2 > 0.00000001) {
+				double normalMod = sqrt(normalMod2);
+				normaliw[0] = normaliw[0]/normalMod;
+				normaliw[1] = normaliw[1]/normalMod;
+				normaliw[2] = normaliw[2]/normalMod;
+			}
+			else {
+				normaliw[0] = 0;
+				normaliw[1] = 0;
+				normaliw[2] = 0;
+			}
+
+			//  Inverse transformation matrix Rinv_i = - I
+			Rinv_i[0] = -1.0; Rinv_i[1] =  0.0; Rinv_i[2] =  0.0;
+			Rinv_i[3] =  0.0; Rinv_i[4] = -1.0; Rinv_i[5] =  0.0;
+			Rinv_i[6] =  0.0; Rinv_i[7] =  0.0; Rinv_i[8] = -1.0;
+
+			//  Transformation matrix Rref_i = I - 2*normal_iwall*normal_iwall
+			Rref_i[0] = 1.0 - 2*normaliw[0]*normaliw[0]; Rref_i[1] = 0.0 - 2*normaliw[0]*normaliw[1]; Rref_i[2] = 0.0 - 2*normaliw[0]*normaliw[2];
+			Rref_i[3] = 0.0 - 2*normaliw[1]*normaliw[0]; Rref_i[4] = 1.0 - 2*normaliw[1]*normaliw[1]; Rref_i[5] = 0.0 - 2*normaliw[1]*normaliw[2];
+			Rref_i[6] = 0.0 - 2*normaliw[2]*normaliw[0]; Rref_i[7] = 0.0 - 2*normaliw[2]*normaliw[1]; Rref_i[8] = 1.0 - 2*normaliw[2]*normaliw[2];
+
+			double viwall[3], vtil[3];
+			// Wall velocity (0 if fixed)
+			viwall[0]=viwall[1]=viwall[2]=0.0;
+
+			if(nearMeshType[i] == meshType::FORCED) {
+				viwall[0] = velVWall[0];
+				viwall[1] = velVWall[1];
+				viwall[2] = velVWall[2];
+			}
+
+			// normal_iwall*v_iwall
+			double dotnv = normaliw[0]*viwall[0] + normaliw[1]*viwall[1] + normaliw[2]*viwall[2];
+			// vtil = vi - 2 {v_iwall - (normal_iwall*v_iwall)normal_iwall}
+			vtil[0] = velXi - 2*(viwall[0] - dotnv*normaliw[0]);
+			vtil[1] = velYi - 2*(viwall[1] - dotnv*normaliw[1]);
+			vtil[2] = velZi - 2*(viwall[2] - dotnv*normaliw[2]);
+			// Mirror particle velocity vi' = Rinv_i * [vi - 2 {v_iwall - (normal_iwall*v_iwall)normal_iwall}] 
+			double velMirrorXi = (Rinv_i[0]*vtil[0] + Rinv_i[1]*vtil[1] + Rinv_i[2]*vtil[2]);
+			double velMirrorYi = (Rinv_i[3]*vtil[0] + Rinv_i[4]*vtil[1] + Rinv_i[5]*vtil[2]);
+			double velMirrorZi = (Rinv_i[6]*vtil[0] + Rinv_i[7]*vtil[1] + Rinv_i[8]*vtil[2]);
+
+			int ix = (int)((posXi - domainMinX)*invBucketSide) + 1;
+			int iy = (int)((posYi - domainMinY)*invBucketSide) + 1;
+			int iz = (int)((posZi - domainMinZ)*invBucketSide) + 1;
+			for(int jz=iz-1;jz<=iz+1;jz++) {
+			for(int jy=iy-1;jy<=iy+1;jy++) {
+			for(int jx=ix-1;jx<=ix+1;jx++) {
+				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
+				int j = firstParticleInBucket[jb];
+				if(j == -1) continue;
+				while(true) {
+					// Particle distance r_ij = Xj - Xi_temporary_position
+					double v0ij = pos[j*3  ] - posXi;
+					double v1ij = pos[j*3+1] - posYi;
+					double v2ij = pos[j*3+2] - posZi;
+
+					double dstij2 = v0ij*v0ij+v1ij*v1ij+v2ij*v2ij;
+
+					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					double v0imj = pos[j*3  ] - posMirrorXi;
+					double v1imj = pos[j*3+1] - posMirrorYi;
+					double v2imj = pos[j*3+2] - posMirrorZi;
+
+					double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
+					// If j is inside the neighborhood of i and im (intersection) and 
+					// is not at the same side of im (avoid real j in the virtual neihborhood)
+					if(dstij2 < reS2 && dstimj2 < reS2 && dstij2 < dstimj2) {
+						if(j != i && particleType[j] != ghost) {
+							double dst = sqrt(dstimj2);
+							double wS = weight(dst, reS, weightType);
+							double nj = pndi[j];
+							double vijx = -(vel[j*3  ]-velMirrorXi);
+							double vijy = -(vel[j*3+1]-velMirrorYi);
+							double vijz = -(vel[j*3+2]-velMirrorZi);
+							// Refelected rij' = Rref_i * ri'j
+							double v0m = (Rref_i[0]*v0imj + Rref_i[1]*v1imj + Rref_i[2]*v2imj);
+							double v1m = (Rref_i[3]*v0imj + Rref_i[4]*v1imj + Rref_i[5]*v2imj);
+							double v2m = (Rref_i[6]*v0imj + Rref_i[7]*v1imj + Rref_i[8]*v2imj);
+							DivV += (dim/pndSmallZero)*(nj/ni)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimj2;
+						}
+					}
+					j = nextParticleInSameBucket[j];
+					if(j == -1) break;
+					}
+			}}}
+
+			// Add "i" contribution ("i" is a neighbor of "mirror i")
+			double v0imi = posXi - posMirrorXi;
+			double v1imi = posYi - posMirrorYi;
+			double v2imi = posZi - posMirrorZi;
+			double dstimi2 = v0imi*v0imi+v1imi*v1imi+v2imi*v2imi;
+			if(dstimi2 < reS2) {
+				double dst = sqrt(dstimi2);
+				double wS = weight(dst, reS, weightType);
+				double nj = pndi[i];
+				double vijx = -(velXi-velMirrorXi);
+				double vijy = -(velYi-velMirrorYi);
+				double vijz = -(velZi-velMirrorZi);
+				// Refelected rij' = Rref_i * ri'j
+				double v0m = (Rref_i[0]*v0imi + Rref_i[1]*v1imi + Rref_i[2]*v2imi);
+				double v1m = (Rref_i[3]*v0imi + Rref_i[4]*v1imi + Rref_i[5]*v2imi);
+				double v2m = (Rref_i[6]*v0imi + Rref_i[7]*v1imi + Rref_i[8]*v2imi);
+				DivV += (dim/pndSmallZero)*(nj/ni)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimi2;
+			}
+
+			velDivergence[i] += DivV;
+		}
 	}
 }
 
@@ -3795,29 +4206,29 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 
 		// Transformation matrix Rref_i = I - 2*normal_iwall*normal_iwall
 		double Rref_i[9], normaliw[3], normalMod2;
-	    // normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
-	    normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
-	    normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
+		// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
+		normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
+		normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
 
-	    if(normalMod2 > 0.00000001) {
-	    	double normalMod = sqrt(normalMod2);
-	    	normaliw[0] = normaliw[0]/normalMod;
-	    	normaliw[1] = normaliw[1]/normalMod;
-	    	normaliw[2] = normaliw[2]/normalMod;
-	    }
-	    else {
-	    	normaliw[0] = 0;
-	    	normaliw[1] = 0;
-	    	normaliw[2] = 0;
-	    }
+		if(normalMod2 > 0.00000001) {
+			double normalMod = sqrt(normalMod2);
+			normaliw[0] = normaliw[0]/normalMod;
+			normaliw[1] = normaliw[1]/normalMod;
+			normaliw[2] = normaliw[2]/normalMod;
+		}
+		else {
+			normaliw[0] = 0;
+			normaliw[1] = 0;
+			normaliw[2] = 0;
+		}
 
-	    //  Transformation matrix R_i = I - 2*normal_iwall*normal_iwall
-	    Rref_i[0] = 1.0 - 2*normaliw[0]*normaliw[0]; Rref_i[1] = 0.0 - 2*normaliw[0]*normaliw[1]; Rref_i[2] = 0.0 - 2*normaliw[0]*normaliw[2];
+		//  Transformation matrix R_i = I - 2*normal_iwall*normal_iwall
+		Rref_i[0] = 1.0 - 2*normaliw[0]*normaliw[0]; Rref_i[1] = 0.0 - 2*normaliw[0]*normaliw[1]; Rref_i[2] = 0.0 - 2*normaliw[0]*normaliw[2];
 		Rref_i[3] = 0.0 - 2*normaliw[1]*normaliw[0]; Rref_i[4] = 1.0 - 2*normaliw[1]*normaliw[1]; Rref_i[5] = 0.0 - 2*normaliw[1]*normaliw[2];
 		Rref_i[6] = 0.0 - 2*normaliw[2]*normaliw[0]; Rref_i[7] = 0.0 - 2*normaliw[2]*normaliw[1]; Rref_i[8] = 1.0 - 2*normaliw[2]*normaliw[2];
 
 		// Mirror particle velocity vi' = Ri * vi
-      	double velMirrorXi = (Rref_i[0]*velXi + Rref_i[1]*velYi + Rref_i[2]*velZi);
+			double velMirrorXi = (Rref_i[0]*velXi + Rref_i[1]*velYi + Rref_i[2]*velZi);
 		double velMirrorYi = (Rref_i[3]*velXi + Rref_i[4]*velYi + Rref_i[5]*velZi);
 		double velMirrorZi = (Rref_i[6]*velXi + Rref_i[7]*velYi + Rref_i[8]*velZi);
 

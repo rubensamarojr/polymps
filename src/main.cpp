@@ -166,6 +166,19 @@ void mainLoopOfSimulation(MpsParticle &part, PolygonMesh* &mesh) {
 		{
 			part.solvePressurePoissonPnd();
 		}
+		else if(part.mpsType == calcPressType::IMPLICIT_PND_DIVU)
+		{
+			part.calcVelDivergence();
+			if(part.wallType == boundaryWallType::POLYGON) {
+				if(part.slipCondition == slipBC::FREE_SLIP) {
+					part.calcWallSlipVelDivergence(); // Free-Slip condition
+				}
+				else if(part.slipCondition == slipBC::NO_SLIP) {
+					part.calcWallNoSlipVelDivergence(); // No-Slip condition
+				}
+			}
+			part.solvePressurePoissonPndDivU();
+		}
 		
 		if(part.wallType == boundaryWallType::PARTICLE) {
 			part.extrapolatePressParticlesWallDummy(); // Extrapolate pressure to wall and dummy particles
@@ -259,6 +272,8 @@ void mainLoopOfSimulation(MpsParticle &part, PolygonMesh* &mesh) {
 
 // Main
 int main( int argc, char** argv) {
+
+	Eigen::initParallel();
 
 	printf("Start MPS.\n");
 	//////////////////////////////
@@ -389,6 +404,19 @@ int main( int argc, char** argv) {
 	else if(particles.mpsType == calcPressType::IMPLICIT_PND)
 	{
 		particles.solvePressurePoissonPnd();
+	}
+	else if(particles.mpsType == calcPressType::IMPLICIT_PND_DIVU)
+	{
+		particles.calcVelDivergence();
+		if(particles.wallType == boundaryWallType::POLYGON) {
+			if(particles.slipCondition == slipBC::FREE_SLIP) {
+				particles.calcWallSlipVelDivergence(); // Free-Slip condition
+			}
+			else if(particles.slipCondition == slipBC::NO_SLIP) {
+				particles.calcWallNoSlipVelDivergence(); // No-Slip condition
+			}
+		}
+		particles.solvePressurePoissonPndDivU();
 	}
 	// Write header for vtu files
 	particles.writePvd();
