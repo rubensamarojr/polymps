@@ -2605,9 +2605,9 @@ void MpsParticle::solvePressurePoissonPnd() {
 	// Finished setup matrix
 	matA.setFromTriplets(coeffs.begin(), coeffs.end());
 	// Solve PPE
-	if(solverType = solvPressType::CG)
+	if(solverType == solvPressType::CG)
 		solveConjugateGradient(matA);
-	else if (solverType = solvPressType::BICGSTAB)
+	else if (solverType == solvPressType::BICGSTAB)
 		solveBiConjugateGradientStabilized(matA);
 	// Set zero to negative pressures
 	setZeroOnNegativePressure();
@@ -2720,9 +2720,9 @@ void MpsParticle::solvePressurePoissonPndDivU() {
 	// Finished setup matrix
 	matA.setFromTriplets(coeffs.begin(), coeffs.end());
 	// Solve PPE
-	if(solverType = solvPressType::CG)
+	if(solverType == solvPressType::CG)
 		solveConjugateGradient(matA);
-	else if (solverType = solvPressType::BICGSTAB)
+	else if (solverType == solvPressType::BICGSTAB)
 		solveBiConjugateGradientStabilized(matA);
 	// Set zero to negative pressures
 	setZeroOnNegativePressure();
