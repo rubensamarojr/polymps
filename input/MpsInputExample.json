@@ -106,7 +106,7 @@
 		// 2: wij = re/rij - rij/re
 		// 3: wij = pow(1-rij/re,3.0)
 		"weight_type":		0,
-		"slip_condition":	0,			// No-slip = 0 ; Free-slip = 1 
+		"slip_condition":	0,			// No-slip = 0; Free-slip = 1 
 		// Influence radius
 		"effective_radius": {
 			// 2D: small = 3.1; large = 3.1
@@ -171,6 +171,7 @@
 			"eps_re":		0.01
 		},
 		"free_surface_threshold": {
+			"type": 	1,		// 0: PND + Neigh, 1: PND + NPCD
 			"pnd": 		0.98,	// 2D: 0.97; 3D: 0.98
 			"neigh":	0.85,	// 0.85
 			// NPCD >= 0.2

@@ -273,6 +273,7 @@ void MpsParticle::readInputFile() {
 	repForceCoefLennardJones = je.at("numerical").at("wall_repulsive_force").at("coefficient").value("Lennard-Jones", 2.0);
 	repForceCoefMonaghanKajtar = je.at("numerical").at("wall_repulsive_force").at("coefficient").value("Monaghan-Kajtar", 1.0);
 	EPS_RE = je.at("numerical").at("wall_repulsive_force").value("eps_re", 0.01);
+	freeSurfType = je.at("numerical").at("free_surface_threshold").value("type", 0);
 	pndThreshold = je.at("numerical").at("free_surface_threshold").value("pnd", 0.98);
 	neighThreshold = je.at("numerical").at("free_surface_threshold").value("neigh", 0.85);
 	npcdThreshold = je.at("numerical").at("free_surface_threshold").value("NPCD", 0.20);
@@ -375,6 +376,7 @@ void MpsParticle::readInputFile() {
 	// cout << "repForceCoefLennardJones: " << repForceCoefLennardJones << " | ";
 	// cout << "repForceCoefMonaghanKajtar: " << repForceCoefMonaghanKajtar << endl;
 	// cout << "EPS_RE: " << EPS_RE << " | ";
+	// cout << "freeSurfType: " << freeSurfType << " | ";
 	// cout << "pndThreshold: " << pndThreshold << " | ";
 	// cout << "neighThreshold: " << neighThreshold << " | ";
 	// cout << "npcdThreshold: " << npcdThreshold << " | ";
@@ -2387,21 +2389,25 @@ void MpsParticle::updateParticleBC() {
 				particleBC[i] = inner;
 			}
 
-			// Boundary particle verification based on relative distance and weight (NPCD)
-			if(particleBC[i] == surface) {
-				double delta2 = npcdThreshold*npcdThreshold*partDist*partDist;
-				if(numNeigh[i] > 4 && npcdDeviation2[i] < delta2) {
+			if(freeSurfType == calcBCType::PND_NEIGH)
+			{
+				if(pndSmall[i] < pndThreshold*pndSmallZero && numNeigh[i] < neighThreshold*numNeighZero) {
+				// if(pndi[i] < pndThreshold*pndSmallZero && numNeigh[i] < neighThreshold*numNeighZero)
+					particleBC[i] = surface;
+				}
+				else {
 					particleBC[i] = inner;
-					//printf(" inner %d \n", i);
 				}
 			}
-
-			if(pndSmall[i] < pndThreshold*pndSmallZero && numNeigh[i] < neighThreshold*numNeighZero) {
-			// if(pndi[i] < pndThreshold*pndSmallZero && numNeigh[i] < neighThreshold*numNeighZero)
-				particleBC[i] = surface;
-			}
-			else {
-				particleBC[i] = inner;
+			else
+			{
+				// Boundary particle verification based on relative distance and weight (NPCD)
+				if(particleBC[i] == surface) {
+					double delta2 = npcdThreshold*npcdThreshold*partDist*partDist;
+					if(numNeigh[i] > 4 && npcdDeviation2[i] < delta2) {
+						particleBC[i] = inner;
+					}
+				}
 			}
 		}
 	}
@@ -5032,7 +5038,10 @@ void MpsParticle::calcWallSlipViscosity() {
 			double dst = sqrt(dstimi2);
 			double wL = weight(dst, reL, weightType);
 
-			NEU = 2 * meu_i * meu_i / (meu_i + meu_i);
+			if(meu_i > 1e-6)
+				NEU = 2 * meu_i * meu_i / (meu_i + meu_i);
+			else
+				NEU = 0.0;
 
 //NEU = KNM_VS2 * DNS_FL2;
 

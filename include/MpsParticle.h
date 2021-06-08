@@ -33,6 +33,11 @@ enum calcPNDType {
 	DIFFUSIVE = 2
 };
 
+enum calcBCType {
+	PND_NEIGH = 0,
+	PND_NPCD = 1
+};
+
 enum slipBC {
 	NO_SLIP = 0,
 	FREE_SLIP = 1
@@ -576,6 +581,7 @@ private:
 	double repForceCoefLennardJones;	// Wall coefficent repulsive force (1-10) (Lennard-Jones)
 	double repForceCoefMonaghanKajtar;	// Wall coefficent repulsive force (1-10) (Monaghan-Kajtar)
 	double EPS_RE;			// 
+	int freeSurfType;		// Free surface condition
 	double pndThreshold;	// Surface threshold PND (2D - 0.97/ 3D - 0.93)
 	double neighThreshold;	// Surface threshold Neighbors
 	double npcdThreshold;	// NPCD threshold
