@@ -41,7 +41,7 @@ MpsParticle::~MpsParticle()
 double MpsParticle::getTime() {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-	return ((double)(tv.tv_sec) + (double)(tv.tv_usec) * 0.000001);
+	return ((double)(tv.tv_sec) + (double)(tv.tv_usec) * 1e-6);
 }
 
 void MpsParticle::displayInfo(const int intervalIter) {
@@ -752,7 +752,7 @@ void MpsParticle::setInitialPndNumberOfNeigh() {
 			// Add Number of neighbors due wall polygon
 			numNeigh[i] += numNeighWallContribution[i];
 
-			if(wSum > 0.0001) {
+			if(wSum > 1e-6) {
 				//npcdDeviation[i*3  ] /= pndSmall[i];
 				//npcdDeviation[i*3+1] /= pndSmall[i];
 				//npcdDeviation[i*3+2] /= pndSmall[i];
@@ -836,7 +836,10 @@ void MpsParticle::calcViscosityGravity() {
 						if(j != i && particleType[j] != ghost) {
 							double dst = sqrt(dstij2);
 							double wL = weight(dst, reL, weightType);
-							NEU = 2 * meu_i * MEU[j] / (meu_i + MEU[j]);
+							if ((meu_i + MEU[j]) > 1e-6)
+								NEU = 2 * meu_i * MEU[j] / (meu_i + MEU[j]);
+							else
+								NEU = 0.0;
 							//NEU = KNM_VS2 * DNS_FL2;
 							if(PTYPE[i] == 1) NEU = NEU/DNS_FL1;
 							else NEU = NEU/DNS_FL2;
@@ -954,7 +957,7 @@ void MpsParticle::predictionPressGradient() {
 								wS *= (press[j] + Pi - 2*pressMin)/dstij2;
 							else if(gradientType == 3) {
 								double nj = pndi[j];
-								if(ni > 0.0001 && nj > 0.0001)
+								if(ni > 1e-6 && nj > 1e-6)
 									wS *= (ni*press[j]/nj + nj*Pi/ni)/dstij2;
 							}
 							accX += v0ij*wS;	accY += v1ij*wS;	accZ += v2ij*wS;
@@ -998,7 +1001,7 @@ void MpsParticle::predictionWallPressGradient() {
 		    // normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
 		    normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		    normaliwSqrt = sqrt(normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2]);
-		    if(normaliwSqrt > 0.00000001) {
+		    if(normaliwSqrt > 1e-6) {
 		    	normaliw[0] = normaliw[0]/normaliwSqrt;
 		    	normaliw[1] = normaliw[1]/normaliwSqrt;
 		    	normaliw[2] = normaliw[2]/normaliwSqrt;
@@ -1094,7 +1097,7 @@ void MpsParticle::predictionWallPressGradient() {
 								wS *= (Pj + Pi - 2*pressMin)/dstimj2;//(press[j] + Pi - 2*pressMin)/dstimj2;
 							else if(gradientType == 3) {
 								double nj = pndi[j];
-								if(ni > 0.0001 && nj > 0.0001)
+								if(ni > 1e-6 && nj > 1e-6)
 									wS *= (ni*Pj/nj + nj*Pi/ni)/dstimj2;
 							}
 						accX += v0imj*wS;	accY += v1imj*wS;	accZ += v2imj*wS;
@@ -1126,7 +1129,7 @@ void MpsParticle::predictionWallPressGradient() {
 					wS *= (Pj + Pi - 2*pressMin)/dstimi2;//(Pi + Pi - 2*pressMin)/dstimi2
 				else if(gradientType == 3) {
 					double nj = pndi[i];
-					if(ni > 0.0001 && nj > 0.0001)
+					if(ni > 1e-6 && nj > 1e-6)
 						wS *= (ni*Pj/nj + nj*Pi/ni)/dstimi2;
 				}
 				accX += v0imi*wS;	accY += v1imi*wS;	accZ += v2imi*wS;
@@ -1358,7 +1361,7 @@ void MpsParticle::calcWallNPCD() {
 			normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 			normaliwSqrt = sqrt(normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2]);
 
-			if(normaliwSqrt > 0.00000001) {
+			if(normaliwSqrt > 1e-6) {
 				normaliw[0] = normaliw[0]/normaliwSqrt;
 				normaliw[1] = normaliw[1]/normaliwSqrt;
 				normaliw[2] = normaliw[2]/normaliwSqrt;
@@ -1522,7 +1525,7 @@ void MpsParticle::calcPnd() {
 			pndSmall[i] = ni + pndWallContribution[i];
 			// Prevent pndSmall[i] = 0
 	//		if(numNeigh[i]>1) {
-			if(wSum>0.0001) {
+			if(wSum > 1e-6) {
 				//npcdDeviation[i*3  ] /= pndSmall[i];
 				//npcdDeviation[i*3+1] /= pndSmall[i];
 				//npcdDeviation[i*3+2] /= pndSmall[i];
@@ -1583,7 +1586,7 @@ void MpsParticle::calcPndDiffusiveTerm() {
 				for(int j = 0; j < 3; j++)
 					M1[i][j] = 0.0;
 			double ni = pndi[i];
-			if(ni < 0.0001) continue;
+			if(ni < 1e-6) continue;
 			double Pi = press[i];
 			int ix = (int)((posXi - domainMinX)*invBucketSide) + 1;
 			int iy = (int)((posYi - domainMinY)*invBucketSide) + 1;
@@ -1653,7 +1656,7 @@ void MpsParticle::calcPndDiffusiveTerm() {
 								double vijy = vel[j*3+1]-velYi;
 								double vijz = vel[j*3+2]-velZi;
 								double wS = weight(dst, reS, weightType);
-								if(ni > 0.0001)
+								if(ni > 1e-6)
 									DivV += (dim/pndSmallZero)*(nj/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
 
 		//						M1[0][0] += (dim/pndSmallZero)*(nj/ni)*(v0*vijx)*wS/dst2; M1[0][1] += (dim/pndSmallZero)*(nj/ni)*(v0*vijy)*wS/dst2; M1[0][2] += (dim/pndSmallZero)*(nj/ni)*(v0*vijz)*wS/dst2;
@@ -1718,8 +1721,8 @@ void MpsParticle::calcWallSlipPndDiffusiveTerm() {
 	//int i = partNearMesh[im];
 	for(int i=0; i<numParticles; i++) {
 		double ni = pndi[i];
-		//if(particleType[i] == fluid && ni > 0.0001) {
-		if(particleType[i] == fluid && particleNearWall[i] == true && ni > 0.0001) {
+		//if(particleType[i] == fluid && ni > 1e-6) {
+		if(particleType[i] == fluid && particleNearWall[i] == true && ni > 1e-6) {
 	//	if(particleType[i] == fluid) {
 			double DivV = 0.0;
 			//double Pi = press[i];
@@ -1733,7 +1736,7 @@ void MpsParticle::calcWallSlipPndDiffusiveTerm() {
 			// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
 			normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 			normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
-			if(normalMod2 > 0.00000001) {
+			if(normalMod2 > 1e-6) {
 				double normalMod = sqrt(normalMod2);
 				normaliw[0] = normaliw[0]/normalMod;
 				normaliw[1] = normaliw[1]/normalMod;
@@ -1834,8 +1837,8 @@ void MpsParticle::calcWallNoSlipPndDiffusiveTerm() {
 	//int i = partNearMesh[im];
 	for(int i=0; i<numParticles; i++) {
 		double ni = pndi[i];
-		//if(particleType[i] == fluid && ni > 0.0001) {
-		if(particleType[i] == fluid && particleNearWall[i] == true && ni > 0.0001) {
+		//if(particleType[i] == fluid && ni > 1e-6) {
+		if(particleType[i] == fluid && particleNearWall[i] == true && ni > 1e-6) {
 	//	if(particleType[i] == fluid) {
 			double DivV = 0.0;
 			//double Pi = press[i];
@@ -1849,7 +1852,7 @@ void MpsParticle::calcWallNoSlipPndDiffusiveTerm() {
 		    // normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
 		    normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		    normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
-		    if(normalMod2 > 0.00000001) {
+		    if(normalMod2 > 1e-6) {
 		    	double normalMod = sqrt(normalMod2);
 		    	normaliw[0] = normaliw[0]/normalMod;
 		    	normaliw[1] = normaliw[1]/normalMod;
@@ -2059,7 +2062,7 @@ void MpsParticle::meanPndParticlesWallDummySurface() {
 //	if(particleBC[i] == surface) {
 		// Prevent PNDdo = 0
 //		if(numNeigh[i] < 1)
-			if(acc[i*3+1] < 0.0001)
+			if(acc[i*3+1] < 1e-6)
 				pndi[i] = acc[i*3];
 			else
 				pndi[i] = acc[i*3]/(acc[i*3+1]);
@@ -2356,7 +2359,7 @@ void MpsParticle::updateParticleBC() {
 		pndSmall[i] = ni + pndWallContribution[i];
 		// Prevent pndSmall[i] = 0
 //		if(numNeigh[i] > 1) {
-		if(wSum > 0.0001) {
+		if(wSum > 1e-6) {
 			//npcdDeviation[i*3  ] /= pndSmall[i];
 			//npcdDeviation[i*3+1] /= pndSmall[i];
 			//npcdDeviation[i*3+2] /= pndSmall[i];
@@ -2830,7 +2833,7 @@ void MpsParticle::calcVelDivergence() {
 								double vijz = vel[j*3+2]-velZi;
 								double dst = sqrt(dstij2);
 								double wS = weight(dst, reS, weightType);
-								if(ni > 0.0001)
+								if(ni > 1e-6)
 									DivV += (dim/pndSmallZero)*(nj/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
 							}
 						}
@@ -2857,7 +2860,7 @@ void MpsParticle::calcWallSlipVelDivergence() {
 //	if(particleType[i] == fluid) {
 	//if(particleType[i] != ghost) {
 		double ni = pndi[i];
-		if(particleType[i] == fluid && particleNearWall[i] == true && ni > 0.0001) {
+		if(particleType[i] == fluid && particleNearWall[i] == true && ni > 1e-6) {
 			double DivV = 0.0;
 			double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
 			double velXi = vel[i*3  ];	double velYi = vel[i*3+1];	double velZi = vel[i*3+2];
@@ -2868,7 +2871,7 @@ void MpsParticle::calcWallSlipVelDivergence() {
 			// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
 			normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 			normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
-			if(normalMod2 > 0.00000001) {
+			if(normalMod2 > 1e-6) {
 				double normalMod = sqrt(normalMod2);
 				normaliw[0] = normaliw[0]/normalMod;
 				normaliw[1] = normaliw[1]/normalMod;
@@ -2886,7 +2889,7 @@ void MpsParticle::calcWallSlipVelDivergence() {
 			Rref_i[6] = 0.0 - 2*normaliw[2]*normaliw[0]; Rref_i[7] = 0.0 - 2*normaliw[2]*normaliw[1]; Rref_i[8] = 1.0 - 2*normaliw[2]*normaliw[2];
 
 			// Mirror particle velocity vi' = Rref_i * vi
-				double velMirrorXi = (Rref_i[0]*velXi + Rref_i[1]*velYi + Rref_i[2]*velZi);
+			double velMirrorXi = (Rref_i[0]*velXi + Rref_i[1]*velYi + Rref_i[2]*velZi);
 			double velMirrorYi = (Rref_i[3]*velXi + Rref_i[4]*velYi + Rref_i[5]*velZi);
 			double velMirrorZi = (Rref_i[6]*velXi + Rref_i[7]*velYi + Rref_i[8]*velZi);
 
@@ -2962,8 +2965,8 @@ void MpsParticle::calcWallNoSlipVelDivergence() {
 	//int i = partNearMesh[im];
 	for(int i=0; i<numParticles; i++) {
 		double ni = pndi[i];
-		//if(particleType[i] == fluid && ni > 0.0001) {
-		if(particleType[i] == fluid && particleNearWall[i] == true && ni > 0.0001) {
+		//if(particleType[i] == fluid && ni > 1e-6) {
+		if(particleType[i] == fluid && particleNearWall[i] == true && ni > 1e-6) {
 	//	if(particleType[i] == fluid) {
 			double DivV = 0.0;
 			double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
@@ -2975,7 +2978,7 @@ void MpsParticle::calcWallNoSlipVelDivergence() {
 			// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
 			normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 			normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
-			if(normalMod2 > 0.00000001) {
+			if(normalMod2 > 1e-6) {
 				double normalMod = sqrt(normalMod2);
 				normaliw[0] = normaliw[0]/normalMod;
 				normaliw[1] = normaliw[1]/normalMod;
@@ -3202,7 +3205,7 @@ void MpsParticle::extrapolatePressParticlesNearPolygonWall() {
 
 	//		if(numNeighborsSurfaceParticles[i]<=0.5){
 			if(pressure > 0) {
-		  		if(sumWij > 0.0001)
+		  		if(sumWij > 1e-6)
 					press[i] = pressure/sumWij;
 				else
 					press[i] = pressure;
@@ -3414,7 +3417,7 @@ void MpsParticle::calcPressGradient() {
 						wS *= (press[j] + Pi - 2*pressMin)/dstij2;
 					else if(gradientType == 3) {
 						double nj = pndi[j];
-						if(ni > 0.0001 && nj > 0.0001)
+						if(ni > 1e-6 && nj > 1e-6)
 							wS *= (ni*press[j]/nj + nj*Pi/ni)/dstij2;
 					}
 					accX += v0ij*wS;	accY += v1ij*wS;	accZ += v2ij*wS;
@@ -3474,7 +3477,7 @@ void MpsParticle::calcWallPressGradient() {
 		normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		normaliwSqrt = sqrt(normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2]);
 
-		if(normaliwSqrt > 0.00000001) {
+		if(normaliwSqrt > 1e-6) {
 			normaliw[0] = normaliw[0]/normaliwSqrt;
 			normaliw[1] = normaliw[1]/normaliwSqrt;
 			normaliw[2] = normaliw[2]/normaliwSqrt;
@@ -3587,7 +3590,7 @@ void MpsParticle::calcWallPressGradient() {
 						wS *= (Pj + Pi - 2*pressMin)/dstimj2;//(press[j] + press[i] - 2*pressMin)/dstimj2
 					else if(gradientType == 3) {
 						double nj = pndi[j];
-						if(ni > 0.0001 && nj > 0.0001)
+						if(ni > 1e-6 && nj > 1e-6)
 							wS *= (ni*Pj/nj + nj*Pi/ni)/dstimj2;
 					}
 					accX += v0imj*wS;	accY += v1imj*wS;	accZ += v2imj*wS;
@@ -3621,7 +3624,7 @@ void MpsParticle::calcWallPressGradient() {
 				wS *= (Pj + Pi - 2*pressMin)/dstimi2;//(press[i] + press[i] - 2*pressMin)/dstimi2;
 			else if(gradientType == 3) {
 				double nj = pndi[i];
-				if(ni > 0.0001 && nj > 0.0001)
+				if(ni > 1e-6 && nj > 1e-6)
 					wS *= (ni*Pj/nj + nj*Pi/ni)/dstimi2;
 			}
 			accX += v0imi*wS;	accY += v1imi*wS;	accZ += v2imi*wS;
@@ -3971,7 +3974,7 @@ void MpsParticle::calcViscosityInteractionVal() {
 				// phi2: maximum friction angle
 				phi = (Cv[i] - 0.25)*PHI / (1 - 0.25);
 				phi2 = (Cv[i] - 0.25)*PHI_2 / (1 - 0.25);
-				if(Cv[i] <= 0.25) { phi = 0.00001; phi2 = 0.00001; } // phi close to zero
+				if(Cv[i] <= 0.25) { phi = 1e-6; phi2 = 1e-6; } // phi close to zero
 				if(PTYPE[i] <= 0) phi = PHI_BED; // ghost
 
 				// normal stress calculation (mechanical pressure)
@@ -4210,7 +4213,7 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 		normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
 
-		if(normalMod2 > 0.00000001) {
+		if(normalMod2 > 1e-6) {
 			double normalMod = sqrt(normalMod2);
 			normaliw[0] = normaliw[0]/normalMod;
 			normaliw[1] = normaliw[1]/normalMod;
@@ -4379,7 +4382,7 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 			else if(PTYPE[i] == 2) {
 				phi = (Cv[i] - 0.25)*PHI / (1 - 0.25);
 				phi2 = (Cv[i] - 0.25)*PHI_2 / (1 - 0.25);
-				if(Cv[i] <= 0.25) { phi = 0.00001; phi2 = 0.00001; } // phi close to zero
+				if(Cv[i] <= 0.25) { phi = 1e-6; phi2 = 1e-6; } // phi close to zero
 				if(PTYPE[i] <= 0) phi = PHI_BED;
 
 				// normal stress calculation (mehcanical pressure)
@@ -4605,7 +4608,7 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 	    normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 	    normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
 
-	    if(normalMod2 > 0.00000001) {
+	    if(normalMod2 > 1e-6) {
 	    	double normalMod = sqrt(normalMod2);
 	    	normaliw[0] = normaliw[0]/normalMod;
 	    	normaliw[1] = normaliw[1]/normalMod;
@@ -4781,7 +4784,7 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 			else if(PTYPE[i] == 2) {
 				phi = (Cv[i] - 0.25)*PHI / (1 - 0.25);
 				phi2 = (Cv[i] - 0.25)*PHI_2 / (1 - 0.25);
-				if(Cv[i] <= 0.25) { phi = 0.00001; phi2 = 0.00001; } // phi close to zero
+				if(Cv[i] <= 0.25) { phi = 1e-6; phi2 = 1e-6; } // phi close to zero
 				if(PTYPE[i] <= 0) phi = PHI_BED;
 
 				// normal stress calculation (mechanical pressure)
@@ -4938,7 +4941,7 @@ void MpsParticle::calcWallSlipViscosity() {
 		normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
 
-		if(normalMod2 > 0.00000001) {
+		if(normalMod2 > 1e-6) {
 			double normalMod = sqrt(normalMod2);
 			normaliw[0] = normaliw[0]/normalMod;
 			normaliw[1] = normaliw[1]/normalMod;
@@ -4990,7 +4993,10 @@ void MpsParticle::calcWallSlipViscosity() {
 					double dst = sqrt(dstimj2);
 					double wL = weight(dst, reL, weightType);
 
-					NEU = 2 * meu_i * MEU[j] / (meu_i + MEU[j]);
+					if((meu_i + MEU[j]) > 1e-6)
+						NEU = 2 * meu_i * MEU[j] / (meu_i + MEU[j]);
+					else
+						NEU = 0.0;
 
 //NEU = KNM_VS2 * DNS_FL2;
 
@@ -5092,7 +5098,7 @@ void MpsParticle::calcWallNoSlipViscosity() {
 		normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
 
-		if(normalMod2 > 0.00000001) {
+		if(normalMod2 > 1e-6) {
 			double normalMod = sqrt(normalMod2);
 			normaliw[0] = normaliw[0]/normalMod;
 			normaliw[1] = normaliw[1]/normalMod;
@@ -5160,7 +5166,10 @@ void MpsParticle::calcWallNoSlipViscosity() {
 					double dst = sqrt(dstimj2);
 					double wL = weight(dst, reL, weightType);
 
-					NEU = 2 * meu_i * MEU[j] / (meu_i + MEU[j]);
+					if((meu_i + MEU[j]) > 1e-6)
+						NEU = 2 * meu_i * MEU[j] / (meu_i + MEU[j]);
+					else
+						NEU = 0.0;
 
 //NEU = KNM_VS2 * DNS_FL2;
 
@@ -5207,7 +5216,10 @@ void MpsParticle::calcWallNoSlipViscosity() {
 			double dst = sqrt(dstimi2);
 			double wL = weight(dst, reL, weightType);
 
-			NEU = 2 * meu_i * meu_i / (meu_i + meu_i);
+			if(meu_i > 1e-6)
+				NEU = 2 * meu_i * meu_i / (meu_i + meu_i);
+			else
+				NEU = 0.0;
 
 //NEU = KNM_VS2 * DNS_FL2;
 
@@ -5409,7 +5421,7 @@ void MpsParticle::transform2Dto3D(double *P1, double *RM) {
 // 		//   	printf("\ni:%5d th timeCurrent: %lf / ri: %lf %lf %lf / rim: %lf %lf %lf / N: %lf", i, timeCurrent, posXi, posYi, posZi, posMirrorXi, posMirrorYi, posMirrorZi, normalMod2);
 
 // 		if(normalMod2 <= 0.26*partDist*partDist) {
-// 			if(normalMod2 > 0.00000001) {
+// 			if(normalMod2 > 1e-6) {
 // 				double normalMod = sqrt(normalMod2);
 // 				normaliw[0] = normaliw[0]/normalMod;
 // 				normaliw[1] = normaliw[1]/normalMod;
@@ -5788,7 +5800,7 @@ void MpsParticle::calcWallShifting() {
 		normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
 
-		if(normalMod2 > 0.00000001) {
+		if(normalMod2 > 1e-6) {
 			double normalMod = sqrt(normalMod2);
 			normaliw[0] = normaliw[0]/normalMod;
 			normaliw[1] = normaliw[1]/normalMod;
@@ -6090,7 +6102,7 @@ void MpsParticle::calcWallConcAndConcGradient() {
 		normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		normaliwSqrt = sqrt(normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2]);
 
-		if(normaliwSqrt > 0.00000001) {
+		if(normaliwSqrt > 1e-6) {
 			normaliw[0] = normaliw[0]/normaliwSqrt;
 			normaliw[1] = normaliw[1]/normaliwSqrt;
 			normaliw[2] = normaliw[2]/normaliwSqrt;
