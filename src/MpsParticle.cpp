@@ -2262,11 +2262,11 @@ void MpsParticle::meanNeighFluidPnd() {
 					if(j == -1) break;
 				}
 			}}}
-			if(numNeigh[i] < 1) {
-				pndski[i] = PNDup;
+			if(PNDdo > 1e-6) {
+				pndski[i] = PNDup/PNDdo;
 			}
 			else {
-				pndski[i] = PNDup/PNDdo;
+				pndski[i] = PNDup;
 			}
 		}
 	}
@@ -2601,7 +2601,7 @@ void MpsParticle::solvePressurePoissonPnd() {
 		//sourceTerm(i) = - relaxPND*ddt*(pndski[i] - pndSmallZero)/pndSmallZero;
 
 		//double riw[3], riwSqrt;
-		// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
+		// Normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
 		//riw[0] = 0.5*(posXi - posMirrorXi); riw[1] = 0.5*(posYi - posMirrorYi); riw[2] = 0.5*(posZi - posMirrorZi);
 		//riwSqrt = sqrt(riw[0]*riw[0] + riw[1]*riw[1] + riw[2]*riw[2]);
 		//double ST1 = - coeffPPESource*density*(ni - pndSmallZero);
