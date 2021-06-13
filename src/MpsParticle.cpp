@@ -163,6 +163,7 @@ void MpsParticle::readInputFile() {
 	}
 	
 	//printf("Input file: %s\n", json_file_char);
+	printf("Reading JSON File... ");
 
 	using json = nlohmann::json;
 	// read a JSON file
@@ -287,7 +288,11 @@ void MpsParticle::readInputFile() {
 	other = je.at("numerical").at("boundary_type").value("other", -1);
 	numPartTypes = je.at("numerical").value("particle_types", 2);
 
+	printf("OK\n");
+
+	printf("Reading GRID File... ");
 	readMpsParticleFile(gridFilename);
+	printf("OK\n");
 
 	// Extend domain
 	domainMinX = domainMinX - partDist*3;
@@ -7591,7 +7596,7 @@ void MpsParticle::writePvd()
 #endif
 
 	if(mkdirOK == -1) {
-		printf("Unable to create directory.\n");
+		printf("Unable to create OUTPUT directory or it is already created!\n");
 	}
 	else {
 		printf("Directory created.\n");

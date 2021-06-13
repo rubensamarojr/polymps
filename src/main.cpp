@@ -275,7 +275,7 @@ int main( int argc, char** argv) {
 
 	Eigen::initParallel();
 
-	printf("Start MPS.\n");
+	printf("Start PolyMPS.\n");
 	//////////////////////////////
 	////// Initializations////////
 	//////////////////////////////
@@ -301,6 +301,7 @@ int main( int argc, char** argv) {
 	PolygonMesh* solidMesh = NULL;
 	solidMesh = new PolygonMesh[particles.numOfMeshs];
 
+	printf("Reading STL File... \n");
 	// It is necessary to read the msesh in the following order (maximum of 3 meshs)
 	// 1st: Rigid mesh file
 	// 2nd: Deformable mesh file
@@ -327,6 +328,7 @@ int main( int argc, char** argv) {
 	for(int me = 0; me < particles.numOfMeshs; me++) {
 		std::cout << " after removing duplicates, mesh containts " << solidMesh[me].NV.rows() << " vertices and " << solidMesh[me].NF.rows() << " faces" << std::endl;
 	}
+	printf("OK\n");
 
 	// Creation of the wall weight (Zij) and number of neighboors functions (numNeighWall)
 	// std::cout << " reS: " << particles.reS << " reL: " << particles.reL << std::endl;
@@ -421,6 +423,7 @@ int main( int argc, char** argv) {
 	// Write header for vtu files
 	particles.writePvd();
 
+	printf("\nStart Main Loop of Simulation\n\n");
 	///////////////////////////
 	//////// Main loop ////////
 	///////////////////////////
@@ -431,6 +434,6 @@ int main( int argc, char** argv) {
 
 	delete[] solidMesh;
 
-	printf("End MPS.\n");
+	printf("End PolyMPS.\n");
 	return 0;
 }
