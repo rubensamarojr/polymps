@@ -191,13 +191,6 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 			}
 
 			part->fileNumber++; // Integer number
-			
-			// Break if simulation reachs the final time
-			if(part->timeCurrent >= part->timeSimulation ) {
-				delete[] output_folder_char;
-				output_folder_char = NULL;
-				break;
-			}
 		}
 		///////////////////////////
 		/// Numerical simulation //
@@ -394,5 +387,11 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 		part->numOfIterations++;
 		part->timeCurrent += part->timeStep;
 
+		// Break if simulation reachs the final time
+		if(part->timeCurrent > part->timeSimulation ) {
+			delete[] output_folder_char;
+			output_folder_char = NULL;
+			break;
+		}
 	}
 }
