@@ -71,6 +71,10 @@ public:
 	double getTime();
 	// Display simulation informations at each nIter iterations
 	void displayInfo(const int intervalIter);
+	// Initialize elements of the class
+	void init();
+	// Update variables at 0th step
+	void stepZero();
 	// Read input data from file .json to class MpsParticle
 	void readInputFile();
 	// Read data from file .grid to class MpsParticle

@@ -59,13 +59,71 @@ void MpsParticle::displayInfo(const int intervalIter) {
 		//seconds = int(timer_end - timer_sta);
 		minutes = seconds / 60;
 		hours = minutes / 60;
-		printf("Iteration: %5dth Time: %lfsec Number of Particles: %d Maximum Velocity: %lfm/s Courant: %lf", 
+		printf("Iteration: %5dth Time: %lfsec Num. Particles: %d Max Velocity: %lfm/s Courant: %lf", 
 			numOfIterations, timeCurrent, numberOfParticles, velMax, CFLcurrent);
 		if(mpsType == calcPressType::IMPLICIT_PND || mpsType == calcPressType::IMPLICIT_PND_DIVU){
 			printf(" Solver iterations: %3d Estimated error: %.2e", solverIter, solverError);
 		}
 		printf(" RunTime: %02dh%02dm%02dsec\n", int(hours), int(minutes%60), int(seconds%60));
 	}
+}
+
+// Initialize elements of the class
+void MpsParticle::init() {
+
+	// Read and allocate memory for data
+	readInputFile();
+	// Write header of output txt files (force and pressure)
+	// part->writeHeaderTxtFiles(); (NOT WORKING !!!)
+	// Allocation of buckets
+	allocateBuckets();
+	// Setting parameters
+	setParameters();
+	// Update particle ID's in buckets
+	updateBuckets();
+}
+
+// Update variables at 0th step
+void MpsParticle::stepZero() {
+
+	// Initial PND
+	setInitialPndNumberOfNeigh();
+	if(wallType == boundaryWallType::POLYGON) {
+		// Contribution to mean PND due polygon wall
+		meanWallPnd();
+	}
+	// Mean of PND
+	meanPnd();
+	// Mean fluid neighbor PND
+	meanNeighFluidPnd();
+	// Update type of particle
+	updateParticleBC();
+	// Compute pressure
+	if(mpsType == calcPressType::EXPLICIT) {
+		calcPressEMPS();
+	}
+	else if(mpsType == calcPressType::WEAKLY) {
+		calcPressWCMPS();
+	}
+	else if(mpsType == calcPressType::IMPLICIT_PND)
+	{
+		solvePressurePoissonPnd();
+	}
+	else if(mpsType == calcPressType::IMPLICIT_PND_DIVU)
+	{
+		calcVelDivergence();
+		if(wallType == boundaryWallType::POLYGON) {
+			if(slipCondition == slipBC::FREE_SLIP) {
+				calcWallSlipVelDivergence(); // Free-Slip condition
+			}
+			else if(slipCondition == slipBC::NO_SLIP) {
+				calcWallNoSlipVelDivergence(); // No-Slip condition
+			}
+		}
+		solvePressurePoissonPndDivU();
+	}
+	// Write header for vtu files
+	writePvd();
 }
 
 // Weight function
