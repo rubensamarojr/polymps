@@ -6671,24 +6671,22 @@ void MpsParticle::writeHeaderTxtFiles() {
 
 // Call functions to write output files
 void MpsParticle::writeOutputFiles() {
-	if(numOfIterations%iterOutput == 0) {
-		// writeProfAscii();
-		// Write particle data (VTU files)
-		if(vtuType == 0) {
-			if(freeSurfWall == true) {
-				writeVtuAsciiFreeSurface();
-			}
-			else {
-				writeVtuAscii();
-			}
+	// writeProfAscii();
+	// Write particle data (VTU files)
+	if(vtuType == 0) {
+		if(freeSurfWall == true) {
+			writeVtuAsciiFreeSurface();
 		}
 		else {
-			if(freeSurfWall == true) {
-				writeVtuBinaryFreeSurface();
-			}
-			else {
-				writeVtuBinary();
-			}
+			writeVtuAscii();
+		}
+	}
+	else {
+		if(freeSurfWall == true) {
+			writeVtuBinaryFreeSurface();
+		}
+		else {
+			writeVtuBinary();
 		}
 	}
 }

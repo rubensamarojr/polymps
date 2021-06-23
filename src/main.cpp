@@ -57,9 +57,11 @@ int main( int argc, char** argv) {
 	particles = new MpsParticle();
 	particles->init();
 
-	// Create an array of PolygonMesh class
-	solidMesh = new PolygonMesh[particles->numOfMeshs];
-	initMesh(particles, solidMesh);
+	if(particles->wallType == boundaryWallType::POLYGON) {
+		// Create an array of PolygonMesh class
+		solidMesh = new PolygonMesh[particles->numOfMeshs];
+		initMesh(particles, solidMesh);
+	}
 
 	// Update variables at 0th step
 	particles->stepZero();
@@ -177,19 +179,20 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 
 		// Display simulation informations at each 10 iterations
 		part->displayInfo(10);
-		// Write output particle files
-		part->writeOutputFiles();
-		// Write output mesh files
 		if(part->numOfIterations%part->iterOutput == 0) {
-			if(part->femOn == true) {
-				// Write deformable mesh (STL files)
-				mesh[meshType::DEFORMABLE].writePolygonMeshFile(meshType::DEFORMABLE, output_folder_char, part->fileNumber);
+			// Write output particle files
+			part->writeOutputFiles();
+			if(part->wallType == boundaryWallType::POLYGON) {
+				// Write output mesh files
+				if(part->femOn == true) {
+					// Write deformable mesh (STL files)
+					mesh[meshType::DEFORMABLE].writePolygonMeshFile(meshType::DEFORMABLE, output_folder_char, part->fileNumber);
+				}
+				if(part->forcedOn == true) {
+					// Write forced rigid mesh (STL files)
+					mesh[meshType::FORCED].writePolygonMeshFile(meshType::FORCED, output_folder_char, part->fileNumber);
+				}
 			}
-			if(part->forcedOn == true) {
-				// Write forced rigid mesh (STL files)
-				mesh[meshType::FORCED].writePolygonMeshFile(meshType::FORCED, output_folder_char, part->fileNumber);
-			}
-
 			part->fileNumber++; // Integer number
 		}
 		///////////////////////////
