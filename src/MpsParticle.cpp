@@ -789,7 +789,7 @@ void MpsParticle::setInitialPndNumberOfNeigh() {
 					double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 					// If j is inside the neighborhood of i and 
 					// is not at the same side of im (avoid real j in the virtual neihborhood)
-					if(dstij2 < reL2 && dstij2 < dstimj2) {
+					if(dstij2 < reL2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 						if(j != i && particleType[j] != ghost) {
 							numNeigh[i] += 1;
 							if(dstij2 < reS2) {
@@ -897,7 +897,7 @@ void MpsParticle::calcViscosityGravity() {
 					double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 					// If j is inside the neighborhood of i and 
 					// is not at the same side of im (avoid real j in the virtual neihborhood)
-					if(dstij2 < reL2 && dstij2 < dstimj2) {
+					if(dstij2 < reL2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 						if(j != i && particleType[j] != ghost) {
 							double dst = sqrt(dstij2);
 							double wL = weight(dst, reL, weightType);
@@ -978,7 +978,7 @@ void MpsParticle::predictionPressGradient() {
 						double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 						// If j is inside the neighborhood of i and 
 						// is not at the same side of im (avoid real j in the virtual neihborhood)
-						if(dstij2 < reS2 && dstij2 < dstimj2) {
+						if(dstij2 < reS2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 							if(j != i && particleType[j] != ghost) {
 								if(pressMin > press[j]) pressMin = press[j];
 							}
@@ -1010,7 +1010,7 @@ void MpsParticle::predictionPressGradient() {
 					double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 					// If j is inside the neighborhood of i and 
 					// is not at the same side of im (avoid real j in the virtual neihborhood)
-					if(dstij2 < reS2 && dstij2 < dstimj2) {
+					if(dstij2 < reS2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 						if(j != i && particleType[j] != ghost) {
 							double dst = sqrt(dstij2);
 							double wS = weightGradient(dst, reS, weightType);
@@ -1344,7 +1344,7 @@ void MpsParticle::checkCollisions() {
 					double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 					// If j is inside the neighborhood of i and 
 					// is not at the same side of im (avoid real j in the virtual neihborhood)
-					if(dstij2 < distCollisionLimit2 && dstij2 < dstimj2) {
+					if(dstij2 < distCollisionLimit2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 						if(j != i && particleType[j] != ghost) {
 							double fDT = (velXi-vel[j*3  ])*v0ij+(velYi-vel[j*3+1])*v1ij+(velZi-vel[j*3+2])*v2ij;
 							if(fDT > 0.0) {
@@ -1537,7 +1537,7 @@ void MpsParticle::calcPnd() {
 					double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 					// If j is inside the neighborhood of i and 
 					// is not at the same side of im (avoid real j in the virtual neihborhood)
-					if(dstij2 < reL2 && dstij2 < dstimj2) {
+					if(dstij2 < reL2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 						if(j != i && particleType[j] != ghost) {
 							numNeigh[i] += 1;
 							//double dst = sqrt(dst2);
@@ -1678,7 +1678,7 @@ void MpsParticle::calcPndDiffusiveTerm() {
 					double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 					// If j is inside the neighborhood of i and 
 					// is not at the same side of im (avoid real j in the virtual neihborhood)
-					if(dstij2 < reL2 && dstij2 < dstimj2) {
+					if(dstij2 < reL2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 						if(j != i && particleType[j] != ghost) {
 		//				if(j != i && particleType[j] == fluid) {
 							double dst = sqrt(dstij2);
@@ -2101,7 +2101,7 @@ void MpsParticle::meanPndParticlesWallDummySurface() {
 					double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 					// If j is inside the neighborhood of i and 
 					// is not at the same side of im (avoid real j in the virtual neihborhood)
-					if(dstij2 < reS2 && dstij2 < dstimj2) {
+					if(dstij2 < reS2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 						if(j != i && particleType[j] != ghost) {
 							double dst = sqrt(dstij2);
 							double wS = weight(dst, reS, weightType);
@@ -2245,7 +2245,7 @@ void MpsParticle::meanPnd() {
 					double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 					// If j is inside the neighborhood of i and 
 					// is not at the same side of im (avoid real j in the virtual neihborhood)
-					if(dstij2 < reS2 && dstij2 < dstimj2) {
+					if(dstij2 < reS2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 						if(j != i && particleType[j] != ghost) {
 							double dst = sqrt(dstij2);
 							double wS = weight(dst, reS, weightType);
@@ -2313,7 +2313,7 @@ void MpsParticle::meanNeighFluidPnd() {
 					double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 					// If j is inside the neighborhood of i and 
 					// is not at the same side of im (avoid real j in the virtual neihborhood)
-					if(dstij2 < reS2 && dstij2 < dstimj2) {
+					if(dstij2 < reS2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 						if(j != i && particleType[j] != ghost) {
 							double dst = sqrt(dstij2);
 							double wS = weight(dst, reS, weightType);
@@ -2374,7 +2374,7 @@ void MpsParticle::updateParticleBC() {
 				double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 				// If j is inside the neighborhood of i and 
 				// is not at the same side of im (avoid real j in the virtual neihborhood)
-				if(dstij2 < reL2 && dstij2 < dstimj2) {
+				if(dstij2 < reL2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 				if(j != i && particleType[j] != ghost) {
 					numNeigh[i] += 1;
 					//double dst = sqrt(dstij2);
@@ -2623,7 +2623,7 @@ void MpsParticle::solvePressurePoissonPnd() {
 
 				// If j is inside the neighborhood of i and 
 				// is not at the same side of im (avoid real j in the virtual neihborhood)
-				if(dstij2 < reL2 && dstij2 < dstimj2) {
+				if(dstij2 < reL2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 				if(j != i && particleType[j] != ghost) {
 					double dst = sqrt(dstij2);
 					double wL = weight(dst, reL, weightType);
@@ -2735,7 +2735,7 @@ void MpsParticle::solvePressurePoissonPndDivU() {
 
 				// If j is inside the neighborhood of i and 
 				// is not at the same side of im (avoid real j in the virtual neihborhood)
-				if(dstij2 < reL2 && dstij2 < dstimj2) {
+				if(dstij2 < reL2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 				if(j != i && particleType[j] != ghost) {
 					double dst = sqrt(dstij2);
 					double wL = weight(dst, reL, weightType);
@@ -2893,7 +2893,7 @@ void MpsParticle::calcVelDivergence() {
 
 					// If j is inside the neighborhood of i and 
 					// is not at the same side of im (avoid real j in the virtual neihborhood)
-					if(dstij2 < reS2 && dstij2 < dstimj2) {
+					if(dstij2 < reS2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 						if(j != i && particleType[j] != ghost) {
 							if(particleType[i] == fluid && particleType[j] == fluid) {
 								double nj = pndi[j];
@@ -3377,7 +3377,7 @@ void MpsParticle::correctionMatrix() {
 				double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 				// If j is inside the neighborhood of i and 
 				// is not at the same side of im (avoid real j in the virtual neihborhood)
-				if(dstij2 < reS2 && dstij2 < dstimj2) {
+				if(dstij2 < reS2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 				if(j != i && particleType[j] != ghost) {
 					double dst = sqrt(dstij2);
 					double wS = weightGradient(dst, reS, weightType);
@@ -3444,7 +3444,7 @@ void MpsParticle::calcPressGradient() {
 				double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 				// If j is inside the neighborhood of i and 
 				// is not at the same side of im (avoid real j in the virtual neihborhood)
-				if(dstij2 < reS2 && dstij2 < dstimj2) {
+				if(dstij2 < reS2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 				if(j != i && particleType[j] != ghost) {
 					if(pressMin > press[j]) pressMin = press[j];
 				}}
@@ -3474,7 +3474,7 @@ void MpsParticle::calcPressGradient() {
 				double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 				// If j is inside the neighborhood of i and 
 				// is not at the same side of im (avoid real j in the virtual neihborhood)
-				if(dstij2 < reS2 && dstij2 < dstimj2) {
+				if(dstij2 < reS2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 				if(j != i && particleType[j] != ghost) {
 					double dst = sqrt(dstij2);
 					double wS = weightGradient(dst, reS, weightType);
@@ -3952,7 +3952,7 @@ void MpsParticle::calcViscosityInteractionVal() {
 				double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 				// If j is inside the neighborhood of i and 
 				// is not at the same side of im (avoid real j in the virtual neihborhood)
-				if(dstij2 < reS2 && dstij2 < dstimj2) {
+				if(dstij2 < reS2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 				if(j != i && particleType[j] != ghost) {
 					double dst = sqrt(dstij2);
 					double wS = weight(dst, reS, weightType);
@@ -5742,7 +5742,7 @@ void MpsParticle::calcShifting() {
 				double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 				// If j is inside the neighborhood of i and 
 				// is not at the same side of im (avoid real j in the virtual neihborhood)
-				if(dstij2 < reS2 && dstij2 < dstimj2) {
+				if(dstij2 < reS2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 				if(j != i && particleType[j] != ghost) {
 					double dst = sqrt(dstij2);
 					double dw = delWeight(dst, reS, weightType);
@@ -5821,7 +5821,7 @@ void MpsParticle::calcNormalParticles() {
 				double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 				// If j is inside the neighborhood of i and 
 				// is not at the same side of im (avoid real j in the virtual neihborhood)
-				if(dstij2 < reS2 && dstij2 < dstimj2) {
+				if(dstij2 < reS2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 				if(j != i && particleType[j] != ghost) {
 					double dst = sqrt(dstij2);
 					double wS = weight(dst, reS, weightType);
@@ -6031,7 +6031,7 @@ void MpsParticle::calcConcAndConcGradient() {
 				double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 				// If j is inside the neighborhood of i and 
 				// is not at the same side of im (avoid real j in the virtual neihborhood)
-				if(dstij2 < reS2 && dstij2 < dstimj2) {
+				if(dstij2 < reS2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 				if(j != i && particleType[j] != ghost) {
 					double dst = sqrt(dstij2);
 					double wS = weight(dst, reS, weightType);
@@ -6082,7 +6082,7 @@ void MpsParticle::calcConcAndConcGradient() {
 				double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 				// If j is inside the neighborhood of i and 
 				// is not at the same side of im (avoid real j in the virtual neihborhood)
-				if(dstij2 < reS2 && dstij2 < dstimj2) {
+				if(dstij2 < reS2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 				if(j != i && particleType[j] != ghost) {
 					double dst = sqrt(dstij2);
 					double wS = weight(dst, reS, weightType);
