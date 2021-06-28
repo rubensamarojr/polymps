@@ -15,6 +15,12 @@ enum boundaryWallType {
 	POLYGON = 1
 };
 
+enum partType{
+	FLUID = 0,
+	WALL = 1,
+	DUMMY_WALL = 2
+};
+
 enum calcPressType {
 	EXPLICIT = 0,
 	WEAKLY = 1,
@@ -343,7 +349,8 @@ public:
 // 	double distLimitRatio;	// Coefficient of distance which does not allow any further access between particles (0.9)
  	int ghost;				// Ghost particle ID
  	int fluid;				// Fluid particle ID
-// 	int wall;				// Wal particle ID
+// 	int wall;				// Wall particle ID
+// 	int dummyWall;			// Dummy wall particle ID
 // 	int surface;			// Free-surface particle BC
 // 	int inner;				// Inner particle BC
 // 	int other;				// Other particle BC
@@ -593,7 +600,8 @@ private:
 	double distLimitRatio;	// Coefficient of distance which does not allow any further access between particles (0.9)
 	// int ghost;				// Ghost particle ID
 	// int fluid;				// Fluid particle ID
-	int wall;				// Wal particle ID
+	int wall;				// Wall particle ID
+	int dummyWall;			// Dummy wall particle ID
 	int surface;			// Free-surface particle BC
 	int inner;				// Inner particle BC
 	int other;				// Other particle BC

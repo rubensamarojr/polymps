@@ -185,14 +185,13 @@
 		"particle_type": {
 			"ghost": 			-1,
 			"fluid": 			0,
-			"wall": 			1
+			"wall": 			2,
+			"dummyWall":		3
 		},
 		"boundary_type": {
 			"free_surface": 	1,
 			"inner": 			0,
 			"other": 			-1
-		},
-		// Number of particle types	(fluid, wall)
-		"particle_types": 	2
+		}
 	}
 }

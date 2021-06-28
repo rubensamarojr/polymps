@@ -341,10 +341,11 @@ void MpsParticle::readInputFile() {
 	ghost = je.at("numerical").at("particle_type").value("ghost", -1);
 	fluid = je.at("numerical").at("particle_type").value("fluid",  0);
 	wall = je.at("numerical").at("particle_type").value("wall",   1);
+	dummyWall = je.at("numerical").at("particle_type").value("dummyWall",   2);
 	surface = je.at("numerical").at("boundary_type").value("free_surface", 1);
 	inner = je.at("numerical").at("boundary_type").value("inner", 0);
 	other = je.at("numerical").at("boundary_type").value("other", -1);
-	numPartTypes = je.at("numerical").value("particle_types", 2);
+	numPartTypes = 3;
 
 	printf("OK\n");
 
@@ -741,8 +742,8 @@ void MpsParticle::setParameters() {
 	coeffShifting2 = coefA*partDist*partDist*cflNumber*machNumber;	// Coefficient used to adjust velocity type 2
 	coeffPPE = 2.0*dim/(pndLargeZero*lambdaZero);					// Coefficient used to PPE
 	coeffPPESource = relaxPND/(timeStep*timeStep*pndSmallZero);		// Coefficient used to PPE source term
-	Dns[fluid]=densityFluid;			Dns[wall]=densityWall;
-	invDns[fluid]=1.0/densityFluid;	invDns[wall]=1.0/densityWall;
+	Dns[partType::FLUID]=densityFluid;			Dns[partType::WALL]=densityWall;
+	invDns[partType::FLUID]=1.0/densityFluid;	invDns[partType::WALL]=1.0/densityWall;
 	distCollisionLimit = partDist*distLimitRatio;					// A distance that does not allow further access between particles
 	distCollisionLimit2 = distCollisionLimit*distCollisionLimit;
 	restitutionCollision = 1.0 + collisionRatio;
@@ -1034,9 +1035,9 @@ void MpsParticle::predictionPressGradient() {
 			}}}
 			// coeffPressGrad is a negative cte (-dim/noGrad)
 			// Original
-	//		acc[i*3  ]+=(1-relaxPress)*accX*invDns[fluid]*coeffPressGrad;
-	//		acc[i*3+1]+=(1-relaxPress)*accY*invDns[fluid]*coeffPressGrad;
-	//		acc[i*3+2]+=(1-relaxPress)*accZ*invDns[fluid]*coeffPressGrad;
+	//		acc[i*3  ]+=(1-relaxPress)*accX*invDns[partType::FLUID]*coeffPressGrad;
+	//		acc[i*3+1]+=(1-relaxPress)*accY*invDns[partType::FLUID]*coeffPressGrad;
+	//		acc[i*3+2]+=(1-relaxPress)*accZ*invDns[partType::FLUID]*coeffPressGrad;
 			// Modified
 			acc[i*3  ]+=(1-relaxPress)*accX*coeffPressGrad/RHO[i];
 			acc[i*3+1]+=(1-relaxPress)*accY*coeffPressGrad/RHO[i];
@@ -1262,17 +1263,17 @@ void MpsParticle::predictionWallPressGradient() {
 		  	}
 			// coeffPressGrad is a negative cte (-dim/noGrad)
 			// Original
-	//		acc[i*3  ] += ((1-relaxPress)*(Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*coeffPressGrad - rpsForce[0])*invDns[fluid];
-	//		acc[i*3+1] += ((1-relaxPress)*(Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*coeffPressGrad - rpsForce[1])*invDns[fluid];
-	//		acc[i*3+2] += ((1-relaxPress)*(Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*coeffPressGrad - rpsForce[2])*invDns[fluid];
+	//		acc[i*3  ] += ((1-relaxPress)*(Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*coeffPressGrad - rpsForce[0])*invDns[partType::FLUID];
+	//		acc[i*3+1] += ((1-relaxPress)*(Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*coeffPressGrad - rpsForce[1])*invDns[partType::FLUID];
+	//		acc[i*3+2] += ((1-relaxPress)*(Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*coeffPressGrad - rpsForce[2])*invDns[partType::FLUID];
 			// Modified
 			acc[i*3  ] += ((1-relaxPress)*(Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*coeffPressGrad - rpsForce[0])/RHO[i];
 			acc[i*3+1] += ((1-relaxPress)*(Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*coeffPressGrad - rpsForce[1])/RHO[i];
 			acc[i*3+2] += ((1-relaxPress)*(Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*coeffPressGrad - rpsForce[2])/RHO[i];
 
-			//Fwall[i*3  ] =  (Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*invDns[fluid]*coeffPressGrad - rpsForce[0]*invDns[fluid];
-			//Fwall[i*3+1] =  (Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*invDns[fluid]*coeffPressGrad - rpsForce[1]*invDns[fluid];
-			//Fwall[i*3+2] =  (Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*invDns[fluid]*coeffPressGrad - rpsForce[2]*invDns[fluid];
+			//Fwall[i*3  ] =  (Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*invDns[partType::FLUID]*coeffPressGrad - rpsForce[0]*invDns[partType::FLUID];
+			//Fwall[i*3+1] =  (Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*invDns[partType::FLUID]*coeffPressGrad - rpsForce[1]*invDns[partType::FLUID];
+			//Fwall[i*3+2] =  (Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*invDns[partType::FLUID]*coeffPressGrad - rpsForce[2]*invDns[partType::FLUID];
 		}
 	}
 }
@@ -1310,7 +1311,7 @@ void MpsParticle::checkCollisions() {
 #pragma omp parallel for schedule(dynamic,64)
 	for(int i=0; i<numParticles; i++) {
 		if(particleType[i] == fluid) {
-	//		double mi = Dns[particleType[i]];
+	//		double mi = Dns[partType::FLUID];
 			double mi;
 			if(PTYPE[i] == 1) mi = DNS_FL1;
 			else mi = DNS_FL2;
@@ -1348,17 +1349,34 @@ void MpsParticle::checkCollisions() {
 						if(j != i && particleType[j] != ghost) {
 							double fDT = (velXi-vel[j*3  ])*v0ij+(velYi-vel[j*3+1])*v1ij+(velZi-vel[j*3+2])*v2ij;
 							if(fDT > 0.0) {
-		//						double mj = Dns[particleType[j]];
 								double mj;
-								if(PTYPE[j] == 1) mj = DNS_FL1;
-								else mj = DNS_FL2;
+								if(particleType[j]==fluid)
+								{
+									if(PTYPE[j] == 1) mj = DNS_FL1;
+									else mj = DNS_FL2;
+								}
+								else
+								{
+									mj = Dns[partType::WALL];
+								}
 
 								fDT *= restitutionCollision*mj/(mi+mj)/dstij2;
-								velXi2 -= v0ij*fDT;		vecYi2 -= v1ij*fDT;		vecZi2 -= v2ij*fDT;
+								if(particleType[j]==fluid)
+								{
+									velXi2 -= v0ij*fDT;		vecYi2 -= v1ij*fDT;		vecZi2 -= v2ij*fDT;
+								}
+								else
+								{
+									velXi2 -= 2*v0ij*fDT;		vecYi2 -= 2*v1ij*fDT;		vecZi2 -= 2*v2ij*fDT;
+								}
 							}
 						/*
 						double fDT = (vel[j*3  ]-velXi)*v0+(vel[j*3+1]-velYi)*v1+(vel[j*3+2]-velZi)*v2;
-						double mj = Dns[particleType[j]];
+						double mj;
+						if(particleType[j]==fluid)
+							mj = Dns[partType::FLUID];
+						else
+							mj = Dns[partType::WALL];
 						fDT *= restitutionCollision*mj/(mi+mj)/dst2;
 						velXi2 += v0*fDT;		vecYi2 += v1*fDT;		vecZi2 += v2*fDT;
 						*/
@@ -1564,10 +1582,13 @@ void MpsParticle::calcPnd() {
 				}
 			}}}
 
-			//		double mi = Dns[particleType[i]];
 	//		double mi;
 	//		if(PTYPE[i] == 1) mi = DNS_FL1;
 	//		else mi = DNS_FL2;
+			//if(particleType[i]==fluid)
+			//	mi = Dns[partType::FLUID];
+			//else
+			//	mi = Dns[partType::WALL];
 
 			if(pndType == calcPNDType::SUM_WIJ || pndType == calcPNDType::MEAN_SUM_WIJ) {
 	//		if(pndType == calcPNDType::SUM_WIJ) {
@@ -2314,7 +2335,7 @@ void MpsParticle::meanNeighFluidPnd() {
 					// If j is inside the neighborhood of i and 
 					// is not at the same side of im (avoid real j in the virtual neihborhood)
 					if(dstij2 < reS2 && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
-						if(j != i && particleType[j] != ghost) {
+						if(j != i && particleType[j] == fluid) {
 							double dst = sqrt(dstij2);
 							double wS = weight(dst, reS, weightType);
 							PNDup += pndki[j]*wS;
@@ -2399,10 +2420,13 @@ void MpsParticle::updateParticleBC() {
 			}
 		}}}
 
-		//		double mi = Dns[particleType[i]];
 		double mi;
 		if(PTYPE[i] == 1) mi = DNS_FL1;
 		else mi = DNS_FL2;
+		//if(particleType[i]==fluid)
+		//	mi = Dns[partType::FLUID];
+		//else
+		//	mi = Dns[partType::WALL];
 
 		if(pndType == calcPNDType::SUM_WIJ || pndType == calcPNDType::MEAN_SUM_WIJ)
 //		if(pndType == calcPNDType::SUM_WIJ)
@@ -2444,6 +2468,11 @@ void MpsParticle::updateParticleBC() {
 		// coeffPressWCMPS = soundSpeed*soundSpeed
 		double pressure = 0.0;
 */		
+			if(particleType[i] == dummyWall)
+			{
+				particleBC[i] = other;
+				continue;
+			}
 			// First check based on particle number density
 			if(pndSmall[i] < pndThreshold*pndSmallZero) {
 				particleBC[i] = surface;
@@ -2484,10 +2513,13 @@ void MpsParticle::calcPressEMPS() {
 	for(int i=0; i<numParticles; i++) {
 		if(particleType[i] != ghost) {
 
-			//		double mi = Dns[particleType[i]];
 			double mi;
 			if(PTYPE[i] == 1) mi = DNS_FL1;
 			else mi = DNS_FL2;
+			//if(particleType[i]==fluid)
+			//	mi = Dns[partType::FLUID];
+			//else
+			//	mi = Dns[partType::WALL];
 
 			double pressure = 0.0;
 			if(particleBC[i] == inner) {
@@ -2528,10 +2560,13 @@ void MpsParticle::calcPressWCMPS() {
 	for(int i=0; i<numParticles; i++) {
 		if(particleType[i] != ghost) {
 
-			//		double mi = Dns[particleType[i]];
 			double mi;
 			if(PTYPE[i] == 1) mi = DNS_FL1;
 			else mi = DNS_FL2;
+			//if(particleType[i]==fluid)
+			//	mi = Dns[partType::FLUID];
+			//else
+			//	mi = Dns[partType::WALL];
 
 			double pressure = 0.0;
 			if(particleBC[i] == inner) {
@@ -2629,9 +2664,16 @@ void MpsParticle::solvePressurePoissonPnd() {
 					double wL = weight(dst, reL, weightType);
 					// coeffPPE = 2.0*dim/(pndLargeZero*lambdaZero)
 					double mat_ij = wL*coeffPPE;
-					sum -= mat_ij;
-					if (particleBC[j] == inner) {
-						coeffs.push_back(T(i, j, mat_ij));
+					if (particleType[j] == dummyWall) {
+						double pgh = RHO[j]*(v0ij*gravityX + v1ij*gravityY + v2ij*gravityZ)*wL;
+						sourceTerm(i) -= coeffPPE*pgh;
+					}
+					else
+					{
+						sum -= mat_ij;
+						if (particleBC[j] == inner) {
+							coeffs.push_back(T(i, j, mat_ij));
+						}
 					}
 				}}
 				
@@ -2741,9 +2783,16 @@ void MpsParticle::solvePressurePoissonPndDivU() {
 					double wL = weight(dst, reL, weightType);
 					// coeffPPE = 2.0*dim/(pndLargeZero*lambdaZero)
 					double mat_ij = wL*coeffPPE;
-					sum -= mat_ij;
-					if (particleBC[j] == inner) {
-						coeffs.push_back(T(i, j, mat_ij));
+					if (particleType[j] == dummyWall) {
+						double pgh = RHO[j]*(v0ij*gravityX + v1ij*gravityY + v2ij*gravityZ)*wL;
+						sourceTerm(i) -= coeffPPE*pgh;
+					}
+					else
+					{
+						sum -= mat_ij;
+						if (particleBC[j] == inner) {
+							coeffs.push_back(T(i, j, mat_ij));
+						}
 					}
 				}}
 				
@@ -3164,7 +3213,7 @@ void MpsParticle::calcWallNoSlipVelDivergence() {
 void MpsParticle::extrapolatePressParticlesWallDummy() {
 #pragma omp parallel for schedule(dynamic,64)
 	for(int i=0; i<numParticles; i++) {
-		if(particleType[i] == wall) {
+		if(particleType[i] == wall || particleType[i] == dummyWall) {
 			double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
 			double ni = 0.0;
 			double pressure = 0.0;
@@ -3497,9 +3546,9 @@ void MpsParticle::calcPressGradient() {
 		}}}
 		// coeffPressGrad is a negative cte (-dim/noGrad)
 		// Original
-//		acc[i*3  ]=relaxPress*accX*invDns[fluid]*coeffPressGrad;
-//		acc[i*3+1]=relaxPress*accY*invDns[fluid]*coeffPressGrad;
-//		acc[i*3+2]=relaxPress*accZ*invDns[fluid]*coeffPressGrad;
+//		acc[i*3  ]=relaxPress*accX*invDns[partType::FLUID]*coeffPressGrad;
+//		acc[i*3+1]=relaxPress*accY*invDns[partType::FLUID]*coeffPressGrad;
+//		acc[i*3+2]=relaxPress*accZ*invDns[partType::FLUID]*coeffPressGrad;
 		// Modified
 		if(gradientCorrection == false) {
 			acc[i*3  ]=relaxPress*accX*coeffPressGrad/RHO[i];
@@ -3751,9 +3800,9 @@ void MpsParticle::calcWallPressGradient() {
 	  	}
 		// coeffPressGrad is a negative cte (-dim/noGrad)
 		// Original
-//		acc[i*3  ] += (relaxPress*(Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*coeffPressGrad - rpsForce[0])*invDns[fluid];
-//		acc[i*3+1] += (relaxPress*(Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*coeffPressGrad - rpsForce[1])*invDns[fluid];
-//		acc[i*3+2] += (relaxPress*(Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*coeffPressGrad - rpsForce[2])*invDns[fluid];
+//		acc[i*3  ] += (relaxPress*(Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*coeffPressGrad - rpsForce[0])*invDns[partType::FLUID];
+//		acc[i*3+1] += (relaxPress*(Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*coeffPressGrad - rpsForce[1])*invDns[partType::FLUID];
+//		acc[i*3+2] += (relaxPress*(Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*coeffPressGrad - rpsForce[2])*invDns[partType::FLUID];
 		// Modified
 		acc[i*3  ] += (relaxPress*(Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*coeffPressGrad - rpsForce[0])/RHO[i];
 		acc[i*3+1] += (relaxPress*(Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*coeffPressGrad - rpsForce[1])/RHO[i];
@@ -6245,9 +6294,9 @@ void MpsParticle::calcWallConcAndConcGradient() {
 
 		// coeffPressGrad is a negative cte (-dim/noGrad)
 		// Original
-//		acc[i*3  ] += (relaxPress*(Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*coeffPressGrad - rpsForce[0])*invDns[fluid];
-//		acc[i*3+1] += (relaxPress*(Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*coeffPressGrad - rpsForce[1])*invDns[fluid];
-//		acc[i*3+2] += (relaxPress*(Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*coeffPressGrad - rpsForce[2])*invDns[fluid];
+//		acc[i*3  ] += (relaxPress*(Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*coeffPressGrad - rpsForce[0])*invDns[partType::FLUID];
+//		acc[i*3+1] += (relaxPress*(Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*coeffPressGrad - rpsForce[1])*invDns[partType::FLUID];
+//		acc[i*3+2] += (relaxPress*(Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*coeffPressGrad - rpsForce[2])*invDns[partType::FLUID];
 		// Modified
 		gradCiWallX = -(Rref_i[0]*drX + Rref_i[1]*drY + Rref_i[2]*drZ)*coeffPressGrad;
 		gradCiWallY = -(Rref_i[3]*drX + Rref_i[4]*drY + Rref_i[5]*drZ)*coeffPressGrad;
