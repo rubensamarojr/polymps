@@ -219,7 +219,14 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 		// Update velocity and positions. Set some variables to zero or inf
 		part->updateVelocityPosition1st();
 		// Check collision between particles
-		part->checkCollisions();
+		if(part->collisionType == colType::PC)
+		{
+			part->checkParticleCollisions();
+		}
+		else
+		{
+			part->checkDynamicParticleCollisions();
+		}
 
 		// Contributions due polygon wall
 		if(part->wallType == boundaryWallType::POLYGON) {

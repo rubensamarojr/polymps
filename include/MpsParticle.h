@@ -67,6 +67,11 @@ enum viscType{
 	NON_NEWTONIAN = 1
 };
 
+enum colType {
+	PC = 0,
+	DPC = 1
+};
+
 
 class MpsParticle {
 public:
@@ -126,7 +131,13 @@ public:
 	// Update velocity and position
 	void updateVelocityPosition1st();
 	// Check collisions between particles
-	void checkCollisions();
+	// Step-by-step improvement of MPS method in simulating violent free-surface motions and impact-loads
+	// https://doi.org/10.1016/j.cma.2010.12.001
+	void checkParticleCollisions();
+	// Check collisions between particles (Dynamic Particle Collision)
+	// Enhanced weakly-compressible MPS method for violent free-surface flows: Role of particle regularization techniques
+	// https://doi.org/10.1016/j.jcp.2021.110202
+	void checkDynamicParticleCollisions();
 	// Set force on wall to zero
 	//void particle::WallZeroForce_omp(int nNodes, int nSolids, solid_fem * &solid);
 	void setWallForceZero(const int nNodes, double *nodeforceX, double *nodeforceY, double *nodeforceZ);
@@ -347,6 +358,7 @@ public:
 // 	double npcdThreshold;	// NPCD threshold
 // 	double collisionRatio;	// Collision ratio
 // 	double distLimitRatio;	// Coefficient of distance which does not allow any further access between particles (0.9)
+ 	int collisionType;		// Particle collision type (PC or DPC)
  	int ghost;				// Ghost particle ID
  	int fluid;				// Fluid particle ID
 // 	int wall;				// Wall particle ID
@@ -596,8 +608,10 @@ private:
 	double pndThreshold;	// Surface threshold PND (2D - 0.97/ 3D - 0.93)
 	double neighThreshold;	// Surface threshold Neighbors
 	double npcdThreshold;	// NPCD threshold
+	// int collisionType;		// Particle collision type (PC or DPC)
 	double collisionRatio;	// Collision ratio
 	double distLimitRatio;	// Coefficient of distance which does not allow any further access between particles (0.9)
+	double lambdaCollision;		// Non-dimensional coefficient used to adjust background pressure
 	// int ghost;				// Ghost particle ID
 	// int fluid;				// Fluid particle ID
 	int wall;				// Wall particle ID
@@ -606,7 +620,7 @@ private:
 	int inner;				// Inner particle BC
 	int other;				// Other particle BC
 	int numPartTypes;		// Number of particle types
-	// 	int numPartTypes;		// Number of particle types
+	// int numPartTypes;		// Number of particle types
  	// int numOfMeshs;			// Number of meshs
  	// int numOfRigidMesh;		// Number of fixed rigid meshs
  	// int numOfDeformableMesh;// Number of deformable meshs
@@ -649,7 +663,7 @@ private:
 	double coeffShifting2;		// Coefficient used to adjust velocity type 2
 	double distCollisionLimit;	// A distance that does not allow further access between particles
 	double distCollisionLimit2;	// distCollisionLimit to square
-	double restitutionCollision;
+	double restitutionCollision;// Restitution related to Kinetic energy variation of the particles
 	double coeffPPE;			// Coefficient used to PPE
 	double coeffPPESource;		// Coefficient used to PPE source term
 	
@@ -682,6 +696,7 @@ private:
 	double *correcMatrixRow2;	// Correction matrix - Row 2
 	double *correcMatrixRow3;	// Correction matrix - Row 3
 	double *normal;				// Particle normal
+	double *dvelCollision;		// Variation of velocity due collision
 
 	// Polygons
 	// Scalars

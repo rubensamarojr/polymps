@@ -177,10 +177,12 @@
 			// NPCD >= 0.2
 			"NPCD": 	0.2
 		},
-		"collision": {
+		"particle_collision": {
+			"type": 			1,		// 0: PC, 1: DPC
 			"ratio": 			0.2,	// Collision ratio (~0.2)
-			// Coefficient of distance which does not allow any further access between particles (~0.9)
-			"dist_limit_ratio": 0.85
+			"dist_limit_ratio": 0.85,	// Coefficient of distance which does not allow any further access between particles (~0.9)
+			// Non-dimensional coefficient used to adjust background pressure (0.1~0.2)
+			"lambda":			0.2
 		},
 		"particle_type": {
 			"ghost": 			-1,

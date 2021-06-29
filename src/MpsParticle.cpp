@@ -336,8 +336,10 @@ void MpsParticle::readInputFile() {
 	pndThreshold = je.at("numerical").at("free_surface_threshold").value("pnd", 0.98);
 	neighThreshold = je.at("numerical").at("free_surface_threshold").value("neigh", 0.85);
 	npcdThreshold = je.at("numerical").at("free_surface_threshold").value("NPCD", 0.20);
-	collisionRatio = je.at("numerical").at("collision").value("ratio", 0.20);
-	distLimitRatio = je.at("numerical").at("collision").value("dist_limit_ratio", 0.85);
+	collisionType = je.at("numerical").at("particle_collision").value("type", 0);
+	collisionRatio = je.at("numerical").at("particle_collision").value("ratio", 0.20);
+	distLimitRatio = je.at("numerical").at("particle_collision").value("dist_limit_ratio", 0.85);
+	lambdaCollision = je.at("numerical").at("particle_collision").value("lambda", 0.20);
 	ghost = je.at("numerical").at("particle_type").value("ghost", -1);
 	fluid = je.at("numerical").at("particle_type").value("fluid",  0);
 	wall = je.at("numerical").at("particle_type").value("wall",   1);
@@ -444,8 +446,10 @@ void MpsParticle::readInputFile() {
 	// cout << "pndThreshold: " << pndThreshold << " | ";
 	// cout << "neighThreshold: " << neighThreshold << " | ";
 	// cout << "npcdThreshold: " << npcdThreshold << " | ";
+	// cout << "collisionType: " << collisionType << " | ";
 	// cout << "collisionRatio: " << collisionRatio << " | ";
-	// cout << "distLimitRatio: " << distLimitRatio << endl;
+	// cout << "distLimitRatio: " << distLimitRatio << " | ";
+	// cout << "lambdaCollision: " << lambdaCollision << endl;
 	// cout << "ghost: " << ghost << " | ";
 	// cout << "fluid: " << fluid << " | ";
 	// cout << "wall: " << wall << " | ";
@@ -505,6 +509,7 @@ void MpsParticle::readMpsParticleFile(const std::string& grid_file) {
 	correcMatrixRow2 = (double*)malloc(sizeof(double)*numParticles*3);		// Correction matrix - Row 2
 	correcMatrixRow3 = (double*)malloc(sizeof(double)*numParticles*3);		// Correction matrix - Row 3
 	normal = (double*)malloc(sizeof(double)*numParticles*3);		// Particle normal
+	dvelCollision = (double*)malloc(sizeof(double)*numParticles*3);			// Variation of velocity due collision
 
 	// Polygons
 	// Scalars
@@ -588,7 +593,7 @@ void MpsParticle::readMpsParticleFile(const std::string& grid_file) {
 	// Set vectors to zero
 	for(int i=0;i<numParticles*3;i++) {
 		acc[i]=0.0;accStar[i]=0.0;npcdDeviation[i]=0.0;gradConcentration[i]=0.0;
-		correcMatrixRow1[i]=0.0;correcMatrixRow2[i]=0.0;correcMatrixRow3[i]=0.0;normal[i]=0.0;//Acv[i]=0.0;
+		correcMatrixRow1[i]=0.0;correcMatrixRow2[i]=0.0;correcMatrixRow3[i]=0.0;normal[i]=0.0;dvelCollision[i]=0.0;//Acv[i]=0.0;
 		particleAtWallPos[i]=0.0;mirrorParticlePos[i]=0.0;wallParticleForce1[i]=0.0;wallParticleForce2[i]=0.0;polygonNormal[i]=0.0;
 		forceWall[i]=0.0;
 	}
@@ -672,6 +677,7 @@ void MpsParticle::checkParticleOutDomain(const int i) {
 		correcMatrixRow3[i*3]=correcMatrixRow3[i*3+1]=correcMatrixRow3[i*3+2]=0.0;
 		wallParticleForce1[i*3]=wallParticleForce1[i*3+1]=wallParticleForce1[i*3+2]=0.0;
 		wallParticleForce2[i*3]=wallParticleForce2[i*3+1]=wallParticleForce2[i*3+2]=0.0;
+		dvelCollision[i*3]=dvelCollision[i*3+1]=dvelCollision[i*3+2]=0.0;
 
 		pressurePPE(i) = 0.0;
 		sourceTerm(i) = 0.0;
@@ -1282,14 +1288,16 @@ void MpsParticle::predictionWallPressGradient() {
 void MpsParticle::updateVelocityPosition1st() {
 #pragma omp parallel for
 	for(int i=0; i<numParticles; i++) {
-		if(particleType[i] != ghost) {
+//		if(particleType[i] != ghost) {
+		if(particleType[i] == fluid) {
 			vel[i*3  ] += acc[i*3  ]*timeStep;	vel[i*3+1] += acc[i*3+1]*timeStep;	vel[i*3+2] += acc[i*3+2]*timeStep;
-			if(particleType[i] == fluid) {
-				pos[i*3  ] += vel[i*3  ]*timeStep;	pos[i*3+1] += vel[i*3+1]*timeStep;	pos[i*3+2] += vel[i*3+2]*timeStep;
-				checkParticleOutDomain(i);
-			}
+			//if(particleType[i] == fluid) {
+			pos[i*3  ] += vel[i*3  ]*timeStep;	pos[i*3+1] += vel[i*3+1]*timeStep;	pos[i*3+2] += vel[i*3+2]*timeStep;
+			checkParticleOutDomain(i);
+			//}
 		}
 		acc[i*3]=acc[i*3+1]=acc[i*3+2]=0.0;
+		dvelCollision[i*3]=dvelCollision[i*3+1]=dvelCollision[i*3+2]=0.0;
 		wallParticleForce1[i*3]=wallParticleForce1[i*3+1]=wallParticleForce1[i*3+2]=0.0;
 		wallParticleForce2[i*3]=wallParticleForce2[i*3+1]=wallParticleForce2[i*3+2]=0.0;
 		npcdDeviation[i*3]=npcdDeviation[i*3+1]=npcdDeviation[i*3+2]=0.0;
@@ -1307,7 +1315,9 @@ void MpsParticle::updateVelocityPosition1st() {
 }
 
 // Check collisions between particles
-void MpsParticle::checkCollisions() {
+// Step-by-step improvement of MPS method in simulating violent free-surface motions and impact-loads
+// https://doi.org/10.1016/j.cma.2010.12.001
+void MpsParticle::checkParticleCollisions() {
 #pragma omp parallel for schedule(dynamic,64)
 	for(int i=0; i<numParticles; i++) {
 		if(particleType[i] == fluid) {
@@ -1315,11 +1325,11 @@ void MpsParticle::checkCollisions() {
 			double mi;
 			if(PTYPE[i] == 1) mi = DNS_FL1;
 			else mi = DNS_FL2;
-
-			double posXi =  pos[i*3  ];double posYi =  pos[i*3+1];double posZi =  pos[i*3+2];
-			double velXi =  vel[i*3  ];double velYi =  vel[i*3+1];double velZi =  vel[i*3+2];
-			double velXi2 = vel[i*3  ];double vecYi2 = vel[i*3+1];double vecZi2 = vel[i*3+2];
+			double posXi = pos[i*3  ];double posYi = pos[i*3+1];double posZi = pos[i*3+2];
+			double velXi = vel[i*3  ];double velYi = vel[i*3+1];double velZi = vel[i*3+2];
+			double dVelXi = 0.0;double dVelYi = 0.0;double dVelZi = 0.0;
 			double posMirrorXi = mirrorParticlePos[i*3  ];	double posMirrorYi = mirrorParticlePos[i*3+1];	double posMirrorZi = mirrorParticlePos[i*3+2];
+			
 			int ix = (int)((posXi - domainMinX)*invBucketSide) + 1;
 			int iy = (int)((posYi - domainMinY)*invBucketSide) + 1;
 			int iz = (int)((posZi - domainMinZ)*invBucketSide) + 1;
@@ -1363,23 +1373,23 @@ void MpsParticle::checkCollisions() {
 								fDT *= restitutionCollision*mj/(mi+mj)/dstij2;
 								if(particleType[j]==fluid)
 								{
-									velXi2 -= v0ij*fDT;		vecYi2 -= v1ij*fDT;		vecZi2 -= v2ij*fDT;
+									dVelXi -= v0ij*fDT;		dVelYi -= v1ij*fDT;		dVelZi -= v2ij*fDT;
 								}
 								else
 								{
-									velXi2 -= 2*v0ij*fDT;		vecYi2 -= 2*v1ij*fDT;		vecZi2 -= 2*v2ij*fDT;
+									dVelXi -= 2*v0ij*fDT;	dVelYi -= 2*v1ij*fDT;	dVelZi -= 2*v2ij*fDT;
 								}
 							}
-						/*
-						double fDT = (vel[j*3  ]-velXi)*v0+(vel[j*3+1]-velYi)*v1+(vel[j*3+2]-velZi)*v2;
-						double mj;
-						if(particleType[j]==fluid)
-							mj = Dns[partType::FLUID];
-						else
-							mj = Dns[partType::WALL];
-						fDT *= restitutionCollision*mj/(mi+mj)/dst2;
-						velXi2 += v0*fDT;		vecYi2 += v1*fDT;		vecZi2 += v2*fDT;
-						*/
+							/*
+							double fDT = (vel[j*3  ]-velXi)*v0+(vel[j*3+1]-velYi)*v1+(vel[j*3+2]-velZi)*v2;
+							double mj;
+							if(particleType[j]==fluid)
+								mj = Dns[partType::FLUID];
+							else
+								mj = Dns[partType::WALL];
+							fDT *= restitutionCollision*mj/(mi+mj)/dst2;
+							velXi2 += v0*fDT;		vecYi2 += v1*fDT;		vecZi2 += v2*fDT;
+							*/
 						}
 					}
 					j = nextParticleInSameBucket[j];
@@ -1387,20 +1397,189 @@ void MpsParticle::checkCollisions() {
 				}
 			}}}
 
-			acc[i*3  ]=velXi2;	acc[i*3+1]=vecYi2;	acc[i*3+2]=vecZi2;
-
-			accStar[i*3  ]=velXi2;	accStar[i*3+1]=vecYi2;	accStar[i*3+2]=vecZi2;
+			dvelCollision[i*3  ]=dVelXi;	dvelCollision[i*3+1]=dVelYi;	dvelCollision[i*3+2]=dVelZi;
+			//accStar[i*3  ]=vel[i*3  ]+dVelXi;	accStar[i*3+1]=vel[i*3+1]+dVelYi;	accStar[i*3+2]=vel[i*3+2]+dVelZi;
 		}
 	}
 #pragma omp parallel for
 	for(int i=0; i<numParticles; i++) {
-		// CHANGED !!!
-		//pos[i*3  ]+=(acc[i*3  ]-vel[i*3  ])*timeStep; pos[i*3+1]+=(acc[i*3+1]-vel[i*3+1])*timeStep; pos[i*3+2]+=(acc[i*3+2]-vel[i*3+2])*timeStep;
-		vel[i*3  ]=acc[i*3  ];	vel[i*3+1]=acc[i*3+1];	vel[i*3+2]=acc[i*3+2];
+		if(particleType[i] == fluid) {
+			// CHANGED !!!
+			//pos[i*3  ]+=(acc[i*3  ]-vel[i*3  ])*timeStep; pos[i*3+1]+=(acc[i*3+1]-vel[i*3+1])*timeStep; pos[i*3+2]+=(acc[i*3+2]-vel[i*3+2])*timeStep;
+			vel[i*3  ]+=dvelCollision[i*3  ];	vel[i*3+1]+=dvelCollision[i*3+1];	vel[i*3+2]+=dvelCollision[i*3+2];
+			
+			//Velk[i*3  ]=vel[i*3  ];	Velk[i*3+1]=vel[i*3+1];	Velk[i*3+2]=vel[i*3+2];
+			//pos[i*3  ]=Posk[i*3  ]+vel[i*3  ]*timeStep; pos[i*3+1]=Posk[i*3+1]+vel[i*3+1]*timeStep; pos[i*3+2]=Posk[i*3+2]+vel[i*3+2]*timeStep;
+		}
+		dvelCollision[i*3  ]=0.0;	dvelCollision[i*3+1]=0.0;	dvelCollision[i*3+2]=0.0;
+	}
+}
 
-		//Velk[i*3  ]=vel[i*3  ];	Velk[i*3+1]=vel[i*3+1];	Velk[i*3+2]=vel[i*3+2];
-		//pos[i*3  ]=Posk[i*3  ]+vel[i*3  ]*timeStep; pos[i*3+1]=Posk[i*3+1]+vel[i*3+1]*timeStep; pos[i*3+2]=Posk[i*3+2]+vel[i*3+2]*timeStep;
-		acc[i*3  ]=0.0;	acc[i*3+1]=0.0;	acc[i*3+2]=0.0;	
+// Check collisions between particles (Dynamic Particle Collision)
+// Enhanced weakly-compressible MPS method for violent free-surface flows: Role of particle regularization techniques
+// https://doi.org/10.1016/j.jcp.2021.110202
+void MpsParticle::checkDynamicParticleCollisions() {
+	double Wij5 = 0.5*0.5*0.5*0.5*3.0;
+	double pmax = 0.0;
+#pragma omp parallel
+{
+	double local_pmax = 0.0;
+#pragma omp for
+	for(int i=0; i<numParticles; i++) {
+		if(particleType[i] == wall) {
+			local_pmax = max(local_pmax, press[i]);
+		}
+	}
+#pragma omp critical
+	{
+		if (local_pmax > pmax)
+			pmax = local_pmax;
+	}
+}
+#pragma omp parallel for schedule(dynamic,64)
+	for(int i=0; i<numParticles; i++) {
+		if(particleType[i] == fluid) {
+	//		double mi = Dns[partType::FLUID];
+			double mi;
+			if(PTYPE[i] == 1) mi = DNS_FL1;
+			else mi = DNS_FL2;
+
+			double posXi = pos[i*3  ];double posYi = pos[i*3+1];double posZi = pos[i*3+2];
+			double velXi = vel[i*3  ];double velYi = vel[i*3+1];double velZi = vel[i*3+2];
+			double dVelXi = 0.0;double dVelYi = 0.0;double dVelZi = 0.0;
+			double posMirrorXi = mirrorParticlePos[i*3  ];	double posMirrorYi = mirrorParticlePos[i*3+1];	double posMirrorZi = mirrorParticlePos[i*3+2];
+
+			int ix = (int)((posXi - domainMinX)*invBucketSide) + 1;
+			int iy = (int)((posYi - domainMinY)*invBucketSide) + 1;
+			int iz = (int)((posZi - domainMinZ)*invBucketSide) + 1;
+			for(int jz=iz-1;jz<=iz+1;jz++) {
+			for(int jy=iy-1;jy<=iy+1;jy++) {
+			for(int jx=ix-1;jx<=ix+1;jx++) {
+				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
+				int j = firstParticleInBucket[jb];
+				if(j == -1) continue;
+				while(true) {
+					// Particle distance r_ij = Xj - Xi_temporary_position
+					double v0ij = pos[j*3  ] - posXi;
+					double v1ij = pos[j*3+1] - posYi;
+					double v2ij = pos[j*3+2] - posZi;
+
+					double dstij2 = v0ij*v0ij+v1ij*v1ij+v2ij*v2ij;
+
+					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					double v0imj = pos[j*3  ] - posMirrorXi;
+					double v1imj = pos[j*3+1] - posMirrorYi;
+					double v2imj = pos[j*3+2] - posMirrorZi;
+
+					double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
+					// If j is inside the neighborhood of i and 
+					// is not at the same side of im (avoid real j in the virtual neihborhood)
+					if(dstij2 < partDist && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
+						if(j != i && particleType[j] != ghost) {
+							double mj;
+							if(particleType[j]==fluid)
+							{
+								if(PTYPE[j] == 1) mj = DNS_FL1;
+								else mj = DNS_FL2;
+							}
+							else
+							{
+								mj = Dns[partType::WALL];
+							}
+							double dst = sqrt(dstij2);
+							
+							// inter-particle distance
+							double Wij = 0.0;
+							if(dst > 0.0 && dst < partDist)
+							{
+								double w1 = (1.0-dst/partDist);
+								double w2 = (4.0*dst/partDist+1);
+								Wij = w1*w1*w1*w1*w2;
+							}
+							double chi = Wij/Wij5;
+							double kappa = 0.0;
+							if(dst < 0.5*partDist)
+							{
+								kappa = 1.0;
+							}
+							else if(dst >= 0.5*partDist && dst < partDist)
+							{
+								kappa = chi;
+							}
+
+							double fDT = (velXi-vel[j*3  ])*v0ij+(velYi-vel[j*3+1])*v1ij+(velZi-vel[j*3+2])*v2ij;
+							if(fDT > 0.0) {
+								fDT *= kappa*mj/(mi+mj)/dstij2;
+								if(particleType[j]==fluid)
+								{
+									dVelXi -= v0ij*fDT;		dVelXi -= v1ij*fDT;		dVelXi -= v2ij*fDT;
+								}
+								else
+								{
+									dVelXi -= 2*v0ij*fDT;		dVelXi -= 2*v1ij*fDT;		dVelXi -= 2*v2ij*fDT;
+								}
+							}
+							else
+							{
+								// Dynamic background pressure
+								//double pmax = 1000;
+								double pmin = 0.0;
+								double ptil = max(min(lambdaCollision*fabs(press[i]+press[j]), lambdaCollision*pmax), pmin);
+								double pb = ptil*chi;
+								double rep = timeStep/mi*chi*pb/dstij2;
+								if(particleType[j]==fluid)
+								{
+									dVelXi -= v0ij*rep;		dVelXi -= v1ij*rep;		dVelXi -= v2ij*rep;
+								}
+								else
+								{
+									dVelXi -= 2*v0ij*rep;		dVelXi -= 2*v1ij*rep;		dVelXi -= 2*v2ij*rep;
+								}
+							}
+						}
+					}
+					j = nextParticleInSameBucket[j];
+					if(j == -1) break;
+				}
+			}}}
+
+			dvelCollision[i*3  ]=dVelXi;	dvelCollision[i*3+1]=dVelYi;	dvelCollision[i*3+2]=dVelZi;
+			//accStar[i*3  ]=dVelXi;	accStar[i*3+1]=dVelYi;	accStar[i*3+2]=dVelZi;
+		}
+	}
+#pragma omp parallel for
+	for(int i=0; i<numParticles; i++) {
+		if(particleType[i] == fluid) {
+			// CHANGED !!!
+			//pos[i*3  ]+=(acc[i*3  ]-vel[i*3  ])*timeStep; pos[i*3+1]+=(acc[i*3+1]-vel[i*3+1])*timeStep; pos[i*3+2]+=(acc[i*3+2]-vel[i*3+2])*timeStep;
+			/*
+			double drNew[3], drMod, drMin, uMod;
+			drNew[0] = (acc[i*3  ]-vel[i*3  ])*timeStep;
+			drNew[1] = (acc[i*3+1]-vel[i*3+1])*timeStep;
+			drNew[2] = (acc[i*3+2]-vel[i*3+2])*timeStep;
+			drMod = (drNew[0]*drNew[0] + drNew[1]*drNew[1] + drNew[2]*drNew[2]);
+			drMin = min(0.1*partDist, drMod);
+			if(drMin > 1.0e-6)
+			{
+				pos[i*3  ]+=drMin*drNew[0]/drMod;
+				pos[i*3+1]+=drMin*drNew[1]/drMod;
+				pos[i*3+2]+=drMin*drNew[2]/drMod;
+			}
+			uMod = (acc[i*3  ]*acc[i*3  ] + acc[i*3+1]*acc[i*3+1] + acc[i*3+2]*acc[i*3+2]);
+			if(uMod > 1.0e-6)
+			{
+				acc[i*3  ]*=drMin/uMod;
+				acc[i*3+1]*=drMin/uMod;
+				acc[i*3+2]*=drMin/uMod;
+			}
+			*/
+			vel[i*3  ]+=dvelCollision[i*3  ];	vel[i*3+1]+=dvelCollision[i*3+1];	vel[i*3+2]+=dvelCollision[i*3+2];
+			pos[i*3  ]+=dvelCollision[i*3  ]*timeStep; pos[i*3+1]+=dvelCollision[i*3+1]*timeStep; pos[i*3+2]+=dvelCollision[i*3+2]*timeStep;
+
+			//Velk[i*3  ]=vel[i*3  ];	Velk[i*3+1]=vel[i*3+1];	Velk[i*3+2]=vel[i*3+2];
+			//pos[i*3  ]=Posk[i*3  ]+vel[i*3  ]*timeStep; pos[i*3+1]=Posk[i*3+1]+vel[i*3+1]*timeStep; pos[i*3+2]=Posk[i*3+2]+vel[i*3+2]*timeStep;
+		}
+		dvelCollision[i*3  ]=0.0;	dvelCollision[i*3+1]=0.0;	dvelCollision[i*3+2]=0.0;
 	}
 }
 
@@ -5721,13 +5900,13 @@ void MpsParticle::updateVelocityPosition2nd() {
 	double local_vMax = 0.0;
 #pragma omp for
 	for(int i=0; i<numParticles; i++) {
-//		if(particleType[i] == fluid) {
-		if(particleType[i] != ghost) {
+		if(particleType[i] == fluid) {
+//		if(particleType[i] != ghost) {
 			vel[i*3  ]+=acc[i*3  ]*timeStep;	vel[i*3+1]+=acc[i*3+1]*timeStep;	vel[i*3+2]+=acc[i*3+2]*timeStep;
-			if(particleType[i] == fluid) {
-				pos[i*3  ]+=acc[i*3  ]*timeStep*timeStep;	pos[i*3+1]+=acc[i*3+1]*timeStep*timeStep;	pos[i*3+2]+=acc[i*3+2]*timeStep*timeStep;
-				checkParticleOutDomain(i);
-			}
+			//if(particleType[i] == fluid) {
+			pos[i*3  ]+=acc[i*3  ]*timeStep*timeStep;	pos[i*3+1]+=acc[i*3+1]*timeStep*timeStep;	pos[i*3+2]+=acc[i*3+2]*timeStep*timeStep;
+			checkParticleOutDomain(i);
+			//}
 			acc[i*3]=acc[i*3+1]=acc[i*3+2]=0.0;
 
 			//pos[i*3  ]=Posk[i*3 ]+vel[i*3  ]*timeStep;	pos[i*3+1]=Posk[i*3+1]+vel[i*3+1]*timeStep;	pos[i*3+2]=Posk[i*3+2]+vel[i*3+2]*timeStep;
@@ -5760,7 +5939,8 @@ void MpsParticle::updateVelocityPosition2nd() {
 void MpsParticle::calcShifting() {
 #pragma omp parallel for schedule(dynamic,64)
 	for(int i=0; i<numParticles; i++) {
-	if(particleType[i] != ghost) {
+//	if(particleType[i] != ghost) {
+	if(particleType[i] == fluid) {
 		double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
 		double velXi = vel[i*3  ];	double velYi = vel[i*3+1];	double velZi = vel[i*3+2];
 		double posMirrorXi = mirrorParticlePos[i*3  ];	double posMirrorYi = mirrorParticlePos[i*3+1];	double posMirrorZi = mirrorParticlePos[i*3+2];
@@ -7328,11 +7508,11 @@ void MpsParticle::writeVtuAscii()
 	
   	if(outputAuxiliar)
   	{
-// 		fprintf(fp,"        <DataArray type='Int32' Name='ParticleType' format='ascii'>\n");
-//		for(int i=0; i<numParticles; i++) {
-//			fprintf(fp,"%d ",particleType[i]);
-//		}
- //		fprintf(fp,"\n        </DataArray>\n");
+ 		fprintf(fp,"        <DataArray type='Int32' Name='ParticleType' format='ascii'>\n");
+		for(int i=0; i<numParticles; i++) {
+			fprintf(fp,"%d ",particleType[i]);
+		}
+ 		fprintf(fp,"\n        </DataArray>\n");
 
 // 		fprintf(fp,"        <DataArray type='Float32' Name='mirrorParticlePos' NumberOfComponents='3' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {

@@ -1,7 +1,7 @@
 {
 	// Types of simulations and output
 	"flags": {
-		"wall_type":		1, 		// Boundary wall type: Particle = 0, Polygon = 1
+		"wall_type":		0, 		// Boundary wall type: Particle = 0, Polygon = 1
 		"fem_MESH": 		false, 	// Finite Element Solver (true or false)
 		"forced_MESH": 		false, 	// Forced mesh motion (true or false)
 		"output_VTU": {
@@ -22,25 +22,25 @@
 	},
 	// Paths of input and output files/folders
 	"pathNames": {
-		"particle_grid_file":	"input/grid/dam1610_3D_fluid_lo0p010_mps.grid",
+		"particle_grid_file":	"input/grid/dam.grid",
 		"mesh_rigid_file": 		"input/stl/dam1610.stl",
 		"mesh_deformable_file": "input/stl/elastic_beam_16.stl", // (NOT WORKING !!)
 		"mesh_forced_file": 	"input/stl/tank_liao_forced_gate.stl",
-		"vtu_output_folder":	"output/dambreak01_INC",
+		"vtu_output_folder":	"output/damWall01_INC",
 		"forceTxt_file":		"output/dambreak01_force.txt",
 		"pressTxt_file":		"output/dambreak01_press.txt"
 	},
 	// Geometry dimension limits of the analysis domain (m)
 	"domain": {
 		"min": {
-			"x":	0.0,
-			"y":	0.0,
+			"x":	-0.1,
+			"y":	-0.1,
 			"z":	0.0
 		},
 		"max": {
-			"x":	1.7, 
-			"y":	0.2,
-			"z":	0.8
+			"x":	1.1, 
+			"y":	2.1,
+			"z":	0.0
 		}
 	},
 	// Physical parameters
@@ -51,8 +51,8 @@
 		// Gravity acceleration (m/s2)
 		"gravity": {
 			"x":			0.0,
-			"y":			0.0,
-			"z":			-9.81
+			"y":			-9.81,
+			"z":			0.0
 		},
 		// Rheological parameters
 		"rheological": {
@@ -94,11 +94,11 @@
 	},
 	// Numerical parameters
 	"numerical": {
-		"dimension": 		3,			// Dimension (2 or 3)
-		"particle_dist": 	0.01,		// Average particle distance (m) (10/5) (0.01)
-		"time_step": 		0.00025,		// Time step (s) (0.02/0.01/0.005) (0.00025/0.00025/0.000125)
-		"final_time": 		1.0,		// Time of simulation (s)
-		"iter_output": 		100,			// Number of iterations to determine the output interval
+		"dimension": 		2,			// Dimension (2 or 3)
+		"particle_dist": 	0.008,		// Average particle distance (m) (10/5) (0.01)
+		"time_step": 		0.0005,		// Time step (s) (0.02/0.01/0.005) (0.00025/0.00025/0.000125)
+		"final_time": 		20.0,		// Time of simulation (s)
+		"iter_output": 		200,			// Number of iterations to determine the output interval
 		"CFL_number":	 	0.2,		// Courant (CFL) condition number (0.2)
 		// Weight function
 		// 0: wij = re/rij - 1
@@ -112,7 +112,7 @@
 			// 2D: small = 3.1; large = 3.1
 			// 3D: small = 2.1; large = 2.1
 			"small":		2.1,
-			"large":		2.1
+			"large":		3.1
 		},
 		// Pressure gradient
 		"gradient": {
@@ -149,7 +149,7 @@
 		"particle_shifting": {
 			"type": 		0,			// 0: OFF; 1: DW*Uij; 2: GradCi
 			"DRI": 			0.01,		// Type 1: Adjusted velocity paramater (DW*Uij) DRI <= 0.01
-			"coef_A":		1.0,		// Type 2: Dimensionless number 1-6 (GradCi) coef_A = 2.0 provide a good compromise
+			"coef_A":		2.0,		// Type 2: Dimensionless number 1-6 (GradCi) coef_A = 2.0 provide a good compromise
 			"mach_number":	0.1,		// Type 2: Mach number Ma~0.1 (GradCi)
 			// Type 3: a = 0.9 (NOT IMPLEMENTED !!!)
 			"adj_vel_A":	0.9
