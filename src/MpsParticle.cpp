@@ -1419,8 +1419,11 @@ void MpsParticle::checkParticleCollisions() {
 // Enhanced weakly-compressible MPS method for violent free-surface flows: Role of particle regularization techniques
 // https://doi.org/10.1016/j.jcp.2021.110202
 void MpsParticle::checkDynamicParticleCollisions() {
+	
 	double Wij5 = 0.5*0.5*0.5*0.5*3.0;
 	double pmax = 0.0;
+	
+	// Compute maximum pressure on the walls
 #pragma omp parallel
 {
 	double local_pmax = 0.0;
@@ -1436,6 +1439,7 @@ void MpsParticle::checkDynamicParticleCollisions() {
 			pmax = local_pmax;
 	}
 }
+	// Compute collision and repulsive terms and the dynamic coefficients
 #pragma omp parallel for schedule(dynamic,64)
 	for(int i=0; i<numParticles; i++) {
 		if(particleType[i] == fluid) {
@@ -1490,13 +1494,13 @@ void MpsParticle::checkDynamicParticleCollisions() {
 							
 							// inter-particle distance
 							double Wij = 0.0;
-							if(dst > 0.0 && dst < partDist)
+							if(dst > 1.0e-6 && dst < partDist)
 							{
-								double w1 = (1.0-dst/partDist);
-								double w2 = (4.0*dst/partDist+1);
+								double w1 = 1.0 - dst/partDist;
+								double w2 = 4.0*dst/partDist + 1;
 								Wij = w1*w1*w1*w1*w2;
 							}
-							double chi = Wij/Wij5;
+							double chi = sqrt(Wij/Wij5);
 							double kappa = 0.0;
 							if(dst < 0.5*partDist)
 							{
@@ -1544,19 +1548,23 @@ void MpsParticle::checkDynamicParticleCollisions() {
 			}}}
 
 			dvelCollision[i*3  ]=dVelXi;	dvelCollision[i*3+1]=dVelYi;	dvelCollision[i*3+2]=dVelZi;
-			//accStar[i*3  ]=dVelXi;	accStar[i*3+1]=dVelYi;	accStar[i*3+2]=dVelZi;
 		}
 	}
+	// Update velocity and position
 #pragma omp parallel for
 	for(int i=0; i<numParticles; i++) {
 		if(particleType[i] == fluid) {
-			// CHANGED !!!
-			//pos[i*3  ]+=(acc[i*3  ]-vel[i*3  ])*timeStep; pos[i*3+1]+=(acc[i*3+1]-vel[i*3+1])*timeStep; pos[i*3+2]+=(acc[i*3+2]-vel[i*3+2])*timeStep;
+			
+			vel[i*3  ]+=dvelCollision[i*3  ];	vel[i*3+1]+=dvelCollision[i*3+1];	vel[i*3+2]+=dvelCollision[i*3+2];
+			pos[i*3  ]+=dvelCollision[i*3  ]*timeStep; pos[i*3+1]+=dvelCollision[i*3+1]*timeStep; pos[i*3+2]+=dvelCollision[i*3+2]*timeStep;
 			/*
-			double drNew[3], drMod, drMin, uMod;
-			drNew[0] = (acc[i*3  ]-vel[i*3  ])*timeStep;
-			drNew[1] = (acc[i*3+1]-vel[i*3+1])*timeStep;
-			drNew[2] = (acc[i*3+2]-vel[i*3+2])*timeStep;
+			double drNew[3], drMod, drMin, duNew[3];
+			duNew[0] = dvelCollision[i*3  ];
+			duNew[1] = dvelCollision[i*3+1];
+			duNew[2] = dvelCollision[i*3+2];
+			drNew[0] = dvelCollision[i*3  ]*timeStep;
+			drNew[1] = dvelCollision[i*3+1]*timeStep;
+			drNew[2] = dvelCollision[i*3+2]*timeStep;
 			drMod = (drNew[0]*drNew[0] + drNew[1]*drNew[1] + drNew[2]*drNew[2]);
 			drMin = min(0.1*partDist, drMod);
 			if(drMin > 1.0e-6)
@@ -1564,20 +1572,11 @@ void MpsParticle::checkDynamicParticleCollisions() {
 				pos[i*3  ]+=drMin*drNew[0]/drMod;
 				pos[i*3+1]+=drMin*drNew[1]/drMod;
 				pos[i*3+2]+=drMin*drNew[2]/drMod;
-			}
-			uMod = (acc[i*3  ]*acc[i*3  ] + acc[i*3+1]*acc[i*3+1] + acc[i*3+2]*acc[i*3+2]);
-			if(uMod > 1.0e-6)
-			{
-				acc[i*3  ]*=drMin/uMod;
-				acc[i*3+1]*=drMin/uMod;
-				acc[i*3+2]*=drMin/uMod;
+				vel[i*3  ]+=drMin*duNew[0]/drMod;
+				vel[i*3+1]+=drMin*duNew[1]/drMod;
+				vel[i*3+2]+=drMin*duNew[2]/drMod;
 			}
 			*/
-			vel[i*3  ]+=dvelCollision[i*3  ];	vel[i*3+1]+=dvelCollision[i*3+1];	vel[i*3+2]+=dvelCollision[i*3+2];
-			pos[i*3  ]+=dvelCollision[i*3  ]*timeStep; pos[i*3+1]+=dvelCollision[i*3+1]*timeStep; pos[i*3+2]+=dvelCollision[i*3+2]*timeStep;
-
-			//Velk[i*3  ]=vel[i*3  ];	Velk[i*3+1]=vel[i*3+1];	Velk[i*3+2]=vel[i*3+2];
-			//pos[i*3  ]=Posk[i*3  ]+vel[i*3  ]*timeStep; pos[i*3+1]=Posk[i*3+1]+vel[i*3+1]*timeStep; pos[i*3+2]=Posk[i*3+2]+vel[i*3+2]*timeStep;
 		}
 		dvelCollision[i*3  ]=0.0;	dvelCollision[i*3+1]=0.0;	dvelCollision[i*3+2]=0.0;
 	}
