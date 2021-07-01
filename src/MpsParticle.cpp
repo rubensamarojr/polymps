@@ -1478,7 +1478,7 @@ void MpsParticle::checkDynamicParticleCollisions() {
 					double dstimj2 = v0imj*v0imj+v1imj*v1imj+v2imj*v2imj;
 					// If j is inside the neighborhood of i and 
 					// is not at the same side of im (avoid real j in the virtual neihborhood)
-					if(dstij2 < partDist && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
+					if(dstij2 < partDist*partDist && (dstij2 < dstimj2 || wallType == boundaryWallType::PARTICLE)) {
 						if(j != i && particleType[j] != ghost) {
 							double mj;
 							if(particleType[j]==fluid)
@@ -1514,13 +1514,14 @@ void MpsParticle::checkDynamicParticleCollisions() {
 							double fDT = (velXi-vel[j*3  ])*v0ij+(velYi-vel[j*3+1])*v1ij+(velZi-vel[j*3+2])*v2ij;
 							if(fDT > 0.0) {
 								fDT *= kappa*mj/(mi+mj)/dstij2;
+								//fDT *= restitutionCollision*mj/(mi+mj)/dstij2;
 								if(particleType[j]==fluid)
 								{
-									dVelXi -= v0ij*fDT;		dVelXi -= v1ij*fDT;		dVelXi -= v2ij*fDT;
+									dVelXi -= v0ij*fDT;		dVelYi -= v1ij*fDT;		dVelZi -= v2ij*fDT;
 								}
 								else
 								{
-									dVelXi -= 2*v0ij*fDT;		dVelXi -= 2*v1ij*fDT;		dVelXi -= 2*v2ij*fDT;
+									dVelXi -= 2*v0ij*fDT;		dVelYi -= 2*v1ij*fDT;		dVelZi -= 2*v2ij*fDT;
 								}
 							}
 							else
@@ -1533,11 +1534,11 @@ void MpsParticle::checkDynamicParticleCollisions() {
 								double rep = timeStep/mi*chi*pb/dstij2;
 								if(particleType[j]==fluid)
 								{
-									dVelXi -= v0ij*rep;		dVelXi -= v1ij*rep;		dVelXi -= v2ij*rep;
+									dVelXi -= v0ij*rep;		dVelYi -= v1ij*rep;		dVelZi -= v2ij*rep;
 								}
 								else
 								{
-									dVelXi -= 2*v0ij*rep;		dVelXi -= 2*v1ij*rep;		dVelXi -= 2*v2ij*rep;
+									dVelXi -= 2*v0ij*rep;		dVelYi -= 2*v1ij*rep;		dVelZi -= 2*v2ij*rep;
 								}
 							}
 						}
