@@ -1515,13 +1515,13 @@ void MpsParticle::checkDynamicParticleCollisions() {
 
 							double fDT = (velXi-vel[j*3  ])*v0ij+(velYi-vel[j*3+1])*v1ij+(velZi-vel[j*3+2])*v2ij;
 							if(fDT > 0.0) {
-								fDT *= kappa*mj/(mi+mj)/dstij2;
+								fDT *= kappa*2*mj/(mi+mj)/dstij2;
 								//fDT *= restitutionCollision*mj/(mi+mj)/dstij2;
 								if(particleType[j]==fluid)
 								{
 									dVelXi -= v0ij*fDT;		dVelYi -= v1ij*fDT;		dVelZi -= v2ij*fDT;
 								}
-								else
+								else //if(particleBC[i] == surface)
 								{
 									dVelXi -= 2*v0ij*fDT;		dVelYi -= 2*v1ij*fDT;		dVelZi -= 2*v2ij*fDT;
 								}
@@ -1529,8 +1529,8 @@ void MpsParticle::checkDynamicParticleCollisions() {
 							else
 							{
 								// Dynamic background pressure
-								//double pmax = 1000;
-								double pmin = 0.0;
+								double pmax = 2/3*DNS_FL1*gravityY*0.3;
+								double pmin = DNS_FL1*gravityY*partDist;
 								double ptil = max(min(lambdaCollision*fabs(press[i]+press[j]), lambdaCollision*pmax), pmin);
 								double pb = ptil*chi;
 								double rep = timeStep/mi*chi*pb/dstij2;
@@ -1538,7 +1538,7 @@ void MpsParticle::checkDynamicParticleCollisions() {
 								{
 									dVelXi -= v0ij*rep;		dVelYi -= v1ij*rep;		dVelZi -= v2ij*rep;
 								}
-								else
+								else //if(particleBC[i] == surface)
 								{
 									dVelXi -= 2*v0ij*rep;		dVelYi -= 2*v1ij*rep;		dVelZi -= 2*v2ij*rep;
 								}
@@ -1700,8 +1700,8 @@ void MpsParticle::calcWallNPCD() {
 	}
 }
 
-// Compute PND
-void MpsParticle::calcPnd() {
+// Compute PND, number of neighbors and NPCD
+void MpsParticle::calcPndnNeighNPCD() {
 #pragma omp parallel for schedule(dynamic,64)
 	for(int i=0; i<numParticles; i++) {
 		if(particleType[i] != ghost) {
@@ -3394,7 +3394,7 @@ void MpsParticle::calcWallNoSlipVelDivergence() {
 void MpsParticle::extrapolatePressParticlesWallDummy() {
 #pragma omp parallel for schedule(dynamic,64)
 	for(int i=0; i<numParticles; i++) {
-		if(particleType[i] == wall || particleType[i] == dummyWall) {
+		if(particleType[i] == dummyWall || (mpsType == calcPressType::WEAKLY && particleType[i] == wall)) {
 			double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
 			double ni = 0.0;
 			double pressure = 0.0;

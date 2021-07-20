@@ -253,8 +253,8 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 			part->calcWallNPCD();
 		}
 
-		// PND calculation
-		part->calcPnd();
+		// PND, number of neighbors and NPCD calculation
+		part->calcPndnNeighNPCD();
 		// Diffusion term
 		if(part->pndType == calcPNDType::DIFFUSIVE) {
 			part->calcPndDiffusiveTerm();

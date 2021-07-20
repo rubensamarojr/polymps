@@ -143,8 +143,8 @@ public:
 	void setWallForceZero(const int nNodes, double *nodeforceX, double *nodeforceY, double *nodeforceZ);
 	// Free-surface particles. NPCD (Polygon wall)
 	void calcWallNPCD();
-	// Compute PND
-	void calcPnd();
+	// Compute PND, number of neighbors and NPCD
+	void calcPndnNeighNPCD();
 	// Diffusive term of density/PND (pndType = calcPNDType:DIFFUSIVE)
 	// An enhanced weakly-compressible MPS method for free-surface flows
 	// https://doi.org/10.1016/j.cma.2019.112771
