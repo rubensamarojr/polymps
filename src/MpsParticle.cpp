@@ -168,7 +168,7 @@ double MpsParticle::delWeight(const double dst, const double re, const int wijTy
 		case 2:
 			return -re/(dst*dst) - 1/re;
 		case 3:
-			return -3/re*(1-dst/re)*(1-dst/re);
+			return -3.0/re*(1-dst/re)*(1-dst/re);
 		default:
 			return -re/(dst*dst);
 	}
@@ -1775,7 +1775,7 @@ void MpsParticle::calcPndnNeighNPCD() {
 	//		if(pndType == calcPNDType::SUM_WIJ) {
 				// PND at initial of step k
 				pndki[i] = pndi[i];
-				// PND due particles and Wall polygon
+				// New PND due particles and Wall polygon
 				pndi[i] = ni + pndWallContribution[i];
 			}
 
@@ -1848,10 +1848,15 @@ void MpsParticle::calcPndDiffusiveTerm() {
 			double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
 			double velXi = vel[i*3  ];	double velYi = vel[i*3+1];	double velZi = vel[i*3+2];
 			double posMirrorXi = mirrorParticlePos[i*3  ];	double posMirrorYi = mirrorParticlePos[i*3+1];	double posMirrorZi = mirrorParticlePos[i*3+2];
-			double M1[3][3];
-			for(int i = 0; i < 3; i++)
-				for(int j = 0; j < 3; j++)
-					M1[i][j] = 0.0;
+			//double M1[3][3];
+			//for(int im=0; im<3; im++)
+			//{
+			//	for(int jm=0; jm<3; jm++)
+			//	{
+			//		M1[im][jm] = 0.0;
+			//	}
+			//}
+
 			double ni = pndi[i];
 			if(ni < 1.0e-8) continue;
 			double Pi = press[i];
@@ -1887,6 +1892,7 @@ void MpsParticle::calcPndDiffusiveTerm() {
 							double wL = weight(dst, reL, weightType);
 							double nj = pndi[j];
 							if(particleType[i] == fluid && particleType[j] == fluid) {
+							//if(particleType[i] == inner) {
 		//					if(particleType[i] == fluid && particleType[j] == fluid && particleBC[i] == inner) {
 								// coeffViscMultiphase = 2.0*dim/(pndLargeZero*lambdaZero);
 		//						double pgh = RHO[i]*(gravityX*v0+gravityY*v1+gravityZ*v2);
@@ -1924,7 +1930,9 @@ void MpsParticle::calcPndDiffusiveTerm() {
 								double vijz = vel[j*3+2]-velZi;
 								double wS = weight(dst, reS, weightType);
 								if(ni > 1.0e-8)
+								{
 									DivV += (dim/pndSmallZero)*(nj/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
+								}
 
 		//						M1[0][0] += (dim/pndSmallZero)*(nj/ni)*(v0*vijx)*wS/dst2; M1[0][1] += (dim/pndSmallZero)*(nj/ni)*(v0*vijy)*wS/dst2; M1[0][2] += (dim/pndSmallZero)*(nj/ni)*(v0*vijz)*wS/dst2;
 		//						M1[1][0] += (dim/pndSmallZero)*(nj/ni)*(v1*vijx)*wS/dst2; M1[1][1] += (dim/pndSmallZero)*(nj/ni)*(v1*vijy)*wS/dst2; M1[1][2] += (dim/pndSmallZero)*(nj/ni)*(v1*vijz)*wS/dst2;
@@ -3001,6 +3009,18 @@ void MpsParticle::solvePressurePoissonPndDivU() {
 		//sourceTerm(i) = - 4*density*(ni - pndSmallZero)/(partDist*partDist*pndSmallZero) 
 		//				+ 2*density*velDivergence[i]/partDist;
 
+		// Sun et al., 2015. Modified MPS method for the 2D fluid structure interaction problem with free surface
+		////double dtPhysical = partDist/20;
+		//double dtPhysical = timeStep;
+		//double a1 = fabs(ni - pndSmallZero)/pndSmallZero;
+		//if ((pndSmallZero-ni)*velDivergence[i] > 1e-6)
+		//{
+		//	a1 += dtPhysical*fabs(velDivergence[i]);
+		//}
+		////double a2 = fabs((ni - pndSmallZero)/pndSmallZero);
+		//sourceTerm(i) = - a1*density/(dtPhysical*dtPhysical)*(ni - pndSmallZero)/pndSmallZero 
+		//	+ density*velDivergence[i]/dtPhysical;
+
 		// 2019 - Enhancement of stabilization of MPS to arbitrary geometries with a generic wall boundary condition
 		//double pndc = 0.0;
 		//if(ni > 0)
@@ -3529,7 +3549,7 @@ int MpsParticle::inverseMatrix(int dim, double &M11, double &M12, double &M13, d
 	Maux[2][0] = M31;	Maux[2][1] = M32;	Maux[2][2] = M33;
 
 	if(dim == 2)
-	Maux[2][2] = 1.0;
+		Maux[2][2] = 1.0;
 
 	// Convert matrix to identity
 	for(int i = 0; i < 3; i++)
