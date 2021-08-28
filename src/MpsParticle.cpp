@@ -629,29 +629,29 @@ void MpsParticle::readMpsParticleFile(const std::string& grid_file) {
 		}
 		*/
 
-		RHO[i] = DNS_FL1;
-		PTYPE[i] = 1;
-		MEU[i] = KNM_VS1 * DNS_FL1;
-
-		/*
-		// ATTENTION !!!
-		// Multiphase simulations
-		// Assign type and density
-		if(particleType[i] == 1) {
-			particleType[i] = 0;
-			PTYPE[i] = 2;
+		if(fluidType == viscType::NEWTONIAN) {
 			RHO[i] = DNS_FL1;
-			// CHANGED Only at the first time step
-			MEU[i] = KNM_VS2 * DNS_FL2;
-		}
-		else {
-			particleType[i] = 0;
 			PTYPE[i] = 1;
-			RHO[i] = DNS_FL1;
-			// CHANGED Only at the first time step
 			MEU[i] = KNM_VS1 * DNS_FL1;
 		}
-		*/
+		// Multiphase simulations - Granular Fluid
+		if(fluidType == viscType::NON_NEWTONIAN) {
+			// Assign type and density
+			if(particleType[i] == 1) {
+				particleType[i] = 0;
+				PTYPE[i] = 2;
+				RHO[i] = DNS_FL2;
+				// CHANGED Only at the first time step
+				MEU[i] = KNM_VS2 * DNS_FL2;
+			}
+			else {
+				particleType[i] = 0;
+				PTYPE[i] = 1;
+				RHO[i] = DNS_FL1;
+				// CHANGED Only at the first time step
+				MEU[i] = KNM_VS1 * DNS_FL1;
+			}
+		}
 	}
 }
 
@@ -7903,7 +7903,7 @@ void MpsParticle::writePvd()
 #endif
 
 	if(mkdirOK == -1) {
-		printf("Unable to create OUTPUT directory or it is already created!\n");
+		printf("Unable to create OUTPUT directory or it has already been created!\n");
 	}
 	else {
 		printf("Directory created.\n");
