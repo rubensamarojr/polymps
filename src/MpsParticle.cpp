@@ -250,6 +250,7 @@ void MpsParticle::readInputFile() {
 	outputDeviation = je.at("flags").at("output_VTU").value("deviation", false);
 	outputConcentration = je.at("flags").at("output_VTU").value("concentration", false);
 	outputAuxiliar = je.at("flags").at("output_VTU").value("auxiliar", false);
+	outputNonNewtonian = je.at("flags").at("output_VTU").value("non_newtonian", false);
 	txtPress = je.at("flags").at("output_TXT").value("press", false);
 	txtForce = je.at("flags").at("output_TXT").value("force", false);
 	// Paths of input and output files/folders
@@ -383,6 +384,7 @@ void MpsParticle::readInputFile() {
 	// cout << "outputDeviation: " << outputDeviation << " | ";
 	// cout << "outputConcentration: " << outputConcentration << " | ";
 	// cout << "outputAuxiliar: " << outputAuxiliar << " | ";
+	// cout << "outputNonNewtonian: " << outputNonNewtonian << " | ";
 	// cout << "txtPress: " << txtPress << " | ";
 	// cout << "txtForce: " << txtForce << endl;
 	// cout << "gridFilename: " << gridFilename << endl;
@@ -7389,28 +7391,28 @@ void MpsParticle::writeVtuAscii()
 	fprintf(fp,"<?xml version='1.0' encoding='UTF-8'?>\n");
 	fprintf(fp,"<VTKFile xmlns='VTK' byte_order='LittleEndian' version='0.1' type='UnstructuredGrid'>\n");
 	fprintf(fp,"  <UnstructuredGrid>\n");
- 	fprintf(fp,"    <Piece NumberOfCells='%d' NumberOfPoints='%d'>\n",nParticles,nParticles);
+	fprintf(fp,"    <Piece NumberOfCells='%d' NumberOfPoints='%d'>\n",nParticles,nParticles);
 
- 	// Points
- 	fprintf(fp,"      <Points>\n");
- 	fprintf(fp,"        <DataArray type='Float32' Name='Position' NumberOfComponents='3' format='ascii'>\n          ");
+	// Points
+	fprintf(fp,"      <Points>\n");
+	fprintf(fp,"        <DataArray type='Float32' Name='Position' NumberOfComponents='3' format='ascii'>\n          ");
 	for(int i=0; i<numParticles; i++)
 	{
 		fprintf(fp,"%lf %lf %lf ",pos[i*3],pos[i*3+1],pos[i*3+2]);
 	}
- 	fprintf(fp,"\n        </DataArray>\n");
-  	fprintf(fp,"      </Points>\n");
+	fprintf(fp,"\n        </DataArray>\n");
+	fprintf(fp,"      </Points>\n");
 
-  	// Point data
-  	fprintf(fp,"      <PointData>\n");
- 	fprintf(fp,"        <DataArray type='Float32' Name='Velocity' NumberOfComponents='3' format='ascii'>\n");
+	// Point data
+	fprintf(fp,"      <PointData>\n");
+	fprintf(fp,"        <DataArray type='Float32' Name='Velocity' NumberOfComponents='3' format='ascii'>\n");
 	for(int i=0; i<numParticles; i++)
 	{
 		//double val=sqrt(vel[i*3]*vel[i*3]+vel[i*3+1]*vel[i*3+1]+vel[i*3+2]*vel[i*3+2]);
 		fprintf(fp,"%f %f %f ",(float)vel[i*3],(float)vel[i*3+1],(float)vel[i*3+2]);
 	}
- 	fprintf(fp,"\n        </DataArray>\n");
- 	//fprintf(fp,"        <DataArray type='Float32' Name='preSmallsave' format='ascii'>\n");
+	fprintf(fp,"\n        </DataArray>\n");
+	//fprintf(fp,"        <DataArray type='Float32' Name='preSmallsave' format='ascii'>\n");
 	//for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)(pressAverage[i]/iterOutput));}
 	//fprintf(fp,"\n        </DataArray>\n");
 	fprintf(fp,"        <DataArray type='Float32' Name='pressure' format='ascii'>\n");
@@ -7428,144 +7430,147 @@ void MpsParticle::writeVtuAscii()
 	
 	if(outputPnd)
 	{
- 		fprintf(fp,"        <DataArray type='Float32' Name='pnd' format='ascii'>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='pnd' format='ascii'>\n");
 		for(int i=0; i<numParticles; i++)
 		{
 			fprintf(fp,"%f ",(float)pndi[i]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
- 		fprintf(fp,"        <DataArray type='Float32' Name='pndk' format='ascii'>\n");
+		fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='pndk' format='ascii'>\n");
 		for(int i=0; i<numParticles; i++)
 		{
 			fprintf(fp,"%f ",(float)pndki[i]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
- 		fprintf(fp,"        <DataArray type='Float32' Name='pndsk' format='ascii'>\n");
+		fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='pndsk' format='ascii'>\n");
 		for(int i=0; i<numParticles; i++)
 		{
 			fprintf(fp,"%f ",(float)pndski[i]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
- 	}
- 	if(outputNeigh) {
- 		fprintf(fp,"        <DataArray type='Int32' Name='nNeigh' format='ascii'>\n");
+		fprintf(fp,"\n        </DataArray>\n");
+	}
+	if(outputNeigh) {
+		fprintf(fp,"        <DataArray type='Int32' Name='nNeigh' format='ascii'>\n");
 		for(int i=0; i<numParticles; i++)
 		{
 			fprintf(fp,"%d ",numNeigh[i]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
- 	}
+		fprintf(fp,"\n        </DataArray>\n");
+	}
 
- 	if(outputDeviation)
- 	{
+	if(outputDeviation)
+	{
 //		fprintf(fp,"        <DataArray type='Float32' Name='devSquare' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)npcdDeviation2[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
- 		fprintf(fp,"        <DataArray type='Float32' Name='npcdDeviation' NumberOfComponents='3' format='ascii'>\n");
- 		for(int i=0; i<numParticles; i++)
- 		{
+//		fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='npcdDeviation' NumberOfComponents='3' format='ascii'>\n");
+		for(int i=0; i<numParticles; i++)
+		{
 			fprintf(fp,"%f %f %f ",(float)npcdDeviation[i*3],(float)npcdDeviation[i*3+1],(float)npcdDeviation[i*3+2]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
- 		fprintf(fp,"        <DataArray type='Float32' Name='polygonNormal' NumberOfComponents='3' format='ascii'>\n");
- 		for(int i=0; i<numParticles; i++)
- 		{
+		fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='polygonNormal' NumberOfComponents='3' format='ascii'>\n");
+		for(int i=0; i<numParticles; i++)
+		{
 			fprintf(fp,"%f %f %f ",(float)polygonNormal[i*3],(float)polygonNormal[i*3+1],(float)polygonNormal[i*3+2]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"\n        </DataArray>\n");
 //		fprintf(fp,"        <DataArray type='Float32' Name='deviationDotPolygonNormal' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)deviationDotPolygonNormal[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
- 	}
+//		fprintf(fp,"\n        </DataArray>\n");
+	}
 
- 	if(outputConcentration)
- 	{
- 		fprintf(fp,"        <DataArray type='Float32' Name='concentration' format='ascii'>\n");
+	if(outputConcentration)
+	{
+		fprintf(fp,"        <DataArray type='Float32' Name='concentration' format='ascii'>\n");
 		for(int i=0; i<numParticles; i++)
 		{
 			fprintf(fp,"%f ",(float)concentration[i]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
- 		fprintf(fp,"        <DataArray type='Float32' Name='GradCi' NumberOfComponents='3' format='ascii'>\n");
+		fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='GradCi' NumberOfComponents='3' format='ascii'>\n");
 		for(int i=0; i<numParticles; i++)
 		{
 			fprintf(fp,"%f %f %f ",(float)gradConcentration[i*3],(float)gradConcentration[i*3+1],(float)gradConcentration[i*3+2]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
- 	}
- 	
+		fprintf(fp,"\n        </DataArray>\n");
+	}
+	
 //	fprintf(fp,"        <DataArray type='Float32' Name='wallParticleForce1' NumberOfComponents='3' format='ascii'>\n");
 //	for(int i=0; i<numParticles; i++) {
 //		fprintf(fp,"%f %f %f ",(float)wallParticleForce1[i*3],(float)wallParticleForce1[i*3+1],(float)wallParticleForce1[i*3+2]);
 //	}
- //	fprintf(fp,"\n        </DataArray>\n");
+//	fprintf(fp,"\n        </DataArray>\n");
 
-// 	fprintf(fp,"        <DataArray type='Float32' Name='wallParticleForce2' NumberOfComponents='3' format='ascii'>\n");
+//	fprintf(fp,"        <DataArray type='Float32' Name='wallParticleForce2' NumberOfComponents='3' format='ascii'>\n");
 //	for(int i=0; i<numParticles; i++) {
 //		fprintf(fp,"%f %f %f ",(float)wallParticleForce2[i*3],(float)wallParticleForce2[i*3+1],(float)wallParticleForce2[i*3+2]);
 //	}
- //	fprintf(fp,"\n        </DataArray>\n");
- 	
-// 	fprintf(fp,"        <DataArray type='Float32' Name='RHO' format='ascii'>\n");
-//		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)RHO[i]);}
- //		fprintf(fp,"\n        </DataArray>\n");
-// 	fprintf(fp,"        <DataArray type='Float32' Name='ConcVol' format='ascii'>\n");
-//		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)Cv[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
-// 	fprintf(fp,"        <DataArray type='Float32' Name='MEU' format='ascii'>\n");
-//		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)MEU[i]);}
- //		fprintf(fp,"\n        </DataArray>\n");
- //	fprintf(fp,"        <DataArray type='Float32' Name='MEUy' format='ascii'>\n");
-//		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)MEU_Y[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
-// 	fprintf(fp,"        <DataArray type='Float32' Name='II' format='ascii'>\n");
-//		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)II[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
-// 	fprintf(fp,"        <DataArray type='Int32' Name='PTYPE' format='ascii'>\n");
-//		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%d ",PTYPE[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
-// 	fprintf(fp,"        <DataArray type='Float32' Name='p_smooth' format='ascii'>\n");
-//	for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)p_smooth[i]);}
 //	fprintf(fp,"\n        </DataArray>\n");
 	
-  	if(outputAuxiliar)
-  	{
- 		fprintf(fp,"        <DataArray type='Int32' Name='ParticleType' format='ascii'>\n");
+	if(outputNonNewtonian)
+	{
+		fprintf(fp,"        <DataArray type='Float32' Name='RHO' format='ascii'>\n");
+			for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)RHO[i]);}
+			fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='ConcVol' format='ascii'>\n");
+			for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)Cv[i]);}
+			fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='MEU' format='ascii'>\n");
+			for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)MEU[i]);}
+			fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='MEUy' format='ascii'>\n");
+			for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)MEU_Y[i]);}
+			fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='II' format='ascii'>\n");
+			for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)II[i]);}
+			fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Int32' Name='PTYPE' format='ascii'>\n");
+			for(int i=0; i<numParticles; i++) {	fprintf(fp,"%d ",PTYPE[i]);}
+			fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='p_smooth' format='ascii'>\n");
+		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)p_smooth[i]);}
+		fprintf(fp,"\n        </DataArray>\n");
+	}
+	
+	if(outputAuxiliar)
+	{
+		fprintf(fp,"        <DataArray type='Int32' Name='ParticleType' format='ascii'>\n");
 		for(int i=0; i<numParticles; i++) {
 			fprintf(fp,"%d ",particleType[i]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"\n        </DataArray>\n");
 
-// 		fprintf(fp,"        <DataArray type='Float32' Name='mirrorParticlePos' NumberOfComponents='3' format='ascii'>\n");
+//		fprintf(fp,"        <DataArray type='Float32' Name='mirrorParticlePos' NumberOfComponents='3' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {
 //			fprintf(fp,"%f %f %f ",(float)mirrorParticlePos[i*3],(float)mirrorParticlePos[i*3+1],(float)mirrorParticlePos[i*3+2]);
 //		}
 //		fprintf(fp,"\n        </DataArray>\n");
 
-// 		fprintf(fp,"        <DataArray type='Int32' Name='NearWall' format='ascii'>\n");
+//		fprintf(fp,"        <DataArray type='Int32' Name='NearWall' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {
 //			fprintf(fp,"%d ",particleNearWall[i]);
 //		}
-// 		fprintf(fp,"\n        </DataArray>\n");
+//		fprintf(fp,"\n        </DataArray>\n");
 
- 		//fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
+		//fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
 		//for(int i=0; i<numParticles; i++) {
 		//	fprintf(fp,"%f %f %f ",(float)Fwall[i*3],(float)Fwall[i*3+1],(float)Fwall[i*3+2]);
 		//}
- 		//fprintf(fp,"\n        </DataArray>\n");
-// 		fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
+		//fprintf(fp,"\n        </DataArray>\n");
+//		fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {
 //			fprintf(fp,"%f %f %f ",(float)forceWall[i*3],(float)forceWall[i*3+1],(float)forceWall[i*3+2]);
 //		}
 //		fprintf(fp,"\n        </DataArray>\n");
-// 		fprintf(fp,"        <DataArray type='Float32' Name='DIV' format='ascii'>\n");
+//		fprintf(fp,"        <DataArray type='Float32' Name='DIV' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)velDivergence[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
+//		fprintf(fp,"\n        </DataArray>\n");
 //		fprintf(fp,"        <DataArray type='Float32' Name='Di' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)diffusiveTerm[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
+//		fprintf(fp,"\n        </DataArray>\n");
 
- 		fprintf(fp,"        <DataArray type='Int32' Name='nearMeshType' format='ascii'>\n");
+		fprintf(fp,"        <DataArray type='Int32' Name='nearMeshType' format='ascii'>\n");
 		for(int i=0; i<numParticles; i++)
 		{
 			fprintf(fp,"%d ",nearMeshType[i]);
@@ -7577,34 +7582,34 @@ void MpsParticle::writeVtuAscii()
 		//fprintf(fp,"\n        </DataArray>\n");
 	}
 
-  	fprintf(fp,"      </PointData>\n");
+	fprintf(fp,"      </PointData>\n");
 
-  	// Cells
- 	fprintf(fp,"      <Cells>\n");
- 	fprintf(fp,"        <DataArray type='Int32' Name='connectivity' format='ascii'>\n");
+	// Cells
+	fprintf(fp,"      <Cells>\n");
+	fprintf(fp,"        <DataArray type='Int32' Name='connectivity' format='ascii'>\n");
 	for(int i=0, ii = 0; i<numParticles; i++)
 	{
 		fprintf(fp,"%d ",ii);
 		ii++;
 	}
- 	fprintf(fp,"\n        </DataArray>\n");
- 	fprintf(fp,"        <DataArray type='Int32' Name='offsets' format='ascii'>\n");
+	fprintf(fp,"\n        </DataArray>\n");
+	fprintf(fp,"        <DataArray type='Int32' Name='offsets' format='ascii'>\n");
 	for(int i=0, ii=0; i<numParticles; i++)
 	{
 		fprintf(fp,"%d ",ii+1);
 		ii++;
 	}
- 	fprintf(fp,"\n        </DataArray>\n");
- 	fprintf(fp,"        <DataArray type='UInt8' Name='types' format='ascii'>\n");
+	fprintf(fp,"\n        </DataArray>\n");
+	fprintf(fp,"        <DataArray type='UInt8' Name='types' format='ascii'>\n");
 	for(int i=0; i<numParticles; i++)
 	{
 		fprintf(fp,"1 ");
 	}
- 	fprintf(fp,"\n        </DataArray>\n");
- 	fprintf(fp,"      </Cells>\n");
- 	fprintf(fp,"    </Piece>\n");
- 	fprintf(fp,"  </UnstructuredGrid>\n");
- 	fprintf(fp,"</VTKFile>\n");
+	fprintf(fp,"\n        </DataArray>\n");
+	fprintf(fp,"      </Cells>\n");
+	fprintf(fp,"    </Piece>\n");
+	fprintf(fp,"  </UnstructuredGrid>\n");
+	fprintf(fp,"</VTKFile>\n");
 
 	fclose(fp);
 }
@@ -7636,11 +7641,11 @@ void MpsParticle::writeVtuAsciiFreeSurface()
 	fprintf(fp,"<?xml version='1.0' encoding='UTF-8'?>\n");
 	fprintf(fp,"<VTKFile xmlns='VTK' byte_order='LittleEndian' version='0.1' type='UnstructuredGrid'>\n");
 	fprintf(fp,"  <UnstructuredGrid>\n");
- 	fprintf(fp,"    <Piece NumberOfCells='%d' NumberOfPoints='%d'>\n",nParticles,nParticles);
+	fprintf(fp,"    <Piece NumberOfCells='%d' NumberOfPoints='%d'>\n",nParticles,nParticles);
 
- 	// Points
- 	fprintf(fp,"      <Points>\n");
- 	fprintf(fp,"        <DataArray type='Float32' Name='Position' NumberOfComponents='3' format='ascii'>\n          ");
+	// Points
+	fprintf(fp,"      <Points>\n");
+	fprintf(fp,"        <DataArray type='Float32' Name='Position' NumberOfComponents='3' format='ascii'>\n          ");
 	for(int i=0; i<numParticles; i++)
 	{
 		if(particleBC[i] == surface || particleType[i] == wall)
@@ -7648,19 +7653,19 @@ void MpsParticle::writeVtuAsciiFreeSurface()
 			fprintf(fp,"%lf %lf %lf ",pos[i*3],pos[i*3+1],pos[i*3+2]);
 		}
 	}
- 	fprintf(fp,"\n        </DataArray>\n");
-  	fprintf(fp,"      </Points>\n");
+	fprintf(fp,"\n        </DataArray>\n");
+	fprintf(fp,"      </Points>\n");
 
-  	// Point data
-  	fprintf(fp,"      <PointData>\n");
- 	fprintf(fp,"        <DataArray type='Float32' Name='Velocity' NumberOfComponents='3' format='ascii'>\n");
+	// Point data
+	fprintf(fp,"      <PointData>\n");
+	fprintf(fp,"        <DataArray type='Float32' Name='Velocity' NumberOfComponents='3' format='ascii'>\n");
 	for(int i=0; i<numParticles; i++)
 	{
 		if(particleBC[i] == surface || particleType[i] == wall)
 			fprintf(fp,"%f %f %f ",(float)vel[i*3],(float)vel[i*3+1],(float)vel[i*3+2]);
 	}
- 	fprintf(fp,"\n        </DataArray>\n");
- 	//fprintf(fp,"        <DataArray type='Float32' Name='preSmallsave' format='ascii'>\n");
+	fprintf(fp,"\n        </DataArray>\n");
+	//fprintf(fp,"        <DataArray type='Float32' Name='preSmallsave' format='ascii'>\n");
 	//for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)(pressAverage[i]/iterOutput));}
 	//fprintf(fp,"\n        </DataArray>\n");
 	fprintf(fp,"        <DataArray type='Float32' Name='pressure' format='ascii'>\n");
@@ -7680,168 +7685,192 @@ void MpsParticle::writeVtuAsciiFreeSurface()
 	
 	if(outputPnd)
 	{
- 		fprintf(fp,"        <DataArray type='Float32' Name='pnd' format='ascii'>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='pnd' format='ascii'>\n");
 		for(int i=0; i<numParticles; i++)
 		{
 			if(particleBC[i] == surface || particleType[i] == wall)
 				fprintf(fp,"%f ",(float)pndi[i]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
- 		fprintf(fp,"        <DataArray type='Float32' Name='pndSmall' format='ascii'>\n");
+		fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='pndSmall' format='ascii'>\n");
 		for(int i=0; i<numParticles; i++)
 		{
 			if(particleBC[i] == surface || particleType[i] == wall)
 				fprintf(fp,"%f ",(float)pndSmall[i]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
- 	}
+		fprintf(fp,"\n        </DataArray>\n");
+	}
 
- 	if(outputNeigh)
- 	{
- 		fprintf(fp,"        <DataArray type='Int32' Name='nNeigh' format='ascii'>\n");
+	if(outputNeigh)
+	{
+		fprintf(fp,"        <DataArray type='Int32' Name='nNeigh' format='ascii'>\n");
 		for(int i=0; i<numParticles; i++)
 		{
 			if(particleBC[i] == surface || particleType[i] == wall)
 				fprintf(fp,"%d ",numNeigh[i]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
- 	}
+		fprintf(fp,"\n        </DataArray>\n");
+	}
 
- 	if(outputDeviation)
- 	{
+	if(outputDeviation)
+	{
 //		fprintf(fp,"        <DataArray type='Float32' Name='devSquare' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)npcdDeviation2[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
- 		fprintf(fp,"        <DataArray type='Float32' Name='npcdDeviation' NumberOfComponents='3' format='ascii'>\n");
- 		for(int i=0; i<numParticles; i++)
- 		{
+//		fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='npcdDeviation' NumberOfComponents='3' format='ascii'>\n");
+		for(int i=0; i<numParticles; i++)
+		{
 			if(particleBC[i] == surface || particleType[i] == wall)
 				fprintf(fp,"%f %f %f ",(float)npcdDeviation[i*3],(float)npcdDeviation[i*3+1],(float)npcdDeviation[i*3+2]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
- 		fprintf(fp,"        <DataArray type='Float32' Name='polygonNormal' NumberOfComponents='3' format='ascii'>\n");
- 		for(int i=0; i<numParticles; i++)
- 		{
+		fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='polygonNormal' NumberOfComponents='3' format='ascii'>\n");
+		for(int i=0; i<numParticles; i++)
+		{
 			fprintf(fp,"%f %f %f ",(float)polygonNormal[i*3],(float)polygonNormal[i*3+1],(float)polygonNormal[i*3+2]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"\n        </DataArray>\n");
 //		fprintf(fp,"        <DataArray type='Float32' Name='deviationDotPolygonNormal' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)deviationDotPolygonNormal[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
- 	}
+//		fprintf(fp,"\n        </DataArray>\n");
+	}
 
- 	if(outputConcentration)
- 	{
- 		fprintf(fp,"        <DataArray type='Float32' Name='concentration' format='ascii'>\n");
+	if(outputConcentration)
+	{
+		fprintf(fp,"        <DataArray type='Float32' Name='concentration' format='ascii'>\n");
 		for(int i=0; i<numParticles; i++)
 		{
 			if(particleBC[i] == surface || particleType[i] == wall)
 				fprintf(fp,"%f ",(float)concentration[i]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
- 		fprintf(fp,"        <DataArray type='Float32' Name='GradCi' NumberOfComponents='3' format='ascii'>\n");
+		fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='GradCi' NumberOfComponents='3' format='ascii'>\n");
 		for(int i=0; i<numParticles; i++)
 		{
 			if(particleBC[i] == surface || particleType[i] == wall)
 				fprintf(fp,"%f %f %f ",(float)gradConcentration[i*3],(float)gradConcentration[i*3+1],(float)gradConcentration[i*3+2]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
- 	}
- 	
+		fprintf(fp,"\n        </DataArray>\n");
+	}
+	
 //	fprintf(fp,"        <DataArray type='Float32' Name='wallParticleForce1' NumberOfComponents='3' format='ascii'>\n");
 //	for(int i=0; i<numParticles; i++) {
 //		fprintf(fp,"%f %f %f ",(float)wallParticleForce1[i*3],(float)wallParticleForce1[i*3+1],(float)wallParticleForce1[i*3+2]);
 //	}
- //	fprintf(fp,"\n        </DataArray>\n");
+//	fprintf(fp,"\n        </DataArray>\n");
 
-// 	fprintf(fp,"        <DataArray type='Float32' Name='wallParticleForce2' NumberOfComponents='3' format='ascii'>\n");
+//	fprintf(fp,"        <DataArray type='Float32' Name='wallParticleForce2' NumberOfComponents='3' format='ascii'>\n");
 //	for(int i=0; i<numParticles; i++) {
 //		fprintf(fp,"%f %f %f ",(float)wallParticleForce2[i*3],(float)wallParticleForce2[i*3+1],(float)wallParticleForce2[i*3+2]);
 //	}
- //	fprintf(fp,"\n        </DataArray>\n");
- 	
-// 	fprintf(fp,"        <DataArray type='Float32' Name='RHO' format='ascii'>\n");
-//		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)RHO[i]);}
- //		fprintf(fp,"\n        </DataArray>\n");
-// 	fprintf(fp,"        <DataArray type='Float32' Name='ConcVol' format='ascii'>\n");
-//		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)Cv[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
-// 	fprintf(fp,"        <DataArray type='Float32' Name='MEU' format='ascii'>\n");
-//		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)MEU[i]);}
- //		fprintf(fp,"\n        </DataArray>\n");
- //	fprintf(fp,"        <DataArray type='Float32' Name='MEUy' format='ascii'>\n");
-//		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)MEU_Y[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
-// 	fprintf(fp,"        <DataArray type='Float32' Name='II' format='ascii'>\n");
-//		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)II[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
-// 	fprintf(fp,"        <DataArray type='Int32' Name='PTYPE' format='ascii'>\n");
-//		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%d ",PTYPE[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
-// 	fprintf(fp,"        <DataArray type='Float32' Name='p_smooth' format='ascii'>\n");
-//	for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)p_smooth[i]);}
 //	fprintf(fp,"\n        </DataArray>\n");
 	
-  	if(outputAuxiliar)
-  	{
+	if(outputNonNewtonian)
+	{
+		fprintf(fp,"        <DataArray type='Float32' Name='RHO' format='ascii'>\n");
+			for(int i=0; i<numParticles; i++) {
+				if(particleBC[i] == surface || particleType[i] == wall)
+					fprintf(fp,"%f ",(float)RHO[i]);
+			}
+			fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='ConcVol' format='ascii'>\n");
+			for(int i=0; i<numParticles; i++) {
+				if(particleBC[i] == surface || particleType[i] == wall)
+					fprintf(fp,"%f ",(float)Cv[i]);
+			}
+			fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='MEU' format='ascii'>\n");
+			for(int i=0; i<numParticles; i++) {
+				if(particleBC[i] == surface || particleType[i] == wall)
+					fprintf(fp,"%f ",(float)MEU[i]);
+			}
+			fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='MEUy' format='ascii'>\n");
+			for(int i=0; i<numParticles; i++) {
+				if(particleBC[i] == surface || particleType[i] == wall)
+					fprintf(fp,"%f ",(float)MEU_Y[i]);
+			}
+			fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='II' format='ascii'>\n");
+			for(int i=0; i<numParticles; i++) {
+				if(particleBC[i] == surface || particleType[i] == wall)
+					fprintf(fp,"%f ",(float)II[i]);
+			}
+			fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Int32' Name='PTYPE' format='ascii'>\n");
+			for(int i=0; i<numParticles; i++) {
+				if(particleBC[i] == surface || particleType[i] == wall)
+					fprintf(fp,"%d ",PTYPE[i]);
+			}
+			fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='p_smooth' format='ascii'>\n");
+		for(int i=0; i<numParticles; i++) {
+			if(particleBC[i] == surface || particleType[i] == wall)
+				fprintf(fp,"%f ",(float)p_smooth[i]);
+		}
+		fprintf(fp,"\n        </DataArray>\n");
+	}
+	
+	if(outputAuxiliar)
+	{
 
-// 		fprintf(fp,"        <DataArray type='Int32' Name='ParticleType' format='ascii'>\n");
+//		fprintf(fp,"        <DataArray type='Int32' Name='ParticleType' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {
 //			if(particleBC[i] == surface || particleType[i] == wall)
 //				fprintf(fp,"%d ",particleType[i]);
 //		}
- //		fprintf(fp,"\n        </DataArray>\n");
+//		fprintf(fp,"\n        </DataArray>\n");
 
-// 		fprintf(fp,"        <DataArray type='Float32' Name='mirrorParticlePos' NumberOfComponents='3' format='ascii'>\n");
+//		fprintf(fp,"        <DataArray type='Float32' Name='mirrorParticlePos' NumberOfComponents='3' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {
 //			if(particleBC[i] == surface || particleType[i] == wall)
 //			fprintf(fp,"%f %f %f ",(float)mirrorParticlePos[i*3],(float)mirrorParticlePos[i*3+1],(float)mirrorParticlePos[i*3+2]);
 //		}
 //		fprintf(fp,"\n        </DataArray>\n");
 
-// 		fprintf(fp,"        <DataArray type='Int32' Name='NearWall' format='ascii'>\n");
+//		fprintf(fp,"        <DataArray type='Int32' Name='NearWall' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {
 //			if(particleBC[i] == surface || particleType[i] == wall)
 //				fprintf(fp,"%d ",particleNearWall[i]);
 //		}
-// 		fprintf(fp,"\n        </DataArray>\n");
+//		fprintf(fp,"\n        </DataArray>\n");
 
- 		//fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
+		//fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
 		//for(int i=0; i<numParticles; i++) {
 		//	fprintf(fp,"%f %f %f ",(float)Fwall[i*3],(float)Fwall[i*3+1],(float)Fwall[i*3+2]);
 		//}
- 		//fprintf(fp,"\n        </DataArray>\n");
-// 		fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
+		//fprintf(fp,"\n        </DataArray>\n");
+//		fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {
 //			fprintf(fp,"%f %f %f ",(float)forceWall[i*3],(float)forceWall[i*3+1],(float)forceWall[i*3+2]);
 //		}
 //		fprintf(fp,"\n        </DataArray>\n");
-// 		fprintf(fp,"        <DataArray type='Float32' Name='DIV' format='ascii'>\n");
+//		fprintf(fp,"        <DataArray type='Float32' Name='DIV' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)velDivergence[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
+//		fprintf(fp,"\n        </DataArray>\n");
 //		fprintf(fp,"        <DataArray type='Float32' Name='Di' format='ascii'>\n");
 //		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)diffusiveTerm[i]);}
-// 		fprintf(fp,"\n        </DataArray>\n");
+//		fprintf(fp,"\n        </DataArray>\n");
 
- 		fprintf(fp,"        <DataArray type='Int32' Name='nearMeshType' format='ascii'>\n");
+		fprintf(fp,"        <DataArray type='Int32' Name='nearMeshType' format='ascii'>\n");
 		for(int i=0; i<numParticles; i++)
 		{
 			if(particleBC[i] == surface || particleType[i] == wall)
 				fprintf(fp,"%d ",nearMeshType[i]);
 		}
- 		fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"\n        </DataArray>\n");
 
- 		//fprintf(fp,"        <DataArray type='Float32' Name='numNeighborsSurfaceParticles' format='ascii'>\n");
+		//fprintf(fp,"        <DataArray type='Float32' Name='numNeighborsSurfaceParticles' format='ascii'>\n");
 		//for(int i=0; i<numParticles; i++) {fprintf(fp,"%f ",(float)numNeighborsSurfaceParticles[i]);}
- 		//fprintf(fp,"\n        </DataArray>\n");
- 	
- 	}
+		//fprintf(fp,"\n        </DataArray>\n");
+	
+	}
 
-  	fprintf(fp,"      </PointData>\n");
+	fprintf(fp,"      </PointData>\n");
 
-  	// Cells
- 	fprintf(fp,"      <Cells>\n");
- 	fprintf(fp,"        <DataArray type='Int32' Name='connectivity' format='ascii'>\n");
+	// Cells
+	fprintf(fp,"      <Cells>\n");
+	fprintf(fp,"        <DataArray type='Int32' Name='connectivity' format='ascii'>\n");
 	for(int i=0, ii = 0; i<numParticles; i++)
 	{
 		if(particleBC[i] == surface || particleType[i] == wall)
@@ -7850,8 +7879,8 @@ void MpsParticle::writeVtuAsciiFreeSurface()
 			ii++;
 		}
 	}
- 	fprintf(fp,"\n        </DataArray>\n");
- 	fprintf(fp,"        <DataArray type='Int32' Name='offsets' format='ascii'>\n");
+	fprintf(fp,"\n        </DataArray>\n");
+	fprintf(fp,"        <DataArray type='Int32' Name='offsets' format='ascii'>\n");
 	for(int i=0, ii=0; i<numParticles; i++)
 	{
 		if(particleBC[i] == surface || particleType[i] == wall)
@@ -7860,8 +7889,8 @@ void MpsParticle::writeVtuAsciiFreeSurface()
 			ii++;
 		}
 	}
- 	fprintf(fp,"\n        </DataArray>\n");
- 	fprintf(fp,"        <DataArray type='UInt8' Name='types' format='ascii'>\n");
+	fprintf(fp,"\n        </DataArray>\n");
+	fprintf(fp,"        <DataArray type='UInt8' Name='types' format='ascii'>\n");
 	for(int i=0; i<numParticles; i++)
 	{
 		if(particleBC[i] == surface || particleType[i] == wall)
@@ -7869,11 +7898,11 @@ void MpsParticle::writeVtuAsciiFreeSurface()
 			fprintf(fp,"1 ");
 		}
 	}
- 	fprintf(fp,"\n        </DataArray>\n");
- 	fprintf(fp,"      </Cells>\n");
- 	fprintf(fp,"    </Piece>\n");
- 	fprintf(fp,"  </UnstructuredGrid>\n");
- 	fprintf(fp,"</VTKFile>\n");
+	fprintf(fp,"\n        </DataArray>\n");
+	fprintf(fp,"      </Cells>\n");
+	fprintf(fp,"    </Piece>\n");
+	fprintf(fp,"  </UnstructuredGrid>\n");
+	fprintf(fp,"</VTKFile>\n");
 
 	fclose(fp);
 }

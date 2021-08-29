@@ -12,7 +12,8 @@
 			"neigh":			false,
 			"deviation":		false,
 			"concentration":	false,
-			"auxiliar":			false
+			"auxiliar":			false,
+			"non_newtonian":	true
 		},
 		"output_TXT": {
 			// (true or false) (NOT WORKING !!)

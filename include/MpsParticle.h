@@ -265,6 +265,7 @@ public:
 // 	bool outputDeviation;
 // 	bool outputConcentration;
 // 	bool outputAuxiliar;
+// 	bool outputNonNewtonian;
 	
 // 	// Flags of type
  	bool femOn;
@@ -518,6 +519,7 @@ private:
 	bool outputDeviation;
 	bool outputConcentration;
 	bool outputAuxiliar;
+	bool outputNonNewtonian;
 	
 	// Flags of type
 	// bool femOn;
