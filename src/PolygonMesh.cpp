@@ -167,8 +167,13 @@ void PolygonMesh::updateForcedPolygonMesh(double *nodeX, double *nodeY, double *
 	double f1 = -300.0*time*time*time + 75.0*time*time;
 	double f2 = -300.0*(time+dt)*(time+dt)*(time+dt) + 75.0*(time+dt)*(time+dt);
 	double vel = (f2 - f1)/dt;
+	double tfim = 0.13;
 
-	if(time > 0.13)
+	// Yilmaz 2021
+	//double vel = 2.0;
+	//double tfim = 0.15;
+
+	if(time > tfim)
 		vel = 0.0;
 
 	velVWall[0] = 0.0;
@@ -237,13 +242,13 @@ void PolygonMesh::initWijnNeigh(int dim, int wijType, double lo, double reL, dou
 					if(rij2 == 0.0) continue;
 					double rij = sqrt(rij2);
 					if(wijType == 0)
-						n0 += reS/rij - 1;
+						n0 += reS/rij - 1.0;
 					if(wijType == 1)
-						n0 += reS/rij + rij/reS - 2;
+						n0 += reS/rij + rij/reS - 2.0;
 					if(wijType == 2)
 						n0 += reS/rij - rij/reS;
 					if(wijType == 3)
-						n0 += pow(1-rij/reS,3.0);
+						n0 += pow(1.0-rij/reS,3.0);
 				}
 			}}
 			// Particle number density due wall
@@ -292,13 +297,13 @@ void PolygonMesh::initWijnNeigh(int dim, int wijType, double lo, double reL, dou
 					if(rij2 == 0.0) continue;
 					double rij = sqrt(rij2);
 					if(wijType == 0)
-						n0 += reS/rij - 1;
+						n0 += reS/rij - 1.0;
 					if(wijType == 1)
-						n0 += reS/rij + rij/reS - 2;
+						n0 += reS/rij + rij/reS - 2.0;
 					if(wijType == 2)
 						n0 += reS/rij - rij/reS;
 					if(wijType == 3)
-						n0 += pow(1-rij/reS,3.0);
+						n0 += pow(1.0-rij/reS,3.0);
 				}
 			}}}
 			// Particle number density due wall
@@ -447,10 +452,10 @@ void PolygonMesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, 
 				wallPos[i*3  ] = xWall.row(i).x();
 				wallPos[i*3+1] = xWall.row(i).y();
 				wallPos[i*3+2] = xWall.row(i).z();
-				// Mirror particle position Xm = Xi + 2*(Xw - Xi)
-				mirrorPos[i*3  ] = Pos[i*3  ] + 2*(wallPos[i*3  ] - Pos[i*3  ]);
-				mirrorPos[i*3+1] = Pos[i*3+1] + 2*(wallPos[i*3+1] - Pos[i*3+1]);
-				mirrorPos[i*3+2] = Pos[i*3+2] + 2*(wallPos[i*3+2] - Pos[i*3+2]);
+				// Mirror particle position Xm = Xi + 2.0*(Xw - Xi)
+				mirrorPos[i*3  ] = Pos[i*3  ] + 2.0*(wallPos[i*3  ] - Pos[i*3  ]);
+				mirrorPos[i*3+1] = Pos[i*3+1] + 2.0*(wallPos[i*3+1] - Pos[i*3+1]);
+				mirrorPos[i*3+2] = Pos[i*3+2] + 2.0*(wallPos[i*3+2] - Pos[i*3+2]);
 
 				// Set if particle is close to a deformable, forced or fixed mesh
 				if(msh_id == fem_id)
@@ -482,8 +487,8 @@ void PolygonMesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, 
 	}
   // Point on the mesh
 //  wall_temporary_position = xWall.transpose();
-  // Mirror particle position Xm = Xi + 2*(Xw - Xi)
-//  mirror_temporary_position = temporary_position + 2*(wall_temporary_position - temporary_position);
+  // Mirror particle position Xm = Xi + 2.0*(Xw - Xi)
+//  mirror_temporary_position = temporary_position + 2.0*(wall_temporary_position - temporary_position);
   // Vector distance between i and wall
 //  r_iwall = temporary_position - wall_temporary_position;
 /*

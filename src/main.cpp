@@ -284,6 +284,14 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 		//part->meanNeighFluidPnd();
 
 		// Update type of particle
+		if(part->freeSurfType == calcBCType::PND_ARC) {
+			// Compute fluid particles normal vector
+			part->calcNormalParticles();
+			if(part->wallType == boundaryWallType::POLYGON) {
+				// Contribution to normal vector due polygon wall
+				part->calcWallNormalParticles();
+			}
+		}
 		part->updateParticleBC();
 		// Pressure calculation
 		if(part->mpsType == calcPressType::EXPLICIT) {

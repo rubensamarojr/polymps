@@ -41,7 +41,8 @@ enum calcPNDType {
 
 enum calcBCType {
 	PND_NEIGH = 0,
-	PND_NPCD = 1
+	PND_NPCD = 1,
+	PND_ARC = 2
 };
 
 enum slipBC {
@@ -122,7 +123,7 @@ public:
 	void setInitialPndNumberOfNeigh();
 	// Update particle ID's in buckets
 	void updateBuckets();
-	// Acceleration due to Laplacian of viscosity and gravity
+	// Acceleration due to Laplacian of velocity and gravity
 	void calcViscosityGravity();
 	// Prediction of pressure gradient
 	void predictionPressGradient();
@@ -226,6 +227,8 @@ public:
 	// An accurate and stable multiphase moving particle semi-implicit method based on a corrective matrix for all particle interaction models
 	// https://onlinelibrary.wiley.com/doi/full/10.1002/nme.5844
 	void calcNormalParticles();
+	// Normal vector on the fluid (Polygon wall)
+	void calcWallNormalParticles();
 	// Shifting technique (Polygon wall)
 	void calcWallShifting();
 	// Concentration and Gradient of concentration
@@ -353,10 +356,12 @@ public:
 // 	double repForceCoefMitsume;			// Wall coefficent repulsive force (10000/100000) (500000) (Mitusme)
 // 	double repForceCoefLennardJones;	// Wall coefficent repulsive force (1-10) (Lennard-Jones)
 // 	double repForceCoefMonaghanKajtar;	// Wall coefficent repulsive force (1-10) (Monaghan-Kajtar)
-// 	double EPS_RE;			// 
+// 	double EPS_RE;			//
+	int freeSurfType;		// Free surface condition
 // 	double pndThreshold;	// Surface threshold PND (2D - 0.97/ 3D - 0.93)
 // 	double neighThreshold;	// Surface threshold Neighbors
-// 	double npcdThreshold;	// NPCD threshold
+// 	double npcdThreshold;	// Surface threshold NPCD
+// 	double thetaThreshold;	// Surface threshold ARC
 // 	double collisionRatio;	// Collision ratio
 // 	double distLimitRatio;	// Coefficient of distance which does not allow any further access between particles (0.9)
  	int collisionType;		// Particle collision type (PC or DPC)
@@ -606,10 +611,11 @@ private:
 	double repForceCoefLennardJones;	// Wall coefficent repulsive force (1-10) (Lennard-Jones)
 	double repForceCoefMonaghanKajtar;	// Wall coefficent repulsive force (1-10) (Monaghan-Kajtar)
 	double EPS_RE;			// 
-	int freeSurfType;		// Free surface condition
+	//int freeSurfType;		// Free surface condition
 	double pndThreshold;	// Surface threshold PND (2D - 0.97/ 3D - 0.93)
 	double neighThreshold;	// Surface threshold Neighbors
-	double npcdThreshold;	// NPCD threshold
+	double npcdThreshold;	// Surface threshold NPCD
+	double thetaThreshold;	// Surface threshold ARC
 	// int collisionType;		// Particle collision type (PC or DPC)
 	double collisionRatio;	// Collision ratio
 	double distLimitRatio;	// Coefficient of distance which does not allow any further access between particles (0.9)

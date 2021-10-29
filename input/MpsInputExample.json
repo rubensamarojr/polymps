@@ -172,11 +172,12 @@
 			"eps_re":		0.01
 		},
 		"free_surface_threshold": {
-			"type": 	1,		// 0: PND + Neigh, 1: PND + NPCD
+			"type": 	1,		// 0: PND + Neigh, 1: PND + NPCD, 2: PND + Neigh + ARC
 			"pnd": 		0.98,	// 2D: 0.97; 3D: 0.98
 			"neigh":	0.85,	// 0.85
-			// NPCD >= 0.2
-			"NPCD": 	0.2
+			"NPCD": 	0.2,	// NPCD >= 0.2
+			// ARC >= 30
+			"ARC":		45.0
 		},
 		"particle_collision": {
 			"type": 			1,		// 0: PC, 1: DPC
