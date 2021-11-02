@@ -408,7 +408,7 @@ int PolygonMesh::interpolateNumNeighWall(double re, double x, bool extrapolate)
 
 // Find closest point on the mesh from a particle and corrects the PND and number of neighboors
 // Libigl
-void PolygonMesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int gst, int msh_id, int sta_id, 
+void PolygonMesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int msh_id, int sta_id, 
 	int fem_id, int frw_id, double *Pos, double *wallPos, double *mirrorPos, double *riw2, int *elementID, int *meshID, double *NormalWall) {
 //  double *Pos, double *wallPos, double *mirrorPos, double *riw2, double *niw, int *numNeighw, int *elementID, std::vector<int>& particlesNearMesh) {
 
@@ -416,7 +416,6 @@ void PolygonMesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, 
 #pragma omp parallel for
 	for(int i=0;i<nP;i++) {
 //		if(Typ[i] == fld) {
-		if(Typ[i] != gst) {
 //		temporary_position.row(i).x() = Pos[i*3  ];
 //		temporary_position.row(i).y() = Pos[i*3+1];
 //		temporary_position.row(i).z() = Pos[i*3+2];
@@ -424,7 +423,6 @@ void PolygonMesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, 
 			temporary_position(i,0) = Pos[i*3  ];
 			temporary_position(i,1) = Pos[i*3+1];
 			temporary_position(i,2) = Pos[i*3+2];
-		}
 	}
 
 	//position_transpose = position.transpose(); // Tanaka - position instead of temporary !!!
@@ -442,47 +440,44 @@ void PolygonMesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, 
 #pragma omp parallel for
 	for(int i=0;i<nP;i++) {
 //    if(Typ[i] == fld) {
-		if(Typ[i] != gst) {
+		// Squared distance of particle to triangle mesh
+		if(sqr_distance(i) < riw2[i]) {
 
-			// Squared distance of particle to triangle mesh
-			if(sqr_distance(i) < riw2[i]) {
+			riw2[i] = sqr_distance(i);
+			// Point on the mesh
+			wallPos[i*3  ] = xWall.row(i).x();
+			wallPos[i*3+1] = xWall.row(i).y();
+			wallPos[i*3+2] = xWall.row(i).z();
+			// Mirror particle position Xm = Xi + 2.0*(Xw - Xi)
+			mirrorPos[i*3  ] = Pos[i*3  ] + 2.0*(wallPos[i*3  ] - Pos[i*3  ]);
+			mirrorPos[i*3+1] = Pos[i*3+1] + 2.0*(wallPos[i*3+1] - Pos[i*3+1]);
+			mirrorPos[i*3+2] = Pos[i*3+2] + 2.0*(wallPos[i*3+2] - Pos[i*3+2]);
 
-				riw2[i] = sqr_distance(i);
-				// Point on the mesh
-				wallPos[i*3  ] = xWall.row(i).x();
-				wallPos[i*3+1] = xWall.row(i).y();
-				wallPos[i*3+2] = xWall.row(i).z();
-				// Mirror particle position Xm = Xi + 2.0*(Xw - Xi)
-				mirrorPos[i*3  ] = Pos[i*3  ] + 2.0*(wallPos[i*3  ] - Pos[i*3  ]);
-				mirrorPos[i*3+1] = Pos[i*3+1] + 2.0*(wallPos[i*3+1] - Pos[i*3+1]);
-				mirrorPos[i*3+2] = Pos[i*3+2] + 2.0*(wallPos[i*3+2] - Pos[i*3+2]);
+			// Set if particle is close to a deformable, forced or fixed mesh
+			if(msh_id == fem_id)
+				meshID[i] = 1;
+			else if (msh_id == frw_id)
+				meshID[i] = 2;
+			else
+				meshID[i] = 0;
 
-				// Set if particle is close to a deformable, forced or fixed mesh
-				if(msh_id == fem_id)
-					meshID[i] = 1;
-				else if (msh_id == frw_id)
-					meshID[i] = 2;
-				else
-					meshID[i] = 0;
+			// If is deformable mesh
+			// Element ID
+			if(msh_id == fem_id)
+				elementID[i] = element_indice(i);
+			// Polygon normal
+			int eID = element_indice(i);
+			//NormalWall[i*3  ] = meshNormals(eID,0);
+			//NormalWall[i*3+1] = meshNormals(eID,1);
+			//NormalWall[i*3+2] = meshNormals(eID,2);
 
-				// If is deformable mesh
-				// Element ID
-				if(msh_id == fem_id)
-					elementID[i] = element_indice(i);
-				// Polygon normal
-				int eID = element_indice(i);
-				//NormalWall[i*3  ] = meshNormals(eID,0);
-				//NormalWall[i*3+1] = meshNormals(eID,1);
-				//NormalWall[i*3+2] = meshNormals(eID,2);
+			NormalWall[i*3  ] = NNormals(eID,0);
+			NormalWall[i*3+1] = NNormals(eID,1);
+			NormalWall[i*3+2] = NNormals(eID,2);
 
-				NormalWall[i*3  ] = NNormals(eID,0);
-				NormalWall[i*3+1] = NNormals(eID,1);
-				NormalWall[i*3+2] = NNormals(eID,2);
-
-				//printf("i:%d riw2:%lf\n", i,riw2[i]);
-				//  double dd = sqrt((pow(0.5*(Pos[i*3]-mirrorPos[i*3]),2)+pow(0.5*(Pos[i*3+1]-mirrorPos[i*3+1]),2)+pow(0.5*(Pos[i*3+2]-mirrorPos[i*3+2]),2)));
-				//  printf("dist: %f %f\n",sqrt(sqr_distance(i)), dd);
-			}
+			//printf("i:%d riw2:%lf\n", i,riw2[i]);
+			//  double dd = sqrt((pow(0.5*(Pos[i*3]-mirrorPos[i*3]),2)+pow(0.5*(Pos[i*3+1]-mirrorPos[i*3+1]),2)+pow(0.5*(Pos[i*3+2]-mirrorPos[i*3+2]),2)));
+			//  printf("dist: %f %f\n",sqrt(sqr_distance(i)), dd);
 		}
 	}
   // Point on the mesh
@@ -506,34 +501,32 @@ void PolygonMesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, 
 	  niw[i] = 0;
 	  numNeighw[i] = 0;
 //      if(Typ[i] == fld) {
-	  if(Typ[i] != gst) {
-		// Compute wall weight function Z(xij)
-		//if(i==6) {
-		//  printf("x:%lf y:%lf z:%lf x:%lf y:%lf z:%lf\n", Pos[i*3],Pos[i*3+1],Pos[i*3+2],mirrorPos[i*3],mirrorPos[i*3+1],mirrorPos[i*3+2]);
-		//  double dd = sqrt((pow(0.5*(Pos[i*3]-mirrorPos[i*3]),2)+pow(0.5*(Pos[i*3+1]-mirrorPos[i*3+1]),2)+pow(0.5*(Pos[i*3+2]-mirrorPos[i*3+2]),2)));
-		//  printf("dist: %f %f\n",sqrt(sqr_distance(i)), dd);
-		//}
+	// Compute wall weight function Z(xij)
+	//if(i==6) {
+	//  printf("x:%lf y:%lf z:%lf x:%lf y:%lf z:%lf\n", Pos[i*3],Pos[i*3+1],Pos[i*3+2],mirrorPos[i*3],mirrorPos[i*3+1],mirrorPos[i*3+2]);
+	//  double dd = sqrt((pow(0.5*(Pos[i*3]-mirrorPos[i*3]),2)+pow(0.5*(Pos[i*3+1]-mirrorPos[i*3+1]),2)+pow(0.5*(Pos[i*3+2]-mirrorPos[i*3+2]),2)));
+	//  printf("dist: %f %f\n",sqrt(sqr_distance(i)), dd);
+	//}
 //        double x2 = sqr_distance(i);
-		double x2 = riw2[i];
-		//printf("x: %f \n",x);
-		if (x2 < reL2) {
+	double x2 = riw2[i];
+	//printf("x: %f \n",x);
+	if (x2 < reL2) {
 
-		  double x = sqrt(x2);
-		  double reS = sqrt(reS2);
-		  // Add particle ID
-		  particlesNearMesh_private.push_back(i);
-		  //particlesNearMesh.push_back(i);
+	  double x = sqrt(x2);
+	  double reS = sqrt(reS2);
+	  // Add particle ID
+	  particlesNearMesh_private.push_back(i);
+	  //particlesNearMesh.push_back(i);
 
-		  // PND due wall weight Z(xij)
-		  niw[i] = interpolateWij(reS, x, true);
-		  //printf("niw: %f\n",niw[i]);
-		  // PND due wall weight Z(xij) to Gradient
-		  //niw2[i] = interpolateWij(dim, 2, re, x, true);
+	  // PND due wall weight Z(xij)
+	  niw[i] = interpolateWij(reS, x, true);
+	  //printf("niw: %f\n",niw[i]);
+	  // PND due wall weight Z(xij) to Gradient
+	  //niw2[i] = interpolateWij(dim, 2, re, x, true);
 
-		  double reL = sqrt(reL2);
-		  // Number of neighboors due wall (numNeighWall)
-		  numNeighw[i] = interpolateNumNeighWall(reL, x, true);
-		  }
+	  double reL = sqrt(reL2);
+	  // Number of neighboors due wall (numNeighWall)
+	  numNeighw[i] = interpolateNumNeighWall(reL, x, true);
 	  }
 	}
 #pragma omp critical
@@ -543,7 +536,7 @@ void PolygonMesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, 
 }
 
 // Update vector with ID of particles near the mesh
-void PolygonMesh::updateParticlesNearPolygonMesh(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int gst, double *riw2,
+void PolygonMesh::updateParticlesNearPolygonMesh(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, double *riw2,
 	double *niw, int *numNeighw, std::vector<int>& particlesNearMesh, bool *Nw) {
 
 	particlesNearMesh.clear();
@@ -559,59 +552,57 @@ void PolygonMesh::updateParticlesNearPolygonMesh(double reS2, double reL2, int n
 			niw[i] = 0;
 			numNeighw[i] = 0;
 		//      if(Typ[i] == fld) {
-			if(Typ[i] != gst) {
-				double x2 = riw2[i];
-				if (x2 < reL2) {
-					Nw[i]=true; // Only to show particles near polygon
-					double x = sqrt(x2);
-					double reS = sqrt(reS2);
-					// Add particle ID
-					particlesNearMesh_private.push_back(i);
-					//particlesNearMesh.push_back(i);
+			double x2 = riw2[i];
+			if (x2 < reL2) {
+				Nw[i]=true; // Only to show particles near polygon
+				double x = sqrt(x2);
+				double reS = sqrt(reS2);
+				// Add particle ID
+				particlesNearMesh_private.push_back(i);
+				//particlesNearMesh.push_back(i);
 
-					// PND due wall weight Z(xij)
-					niw[i] = interpolateWij(reS, x, true);
-					//printf("niw: %f\n",niw[i]);
-					// PND due wall weight Z(xij) to Gradient
-					//niw2[i] = interpolateWij(dim, 2, re, x, true);
+				// PND due wall weight Z(xij)
+				niw[i] = interpolateWij(reS, x, true);
+				//printf("niw: %f\n",niw[i]);
+				// PND due wall weight Z(xij) to Gradient
+				//niw2[i] = interpolateWij(dim, 2, re, x, true);
 
-					double reL = sqrt(reL2);
-					// Number of neighboors due wall (numNeighWall)
-					numNeighw[i] = interpolateNumNeighWall(reL, x, true);
+				double reL = sqrt(reL2);
+				// Number of neighboors due wall (numNeighWall)
+				numNeighw[i] = interpolateNumNeighWall(reL, x, true);
 
-					/*
-					if (dim == 2) {
-						// Mesh surface tangent of wall particle
-						if (x <= 0.1403*re)
-							numNeighw[i] += 8;
-						else if (x <= 0.3466*re)
-							numNeighw[i] += 6;
-						else if (x <= 0.6*re)
-							numNeighw[i] += 4;
-						else if (x <= 1.3466*re)
-							numNeighw[i] += 3;
-						else if (x <= 1.6*re)
-							numNeighw[i] += 1;
-					}
-					else {
-						// Mesh surface tangent of wall particle
-						if (x <= 0.0524*re)
-							numNeighw[i] += 22;
-						else if (x <= 0.1403*re)
-							numNeighw[i] += 18;
-						else if (x <= 0.3466*re)
-							numNeighw[i] += 14;
-						else if (x <= 0.6*re)
-							numNeighw[i] += 10;
-						else if (x <= 1.0524*re)
-							numNeighw[i] += 9;
-						else if (x <= 1.3466*re)
-							numNeighw[i] += 5;
-						else if (x <= 1.6*re)
-							numNeighw[i] += 1;
-					}
-					*/
+				/*
+				if (dim == 2) {
+					// Mesh surface tangent of wall particle
+					if (x <= 0.1403*re)
+						numNeighw[i] += 8;
+					else if (x <= 0.3466*re)
+						numNeighw[i] += 6;
+					else if (x <= 0.6*re)
+						numNeighw[i] += 4;
+					else if (x <= 1.3466*re)
+						numNeighw[i] += 3;
+					else if (x <= 1.6*re)
+						numNeighw[i] += 1;
 				}
+				else {
+					// Mesh surface tangent of wall particle
+					if (x <= 0.0524*re)
+						numNeighw[i] += 22;
+					else if (x <= 0.1403*re)
+						numNeighw[i] += 18;
+					else if (x <= 0.3466*re)
+						numNeighw[i] += 14;
+					else if (x <= 0.6*re)
+						numNeighw[i] += 10;
+					else if (x <= 1.0524*re)
+						numNeighw[i] += 9;
+					else if (x <= 1.3466*re)
+						numNeighw[i] += 5;
+					else if (x <= 1.6*re)
+						numNeighw[i] += 1;
+				}
+				*/
 			}
 		}
 #pragma omp critical

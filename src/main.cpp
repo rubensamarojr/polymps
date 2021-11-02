@@ -145,7 +145,7 @@ void initMesh(MpsParticle* part, PolygonMesh* mesh){
 		// Positions of wall and mirror particles
 		for(int me = 0; me < part->numOfMeshs; me++) {
 			mesh[me].closestPointPNDBoundaryAABB(part->reS2, part->reL2, part->numParticles, part->weightType, 
-				part->particleType, part->fluid, part->ghost, me, meshType::FIXED, meshType::DEFORMABLE, 
+				part->particleType, part->fluid, me, meshType::FIXED, meshType::DEFORMABLE, 
 				meshType::FORCED, part->pos, part->particleAtWallPos, part->mirrorParticlePos, 
 				part->distParticleWall2, part->elementID, part->nearMeshType, part->polygonNormal);
 			// mesh[me].closestPointPNDBoundaryAABB(reS2, reL2, nP, WGT_TYP, 
@@ -158,7 +158,7 @@ void initMesh(MpsParticle* part, PolygonMesh* mesh){
 		// }
 		// Only call once since the distance riw2 have the values from all the meshes (Rigid, Deformable and Forced)
 		mesh[0].updateParticlesNearPolygonMesh(part->reS2, part->reL2, part->numParticles, part->weightType, 
-			part->particleType, part->fluid, part->ghost, part->distParticleWall2, part->pndWallContribution,
+			part->particleType, part->fluid, part->distParticleWall2, part->pndWallContribution,
 			part->numNeighWallContribution, partNearMesh, part->particleNearWall);
 		// NPCD PND due polygon wall
 		part->calcWallNPCD();
@@ -234,20 +234,20 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 			// Positions of wall and mirror particles
 			for(int me = 0; me < part->numOfMeshs; me++) {
 				mesh[me].closestPointPNDBoundaryAABB(part->reS2, part->reL2, part->numParticles, part->weightType, part->particleType, 
-					part->fluid, part->ghost, me, meshType::FIXED, meshType::DEFORMABLE, meshType::FORCED, part->pos, part->particleAtWallPos, part->mirrorParticlePos, 
+					part->fluid, me, meshType::FIXED, meshType::DEFORMABLE, meshType::FORCED, part->pos, part->particleAtWallPos, part->mirrorParticlePos, 
 					part->distParticleWall2, part->elementID, part->nearMeshType, part->polygonNormal);
 				// mesh[me].closestPointPNDBoundaryAABB(part->reS2, part->reL2, part->numParticles, part->weightType, part->particleType, 
-				// 		part->fluid, part->ghost, part->pos, part->particleAtWallPos, part->mirrorParticlePos, part->distParticleWall2, 
+				// 		part->fluid, part->pos, part->particleAtWallPos, part->mirrorParticlePos, part->distParticleWall2, 
 				// 		part->pndWallContribution, part->numNeighWallContribution, elementID, partNearMesh);
 			}
 			partNearMesh.clear();
 			//for(int me = 0; me < part->numOfMeshs; me++) {
 			//	mesh[me].updateParticlesNearPolygonMesh(part->reS2, part->reL2, part->numParticles, part->weightType, part->particleType, 
-			//	part->fluid, part->ghost, part->distParticleWall2, part->pndWallContribution, part->numNeighWallContribution, partNearMesh);
+			//	part->fluid, part->distParticleWall2, part->pndWallContribution, part->numNeighWallContribution, partNearMesh);
 			//}
 			// Only call once since the distance riw2 have the values from all the meshes
 			mesh[0].updateParticlesNearPolygonMesh(part->reS2, part->reL2, part->numParticles, part->weightType, part->particleType, part->fluid, 
-				part->ghost, part->distParticleWall2, part->pndWallContribution, part->numNeighWallContribution, partNearMesh, part->particleNearWall);
+				part->distParticleWall2, part->pndWallContribution, part->numNeighWallContribution, partNearMesh, part->particleNearWall);
 
 			// NPCD PND due polygon wall
 			part->calcWallNPCD();
@@ -400,6 +400,9 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 		// for(int i=0; i<part->numParticles; i++) {
 		// 	part->pressAverage[i] += part->press[i];
 		// }
+
+		// Verify if particle is out of the domain
+		part->checkParticleOutDomain();
 
 		// Update iteration and time
 		part->numOfIterations++;

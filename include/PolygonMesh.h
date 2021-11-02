@@ -48,11 +48,11 @@ public:
 	// For Triangle meshes, the AABB tree is used to accelerate point-mesh closest point queries given a 
 	// mesh (V,F) and a query point P (Particle) find the closest point C in the triangle face or vertex
 	// Libigl
-	void closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int gst, int msh_id, int sta_id,
+	void closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int msh_id, int sta_id,
 	int fem_id, int frw_id, double *Pos, double *wallPos, double *mirrorPos, double *riw2, int *elementID, int *meshID, double *NormalWall);
 	//	double *wallPos, double *mirrorPos, double *riw2, double *niw, int *numNeighw, int *elementID, std::vector<int>& particlesNearMesh);
 	// Update vector with ID of particles near the mesh
-	void updateParticlesNearPolygonMesh(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int gst, double *riw2,
+	void updateParticlesNearPolygonMesh(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, double *riw2,
 	double *niw, int *numNeighw, std::vector<int>& meshParticlesNeighbors, bool *Nw);
 	// Correction of velocity due the wall gradient of pressure
 	void correctVelocityWallPressure(const double timer);

@@ -113,7 +113,7 @@ public:
 	// Derivate of weight function
 	double delWeight(const double dst, const double re, const int wijType);
 	// Verify if particle is out of domain
-	void checkParticleOutDomain(const int i);
+	void checkParticleOutDomain();
 	// Allocation of buckets
 	// Murotani et al., 2015. Performance improvements of differential operators code for MPS method on GPU.
 	void allocateBuckets();
