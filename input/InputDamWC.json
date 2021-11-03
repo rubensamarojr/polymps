@@ -156,6 +156,7 @@
 			"adj_vel_A":	0.9
 		},
 		// Particle number density
+		// IMPORTANT: Use 0 to incompressible MPS and 2 to Explicit or Weakly compressible MPS
 		"pnd": {
 			"type":			2,			// 0: ni = Soma(wij); 1: ni = soma(PNDj)*wij/soma(wij); 2: ni = Div(u)i + Diffusive term
 			"diffusive_coeff": 	0.35
@@ -163,6 +164,7 @@
 		"wall_repulsive_force": {
 			"type": 		2,			// 0: Harada, 1: Mitsume; 2: Lennard-Jones; 3: Monaghan-Kajtar
 			"re":			0.5,		// Influence radius (0.5)
+			"maxVel":		4.0,		// Expected maximum velocity (e.g., dam-break wave front = 2*sqrt(gravity*WaterHeight))
 			"coefficient": {
 				"Mitsume":	40000000.0,
 				// Range for L-J and M-K ~ [1,10]
@@ -172,11 +174,13 @@
 			"eps_re":		0.01
 		},
 		"free_surface_threshold": {
-			"type": 	1,		// 0: PND + Neigh, 1: PND + NPCD
+			"type": 	2,		// 0: PND + Neigh, 1: PND + NPCD, 2: PND + Neigh + Normal + ARC
 			"pnd": 		0.98,	// 2D: 0.97; 3D: 0.98
 			"neigh":	0.85,	// 0.85
-			// NPCD >= 0.2
-			"NPCD": 	0.2
+			"NPCD": 	0.2,	// NPCD >= 0.2
+			"ARC":		45.0,	// ARC >= 30
+			// Normal >= 0.1
+			"normal":	0.2
 		},
 		"particle_collision": {
 			"type": 			1,		// 0: PC, 1: DPC

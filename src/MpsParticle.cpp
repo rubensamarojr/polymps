@@ -133,7 +133,7 @@ double MpsParticle::weight(const double dst, const double re, const int wijType)
 		case 0:
 			return re/dst - 1.0;
 		case 1:
-			return re/dst + dst/re - 2;
+			return re/dst + dst/re - 2.0;
 		case 2:
 			return re/dst - dst/re;
 		case 3:
@@ -149,7 +149,7 @@ double MpsParticle::weightGradient(const double dst, const double re, const int 
 		case 0:
 			return re/dst - 1.0;
 		case 1:
-			return re/dst + dst/re - 2;
+			return re/dst + dst/re - 2.0;
 		case 2:
 			return re/dst - dst/re;
 		case 3:
@@ -330,6 +330,7 @@ void MpsParticle::readInputFile() {
 	diffusiveCoef = je.at("numerical").at("pnd").value("diffusive_coeff", 0.35);
 	repulsiveForceType = je.at("numerical").at("wall_repulsive_force").value("type", 2);
 	reRepulsiveForce = je.at("numerical").at("wall_repulsive_force").value("re", 0.5);
+	expectMaxVelocity = je.at("numerical").at("wall_repulsive_force").value("maxVel", 6.0);
 	repForceCoefMitsume = je.at("numerical").at("wall_repulsive_force").at("coefficient").value("Mitsume", 40000000.0);
 	repForceCoefLennardJones = je.at("numerical").at("wall_repulsive_force").at("coefficient").value("Lennard-Jones", 2.0);
 	repForceCoefMonaghanKajtar = je.at("numerical").at("wall_repulsive_force").at("coefficient").value("Monaghan-Kajtar", 1.0);
@@ -339,6 +340,7 @@ void MpsParticle::readInputFile() {
 	neighThreshold = je.at("numerical").at("free_surface_threshold").value("neigh", 0.85);
 	npcdThreshold = je.at("numerical").at("free_surface_threshold").value("NPCD", 0.20);
 	thetaThreshold = je.at("numerical").at("free_surface_threshold").value("ARC", 45.0);
+	normThreshold = je.at("numerical").at("free_surface_threshold").value("normal", 0.1);
 	collisionType = je.at("numerical").at("particle_collision").value("type", 0);
 	collisionRatio = je.at("numerical").at("particle_collision").value("ratio", 0.20);
 	distLimitRatio = je.at("numerical").at("particle_collision").value("dist_limit_ratio", 0.85);
@@ -442,6 +444,7 @@ void MpsParticle::readInputFile() {
 	// cout << "diffusiveCoef: " << diffusiveCoef << " | ";
 	// cout << "repulsiveForceType: " << repulsiveForceType << " | ";
 	// cout << "reRepulsiveForce: " << reRepulsiveForce << " | ";
+	// cout << "expectMaxVelocity: " << expectMaxVelocity << " | ";
 	// cout << "repForceCoefMitsume" << repForceCoefMitsume << " | ";
 	// cout << "repForceCoefLennardJones: " << repForceCoefLennardJones << " | ";
 	// cout << "repForceCoefMonaghanKajtar: " << repForceCoefMonaghanKajtar << endl;
@@ -451,6 +454,7 @@ void MpsParticle::readInputFile() {
 	// cout << "neighThreshold: " << neighThreshold << " | ";
 	// cout << "npcdThreshold: " << npcdThreshold << " | ";
 	// cout << "thetaThreshold: " << thetaThreshold << " | ";
+	// cout << "normThreshold: " << normThreshold << " | ";
 	// cout << "collisionType: " << collisionType << " | ";
 	// cout << "collisionRatio: " << collisionRatio << " | ";
 	// cout << "distLimitRatio: " << distLimitRatio << " | ";
@@ -762,7 +766,7 @@ void MpsParticle::allocateBuckets() {
 	reL = partDist*reL;								// Influence radius large
 	reS2 = reS*reS;									// Influence radius small to square
 	reL2 = reL*reL;									// Influence radius large to square
-	EPS_RE = EPS_RE*reS2/4;
+	EPS_RE = EPS_RE*reS2/4.0;
 	reRepulsiveForce = partDist*reRepulsiveForce;	// Influence radius for repulsive force
 	bucketSide = reL*(1.0+cflNumber);				// Length of one bucket side
 	bucketSide2 = bucketSide*bucketSide;
@@ -829,6 +833,14 @@ void MpsParticle::setParameters() {
 	timeCurrent = 0.0;												// Simulation time
 	velMax = 0.0;													// Maximum flow velocity
 	CFLcurrent = cflNumber;											// Current Courant number
+	betaPnd = pndThreshold*pndSmallZero;							// Surface cte PND
+	betaNeigh = neighThreshold*numNeighZero;						// Surface cte Neighbors
+	delta2 = npcdThreshold*npcdThreshold*partDist*partDist;			// Surface cte NPCD 
+	thetaArc = thetaThreshold/180.0*3.14159265;						// Surface cte theta ARC
+	hThreshold2 = 1.33*1.33*partDist*partDist;						// Surface cte radius ARC
+	dstThreshold2 = 2.0*hThreshold2;								// Surface cte radius ARC
+	normThreshold2 = normThreshold*normThreshold;					// Surface cte Normal
+	
 	// cout << "lo: " << partDist << " m, dt: " << timeStep << " s, PND0Small: " << pndSmallZero << " PND0Large: " << pndLargeZero << " PND0Grad: " << pndGradientZero << " lambda: " << lambdaZero << std::endl;
 }
 
@@ -1120,6 +1132,9 @@ void MpsParticle::predictionPressGradient() {
 
 // Prediction of pressure gradient (Polygon wall)
 void MpsParticle::predictionWallPressGradient() {
+	// Maximum velocity is the minimum of the computed and expected maximum velocities
+	double maxVelocity = min(velMax, expectMaxVelocity);
+	double velMax2 = maxVelocity*maxVelocity;
 	//int nPartNearMesh = partNearMesh.size();
 	//printf(" Mesh %d \n", nPartNearMesh);
 	// Loop only for particles near mesh
@@ -1311,7 +1326,6 @@ void MpsParticle::predictionWallPressGradient() {
 				// Simulating Free Surface Flows with SPH
 				// https://doi.org/10.1006/jcph.1994.1034
 				if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > 1.0e-8) {
-					double velMax2 = velMax*velMax;
 					double R1 = (reRepulsiveForce/normaliwSqrt)*(reRepulsiveForce/normaliwSqrt);
 					double R2 = R1*R1;
 					double wijRep = (repForceCoefLennardJones*velMax2/normaliwSqrt)*(R2-R1)*RHO[i];
@@ -1324,7 +1338,6 @@ void MpsParticle::predictionWallPressGradient() {
 				// SPH particle boundary forces for arbitrary boundaries 
 				// https://doi.org/10.1016/j.cpc.2009.05.008
 				if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > 1.0e-8) {
-					double velMax2 = velMax*velMax;
 					double W1 = (1.0+3.0/2.0*normaliwSqrt/(reRepulsiveForce));
 					double W2 = (1.0-normaliwSqrt/(reRepulsiveForce))*(1.0-normaliwSqrt/(reRepulsiveForce))*(1.0-normaliwSqrt/(reRepulsiveForce));
 					double wijRep = (repForceCoefMonaghanKajtar*velMax2/(normaliwSqrt - 0.0*partDist))*(1.0/8.0)*(W1)*(W2)*RHO[i];
@@ -1880,7 +1893,6 @@ void MpsParticle::calcPndnNeighNPCD() {
 
 		// Boundary particle verification based on relative distance and weight (NPCD)
 //		if(particleBC[i] == surface) {
-//			double delta2 = npcdThreshold*npcdThreshold*partDist*partDist;
 //			if(numNeigh[i] > 4 && npcdDeviation2[i] < delta2)
 //			{
 //				particleBC[i] = inner;
@@ -2394,7 +2406,7 @@ void MpsParticle::meanPndParticlesWallDummySurface() {
 				pndi[i] = acc[i*3];
 			else
 				pndi[i] = acc[i*3]/(acc[i*3+1]);
-//			pndi[i] = acc[i*3]/(acc[i*3+1] + 0.01*reS2/4);
+//			pndi[i] = acc[i*3]/(acc[i*3+1] + 0.01*reS2/4.0);
 		}
 //	}
 		acc[i*3]=0.0;acc[i*3+1]=0.0;
@@ -2592,13 +2604,6 @@ void MpsParticle::meanNeighFluidPnd() {
 
 // Update type of particle
 void MpsParticle::updateParticleBC() {
-	double betaPnd = pndThreshold*pndSmallZero;
-	double betaNeigh = neighThreshold*numNeighZero;
-	double delta2 = npcdThreshold*npcdThreshold*partDist*partDist;
-	double thetaArc = thetaThreshold/180.0*3.14159265;
-	double hThreshold2 = 1.33*1.33*partDist*partDist;
-	double dstThreshold2 = 2.0*hThreshold2;
-	double normThreshold2 = 0.1*0.1;
 // Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
 //#pragma omp parallel for schedule(dynamic,64)
 #pragma omp parallel for
@@ -3246,7 +3251,7 @@ void MpsParticle::solvePressurePoissonPndDivU() {
 		//				+ 2.0*density*velDivergence[i]/partDist;
 
 		// Sun et al., 2015. Modified MPS method for the 2D fluid structure interaction problem with free surface
-		////double dtPhysical = partDist/20;
+		////double dtPhysical = partDist/20.0;
 		//double dtPhysical = timeStep;
 		//double a1 = fabs(ni - pndSmallZero)/pndSmallZero;
 		//if ((pndSmallZero-ni)*velDivergence[i] > 1e-6)
@@ -4004,6 +4009,9 @@ void MpsParticle::calcPressGradient() {
 void MpsParticle::calcWallPressGradient() {
 	//int nPartNearMesh = partNearMesh.size();
 	double VolumeForce = pow(partDist,dim);
+	// Maximum velocity is the minimum of the computed and expected maximum velocities
+	double maxVelocity = min(velMax, expectMaxVelocity);
+	double velMax2 = maxVelocity*maxVelocity;
 	//printf(" Mesh %d \n", nPartNearMesh);
 	// Loop only for particles near mesh
 #pragma omp parallel for schedule(dynamic,64)
@@ -4208,7 +4216,6 @@ void MpsParticle::calcWallPressGradient() {
 			// Simulating Free Surface Flows with SPH
 			// https://doi.org/10.1006/jcph.1994.1034
 			if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > 1.0e-8) {
-				double velMax2 = velMax*velMax;
 				double R1 = (reRepulsiveForce/normaliwSqrt)*(reRepulsiveForce/normaliwSqrt);
 				double R2 = R1*R1;
 				double wijRep = (repForceCoefLennardJones*velMax2/normaliwSqrt)*(R2-R1)*RHO[i];
@@ -4221,7 +4228,6 @@ void MpsParticle::calcWallPressGradient() {
 			// SPH particle boundary forces for arbitrary boundaries 
 			// https://doi.org/10.1016/j.cpc.2009.05.008
 			if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > 1.0e-8) {
-				double velMax2 = velMax*velMax;
 				double W1 = (1.0+3.0/2.0*normaliwSqrt/(reRepulsiveForce));
 				double W2 = (1.0-normaliwSqrt/(reRepulsiveForce))*(1.0-normaliwSqrt/(reRepulsiveForce))*(1.0-normaliwSqrt/(reRepulsiveForce));
 				double wijRep = (repForceCoefMonaghanKajtar*velMax2/(normaliwSqrt - 0.0*partDist))*(1.0/8.0)*(W1)*(W2)*RHO[i];
@@ -4534,7 +4540,7 @@ void MpsParticle::calcViscosityInteractionVal() {
 				ky = int((posYi - Ymin) / aa / partDist) + 1;
 
 				// Effective pressure = total pressure (from EOS) - hydrostatic pressure
-				//normal_stress=(BL[k]-posYi+DL/2)*(DNS_FL2)*9.81;	// normal_stress= Gama.H
+				//normal_stress=(BL[k]-posYi+DL/2.0)*(DNS_FL2)*9.81;	// normal_stress= Gama.H
 				normal_stress = (BL[kx][ky] - posZi + partDist / 2.0)*(DNS_FL2 - DNS_FL1)*9.81 - (velXi*velXi + velYi*velYi + velZi*velZi)*(DNS_FL2 - DNS_FL1) / 2.0;	// normal_stress= Gama.H
 
 				if(p_smooth[i] - (WL[kx][ky] - posZi)*DNS_FL1*9.81<0) p_smooth[i] = (WL[kx][ky] - posZi)*DNS_FL1*9.81;
@@ -4942,7 +4948,7 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 				ky = int((posYi - Ymin) / aa / partDist) + 1;
 
 				// Effective pressure = total pressure (from EOS) - hydrostatic pressure
-				//normal_stress=(BL[k]-posYi+DL/2)*(DNS_FL2)*9.81;	// normal_stress= Gama.H
+				//normal_stress=(BL[k]-posYi+DL/2.0)*(DNS_FL2)*9.81;	// normal_stress= Gama.H
 				normal_stress = (BL[kx][ky] - posZi + partDist / 2.0)*(DNS_FL2 - DNS_FL1)*9.81 - (velXi*velXi + velYi*velYi + velZi*velZi)*(DNS_FL2 - DNS_FL1) / 2.0;	// normal_stress= Gama.H
 
 				if(p_smooth[i] - (WL[kx][ky] - posZi)*DNS_FL1*9.81<0) p_smooth[i] = (WL[kx][ky] - posZi)*DNS_FL1*9.81;
@@ -5344,7 +5350,7 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 				ky = int((posYi - Ymin) / aa / partDist) + 1;
 
 				// Effective pressure = total pressure (from EOS) - hydrostatic pressure
-				//normal_stress=(BL[k]-posYi+DL/2)*(DNS_FL2)*9.81;	// normal_stress= Gama.H
+				//normal_stress=(BL[k]-posYi+DL/2.0)*(DNS_FL2)*9.81;	// normal_stress= Gama.H
 				normal_stress = (BL[kx][ky] - posZi + partDist / 2.0)*(DNS_FL2 - DNS_FL1)*9.81 - (velXi*velXi + velYi*velYi + velZi*velZi)*(DNS_FL2 - DNS_FL1) / 2.0;	// normal_stress= Gama.H
 
 				if(p_smooth[i] - (WL[kx][ky] - posZi)*DNS_FL1*9.81<0) p_smooth[i] = (WL[kx][ky] - posZi)*DNS_FL1*9.81;

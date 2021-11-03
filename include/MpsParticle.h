@@ -353,15 +353,24 @@ public:
 // 	double diffusiveCoef;	// Diffusive term coefficient
 // 	int repulsiveForceType;				// Wall repulsive force: Harada = 0, Mitsume = 1; Lennard-Jones = 2; Monaghan-Kajtar = 3
 // 	double reRepulsiveForce;			// Influence radius for repulsive force
+//	double expectMaxVelocity;			// Expected maximum velocity
 // 	double repForceCoefMitsume;			// Wall coefficent repulsive force (10000/100000) (500000) (Mitusme)
 // 	double repForceCoefLennardJones;	// Wall coefficent repulsive force (1-10) (Lennard-Jones)
 // 	double repForceCoefMonaghanKajtar;	// Wall coefficent repulsive force (1-10) (Monaghan-Kajtar)
 // 	double EPS_RE;			//
 	int freeSurfType;		// Free surface condition
 // 	double pndThreshold;	// Surface threshold PND (2D - 0.97/ 3D - 0.93)
-// 	double neighThreshold;	// Surface threshold Neighbors
-// 	double npcdThreshold;	// Surface threshold NPCD
-// 	double thetaThreshold;	// Surface threshold ARC
+//	double betaPnd;			// Surface cte PND
+//	double neighThreshold;	// Surface threshold Neighbors
+//	double betaNeigh;		// Surface cte Neighbors
+//	double npcdThreshold;	// Surface threshold NPCD
+//	double delta2;			// Surface cte NPCD
+//	double thetaThreshold;	// Surface threshold ARC
+//	double thetaArc;		// Surface cte theta ARC
+//	double hThreshold2;		// Surface cte radius ARC
+//	double dstThreshold2;	// Surface cte radius ARC
+//	double normThreshold;	// Surface threshold Normal
+//	double normThreshold2;	// Surface cte Normal
 // 	double collisionRatio;	// Collision ratio
 // 	double distLimitRatio;	// Coefficient of distance which does not allow any further access between particles (0.9)
  	int collisionType;		// Particle collision type (PC or DPC)
@@ -607,15 +616,24 @@ private:
 	double diffusiveCoef;	// Diffusive term coefficient
 	int repulsiveForceType;				// Wall repulsive force: Harada = 0, Mitsume = 1; Lennard-Jones = 2; Monaghan-Kajtar = 3
 	double reRepulsiveForce;			// Influence radius for repulsive force
+	double expectMaxVelocity;			// Expected maximum velocity
 	double repForceCoefMitsume;			// Wall coefficent repulsive force (10000/100000) (500000) (Mitusme)
 	double repForceCoefLennardJones;	// Wall coefficent repulsive force (1-10) (Lennard-Jones)
 	double repForceCoefMonaghanKajtar;	// Wall coefficent repulsive force (1-10) (Monaghan-Kajtar)
 	double EPS_RE;			// 
 	//int freeSurfType;		// Free surface condition
 	double pndThreshold;	// Surface threshold PND (2D - 0.97/ 3D - 0.93)
+	double betaPnd;			// Surface cte PND
 	double neighThreshold;	// Surface threshold Neighbors
+	double betaNeigh;		// Surface cte Neighbors
 	double npcdThreshold;	// Surface threshold NPCD
+	double delta2;			// Surface cte NPCD
 	double thetaThreshold;	// Surface threshold ARC
+	double thetaArc;		// Surface cte theta ARC
+	double hThreshold2;		// Surface cte radius ARC
+	double dstThreshold2;	// Surface cte radius ARC
+	double normThreshold;	// Surface threshold Normal
+	double normThreshold2;	// Surface cte Normal
 	// int collisionType;		// Particle collision type (PC or DPC)
 	double collisionRatio;	// Collision ratio
 	double distLimitRatio;	// Coefficient of distance which does not allow any further access between particles (0.9)
