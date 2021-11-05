@@ -26,9 +26,10 @@
 // Polygon walls class
 class PolygonMesh {
 public:
-
+	// Constructor declaration
 	PolygonMesh();
 	//PolygonMesh(const std::string& path, const int nP);
+	// Destructor declaration
 	virtual ~PolygonMesh();
 	// Initi elements of the class
 	void initPolygonMesh(const int nP);

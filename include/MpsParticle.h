@@ -76,8 +76,9 @@ enum colType {
 
 class MpsParticle {
 public:
-
+	// Constructor declaration
 	MpsParticle();
+	// Destructor declaration
 	virtual ~MpsParticle();
 	// Return time
 	double getTime();
@@ -106,6 +107,12 @@ public:
 	void writeVtuAsciiFreeSurface();
 	// Write header for vtu files
 	void writePvd();
+	// Return the bucket coordinates for particle "i"
+	void bucketCoordinates(int &bx, int &by, int &bz, 
+		const double rxi, const double ryi, const double rzi);
+	// Return the square distance between thwo particles "i" and "j"
+	void sqrDistBetweenParticles(const int j, const double rxi, const double ryi, 
+		const double rzi, double &rx, double &ry, double &rz, double &rij2);
 	// Weight function
 	double weight(const double dst, const double re, const int wijType);
 	// Weight function for gradient
@@ -187,9 +194,11 @@ public:
 	// Extrapolate pressure to inner particles near polygon walls
 	void extrapolatePressParticlesNearPolygonWall();
 	// Determinant of matrix
-	double detMatrix (double M11, double M12, double M13, double M21, double M22, double M23, double M31, double M32, double M33);
+	double detMatrix (double M11, double M12, double M13, double M21, double M22, double M23, 
+		double M31, double M32, double M33);
 	// Inverse of matrix
-	int inverseMatrix (int dim, double &M11, double &M12, double &M13, double &M21, double &M22, double &M23, double &M31, double &M32, double &M33);
+	int inverseMatrix (int dim, double &M11, double &M12, double &M13, double &M21, double &M22, double &M23, 
+		double &M31, double &M32, double &M33);
 	// Correction matrix
 	void correctionMatrix();
 	// Acceleration due to pressure gradient

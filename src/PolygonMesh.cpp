@@ -6,10 +6,11 @@
 #include <iostream>
 #include "PolygonMesh.h"
 
+// Constructor declaration
 PolygonMesh::PolygonMesh()
 {
 }
-
+// Destructor declaration
 PolygonMesh::~PolygonMesh()
 {
 }
