@@ -73,7 +73,12 @@ void MpsParticle::init() {
 	// Setting parameters
 	setParameters();
 	// Update particle ID's in buckets
-	updateBuckets();
+	if((int)dim == 2) {
+		updateBuckets2D();
+	}
+	else {
+		updateBuckets3D();
+	}
 }
 
 // Update variables at 0th step
@@ -184,9 +189,9 @@ double MpsParticle::delWeight(const double dst, const double re, const int wijTy
 		case 0:
 			return -re/(dst*dst);
 		case 1:
-			return -re/(dst*dst) + 1/re;
+			return -re/(dst*dst) + 1.0/re;
 		case 2:
-			return -re/(dst*dst) - 1/re;
+			return -re/(dst*dst) - 1.0/re;
 		case 3:
 			return -3.0/re*(1.0-dst/re)*(1.0-dst/re);
 		default:
@@ -321,7 +326,7 @@ void MpsParticle::readInputFile() {
 	VF_min = je.at("physical").at("rheological").at("volume_fraction").value("min", 0.25);
 	VF_max = je.at("physical").at("rheological").at("volume_fraction").value("max", 0.65);
 	// Numerical parameters
-	dim = je.at("numerical").value("dimension", 3);
+	dim = je.at("numerical").value("dimension", 3.0);
 	partDist = je.at("numerical").value("particle_dist", 0.01);
 	timeStep = je.at("numerical").value("time_step", 0.0005);
 	timeSimulation = je.at("numerical").value("final_time", 1.0);
@@ -386,6 +391,10 @@ void MpsParticle::readInputFile() {
 	domainMaxX = domainMaxX + partDist*3;
 	domainMaxY = domainMaxY + partDist*3;
 	domainMaxZ = domainMaxZ + partDist*3;
+	if((int)dim == 2) {	
+		domainMinZ = 0.0;
+		domainMaxZ = 0.0;
+	}
 
 	// Number of meshs
 	numOfRigidMesh = 0;	numOfDeformableMesh = 0;	numOfForcedMesh = 0;
@@ -697,6 +706,7 @@ void MpsParticle::allocateBuckets() {
 	numBucketsX = (int)((domainMaxX - domainMinX)*invBucketSide) + 3;		// Number of buckets in the x direction in the analysis domain
 	numBucketsY = (int)((domainMaxY - domainMinY)*invBucketSide) + 3;		// Number of buckets in the y direction in the analysis domain
 	numBucketsZ = (int)((domainMaxZ - domainMinZ)*invBucketSide) + 3;		// Number of buckets in the z direction in the analysis domain
+	if((int)dim == 2) {	numBucketsZ = 1; }
 	numBucketsXY = numBucketsX*numBucketsY;
 	numBucketsXYZ = numBucketsX*numBucketsY*numBucketsZ;					// Number of buckets in analysis area
 	
@@ -712,7 +722,7 @@ void MpsParticle::setParameters() {
 	int lmax = ceil(reL/partDist) + 2;
 	int flag2D = 0;
 	int flag3D = 1;
-	if(dim == 2) {
+	if((int)dim == 2) {
 		flag2D = 1;
 		flag3D = 0;
 	}
@@ -747,6 +757,7 @@ void MpsParticle::setParameters() {
 	coeffPPESource = relaxPND/(timeStep*timeStep*pndSmallZero);		// Coefficient used to PPE source term
 	Dns[partType::FLUID]=densityFluid;			Dns[partType::WALL]=densityWall;
 	invDns[partType::FLUID]=1.0/densityFluid;	invDns[partType::WALL]=1.0/densityWall;
+	invPartDist = 1.0/partDist;
 	distCollisionLimit = partDist*distLimitRatio;					// A distance that does not allow further access between particles
 	distCollisionLimit2 = distCollisionLimit*distCollisionLimit;
 	restitutionCollision = 1.0 + collisionRatio;
@@ -763,7 +774,8 @@ void MpsParticle::setParameters() {
 	dstThreshold2 = 2.0*hThreshold2;								// Surface cte radius ARC
 	normThreshold2 = normThreshold*normThreshold;					// Surface cte Normal
 	
-	// cout << "lo: " << partDist << " m, dt: " << timeStep << " s, PND0Small: " << pndSmallZero << " PND0Large: " << pndLargeZero << " PND0Grad: " << pndGradientZero << " lambda: " << lambdaZero << std::endl;
+	//cout << "lo: " << partDist << " m, dt: " << timeStep << " s, PND0Small: " << pndSmallZero << " PND0Large: " << pndLargeZero << " PND0Grad: " << pndGradientZero << " lambda: " << lambdaZero << std::endl;
+	//cout << "bPnd: " << betaPnd << "betaNeigh: " << betaNeigh << endl;
 }
 
 // Set initial PND and number of neighbors
@@ -778,7 +790,8 @@ void MpsParticle::setInitialPndNumberOfNeigh() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -802,9 +815,9 @@ void MpsParticle::setInitialPndNumberOfNeigh() {
 							double wS = weight(dst, reS, weightType);
 							pndi[i] += wS;
 
-							npcdDeviation[i*3  ] += v0ij*wS/partDist;
-							npcdDeviation[i*3+1] += v1ij*wS/partDist;
-							npcdDeviation[i*3+2] += v2ij*wS/partDist;
+							npcdDeviation[i*3  ] += v0ij*wS*invPartDist;
+							npcdDeviation[i*3+1] += v1ij*wS*invPartDist;
+							npcdDeviation[i*3+2] += v2ij*wS*invPartDist;
 							wSum += wS;
 						}
 					}
@@ -945,7 +958,24 @@ void MpsParticle::checkParticleOutDomain() {
 }
 
 // Update particle ID's in buckets
-void MpsParticle::updateBuckets() {
+// Update particle ID's in buckets
+void MpsParticle::updateBuckets2D() {
+	for(int i=0; i<numBucketsXY ;i++) 	{	firstParticleInBucket[i] = -1;	}
+	for(int i=0; i<numBucketsXY ;i++) 	{	lastParticleInBucket[i] = -1;	}
+	for(int i=0; i<numParticles ;i++) 	{	nextParticleInSameBucket[i] = -1;	}
+	for(int i=0; i<numParticles; i++) {
+		if(particleType[i] == ghost) continue;
+		int ix = (int)((pos[i*3  ] - domainMinX)*invBucketSide) + 1;
+		int iy = (int)((pos[i*3+1] - domainMinY)*invBucketSide) + 1;
+		int ib = iy*numBucketsX + ix;
+		int j = lastParticleInBucket[ib];
+		lastParticleInBucket[ib] = i;
+		if(j == -1) {	firstParticleInBucket[ib] = i;	}
+		else 		{	nextParticleInSameBucket[j] = i;}
+	}
+}
+
+void MpsParticle::updateBuckets3D() {
 	for(int i=0; i<numBucketsXYZ ;i++) 	{	firstParticleInBucket[i] = -1;	}
 	for(int i=0; i<numBucketsXYZ ;i++) 	{	lastParticleInBucket[i] = -1;	}
 	for(int i=0; i<numParticles ;i++) 	{	nextParticleInSameBucket[i] = -1;	}
@@ -975,7 +1005,8 @@ void MpsParticle::calcViscosityGravity() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -1047,8 +1078,9 @@ void MpsParticle::predictionPressGradient() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
 		if(gradientType == 0 || gradientType == 2) {
-			for(int jz=iz-1;jz<=iz+1;jz++) {
+			for(int jz=minZ;jz<=maxZ;jz++) {
 			for(int jy=iy-1;jy<=iy+1;jy++) {
 			for(int jx=ix-1;jx<=ix+1;jx++) {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -1074,7 +1106,7 @@ void MpsParticle::predictionPressGradient() {
 				}
 			}}}
 		}
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -1170,8 +1202,9 @@ void MpsParticle::predictionWallPressGradient() {
 
 			int ix, iy, iz;
 			bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
+			int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
 			if(gradientType == 0 || gradientType == 2) {
-				for(int jz=iz-1;jz<=iz+1;jz++) {
+				for(int jz=minZ;jz<=maxZ;jz++) {
 				for(int jy=iy-1;jy<=iy+1;jy++) {
 				for(int jx=ix-1;jx<=ix+1;jx++) {
 					int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -1196,7 +1229,7 @@ void MpsParticle::predictionWallPressGradient() {
 					}
 				}}}
 			}
-			for(int jz=iz-1;jz<=iz+1;jz++) {
+			for(int jz=minZ;jz<=maxZ;jz++) {
 			for(int jy=iy-1;jy<=iy+1;jy++) {
 			for(int jx=ix-1;jx<=ix+1;jx++) {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -1389,7 +1422,8 @@ void MpsParticle::checkParticleCollisions() {
 			
 			int ix, iy, iz;
 			bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-			for(int jz=iz-1;jz<=iz+1;jz++) {
+			int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+			for(int jz=minZ;jz<=maxZ;jz++) {
 			for(int jy=iy-1;jy<=iy+1;jy++) {
 			for(int jx=ix-1;jx<=ix+1;jx++) {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -1506,7 +1540,8 @@ void MpsParticle::checkDynamicParticleCollisions() {
 
 			int ix, iy, iz;
 			bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-			for(int jz=iz-1;jz<=iz+1;jz++) {
+			int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+			for(int jz=minZ;jz<=maxZ;jz++) {
 			for(int jy=iy-1;jy<=iy+1;jy++) {
 			for(int jx=ix-1;jx<=ix+1;jx++) {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -1540,8 +1575,8 @@ void MpsParticle::checkDynamicParticleCollisions() {
 							double Wij = 0.0;
 							if(dst > 1.0e-8 && dst < partDist)
 							{
-								double w1 = 1.0 - dst/partDist;
-								double w2 = 4.0*dst/partDist + 1;
+								double w1 = 1.0 - dst*invPartDist;
+								double w2 = 4.0*dst*invPartDist + 1;
 								Wij = w1*w1*w1*w1*w2;
 								//Wij = w1*w1;
 							}
@@ -1572,7 +1607,7 @@ void MpsParticle::checkDynamicParticleCollisions() {
 							else
 							{
 								// Dynamic background pressure
-								double pmax = 2/3*DNS_FL1*gravityY*0.3;
+								double pmax = 2.0/3.0*DNS_FL1*gravityY*0.3;
 								double pmin = DNS_FL1*gravityY*partDist;
 								double ptil = max(min(lambdaCollision*fabs(press[i]+press[j]), lambdaCollision*pmax), pmin);
 								double pb = ptil*chi;
@@ -1686,7 +1721,8 @@ void MpsParticle::calcWallNPCD() {
 
 			int ix, iy, iz;
 			bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-			for(int jz=iz-1;jz<=iz+1;jz++) {
+			int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+			for(int jz=minZ;jz<=maxZ;jz++) {
 			for(int jy=iy-1;jy<=iy+1;jy++) {
 			for(int jx=ix-1;jx<=ix+1;jx++) {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -1747,7 +1783,8 @@ void MpsParticle::calcPndnNeighNPCD() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -1767,20 +1804,20 @@ void MpsParticle::calcPndnNeighNPCD() {
 					if(j != i) {
 						numNeigh[i] += 1;
 						//double dst = sqrt(dst2);
-						//double wL = weight(dst, reL/partDist, weightType);
-						//npcdDeviation[i*3  ] += v0*wL/partDist;
-						//npcdDeviation[i*3+1] += v1*wL/partDist;
-						//npcdDeviation[i*3+2] += v2*wL/partDist;
+						//double wL = weight(dst, reL*invPartDist, weightType);
+						//npcdDeviation[i*3  ] += v0*wL*invPartDist;
+						//npcdDeviation[i*3+1] += v1*wL*invPartDist;
+						//npcdDeviation[i*3+2] += v2*wL*invPartDist;
 						//wSum += wL;
 						if(dstij2 < reS2) {
 							double dst = sqrt(dstij2);
 							double wS = weight(dst, reS, weightType);
 							ni += wS;
-							dst = dst/partDist;
-							wS = weight(dst, reS/partDist, weightType);
-							npcdDeviation[i*3  ] += v0ij*wS/partDist;
-							npcdDeviation[i*3+1] += v1ij*wS/partDist;
-							npcdDeviation[i*3+2] += v2ij*wS/partDist;
+							dst = dst*invPartDist;
+							wS = weight(dst, reS*invPartDist, weightType);
+							npcdDeviation[i*3  ] += v0ij*wS*invPartDist;
+							npcdDeviation[i*3+1] += v1ij*wS*invPartDist;
+							npcdDeviation[i*3+2] += v2ij*wS*invPartDist;
 							wSum += wS;
 						}
 					}
@@ -1887,7 +1924,8 @@ void MpsParticle::calcPndDiffusiveTerm() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -1915,13 +1953,13 @@ void MpsParticle::calcPndDiffusiveTerm() {
 							// coeffViscMultiphase = 2.0*dim/(pndLargeZero*lambdaZero);
 	//						double pgh = RHO[i]*(gravityX*v0+gravityY*v1+gravityZ*v2);
 	//						double CB = RHO[i]*soundSpeed*soundSpeed/gamma;
-	//						double nijH = pndSmallZero*(pow((pgh+1)/CB,1/gamma)-1);
-	//						double nijH = pndSmallZero*(pow((pgh)/CB+1,1/gamma)-1);
+	//						double nijH = pndSmallZero*(pow((pgh+1.0)/CB,1.0/gamma)-1.0);
+	//						double nijH = pndSmallZero*(pow((pgh)/CB+1.0,1.0/gamma)-1.0);
 	//
-						//	pow( ( pgh + 1 ) / CB - 1 , 1  )
+						//	pow( ( pgh + 1.0 ) / CB - 1.0 , 1.0  )
 
 							//double CB = soundSpeed*soundSpeed*RHO[i];
-							//double nijH = pndSmallZero*((PijH+1)/CB-1);
+							//double nijH = pndSmallZero*((PijH+1.0)/CB-1);
 	//						if(isnan(nijH) == 0)
 	//							Di += C1*(nj - ni - nijH)*wL;
 	//						else
@@ -2051,7 +2089,8 @@ void MpsParticle::calcWallSlipPndDiffusiveTerm() {
 
 			int ix, iy, iz;
 			bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-			for(int jz=iz-1;jz<=iz+1;jz++) {
+			int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+			for(int jz=minZ;jz<=maxZ;jz++) {
 			for(int jy=iy-1;jy<=iy+1;jy++) {
 			for(int jx=ix-1;jx<=ix+1;jx++) {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -2179,7 +2218,8 @@ void MpsParticle::calcWallNoSlipPndDiffusiveTerm() {
 
 			int ix, iy, iz;
 			bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-			for(int jz=iz-1;jz<=iz+1;jz++) {
+			int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+			for(int jz=minZ;jz<=maxZ;jz++) {
 			for(int jy=iy-1;jy<=iy+1;jy++) {
 			for(int jx=ix-1;jx<=ix+1;jx++) {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -2284,7 +2324,8 @@ void MpsParticle::meanPndParticlesWallDummySurface() {
 			
 			int ix, iy, iz;
 			bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-			for(int jz=iz-1;jz<=iz+1;jz++) {
+			int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+			for(int jz=minZ;jz<=maxZ;jz++) {
 			for(int jy=iy-1;jy<=iy+1;jy++) {
 			for(int jx=ix-1;jx<=ix+1;jx++) {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -2354,7 +2395,8 @@ void MpsParticle::meanWallPnd() {
 
 			int ix, iy, iz;
 			bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-			for(int jz=iz-1;jz<=iz+1;jz++) {
+			int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+			for(int jz=minZ;jz<=maxZ;jz++) {
 			for(int jy=iy-1;jy<=iy+1;jy++) {
 			for(int jx=ix-1;jx<=ix+1;jx++) {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -2410,7 +2452,8 @@ void MpsParticle::meanPnd() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -2467,7 +2510,8 @@ void MpsParticle::meanNeighFluidPnd() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -2520,7 +2564,8 @@ void MpsParticle::updateParticleBC() {
 	
 	int ix, iy, iz;
 	bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-	for(int jz=iz-1;jz<=iz+1;jz++) {
+	int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+	for(int jz=minZ;jz<=maxZ;jz++) {
 	for(int jy=iy-1;jy<=iy+1;jy++) {
 	for(int jx=ix-1;jx<=ix+1;jx++) {
 		int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -2540,20 +2585,20 @@ void MpsParticle::updateParticleBC() {
 			if(j != i) {
 				numNeigh[i] += 1;
 				//double dst = sqrt(dstij2);
-				//double wL = weight(dst, reL/partDist, weightType);
-				//npcdDeviation[i*3  ] += v0ij*wL/partDist;
-				//npcdDeviation[i*3+1] += v1ij*wL/partDist;
-				//npcdDeviation[i*3+2] += v2ij*wL/partDist;
+				//double wL = weight(dst, reL*invPartDist, weightType);
+				//npcdDeviation[i*3  ] += v0ij*wL*invPartDist;
+				//npcdDeviation[i*3+1] += v1ij*wL*invPartDist;
+				//npcdDeviation[i*3+2] += v2ij*wL*invPartDist;
 				//wSum += wL;
 				if(dstij2 < reS2) {
 					double dst = sqrt(dstij2);
 					double wS = weight(dst, reS, weightType);
 					ni += wS;
-					dst = dst/partDist;
-					wS = weight(dst, reS/partDist, weightType);;
-					npcdDeviation[i*3  ] += v0ij*wS/partDist;
-					npcdDeviation[i*3+1] += v1ij*wS/partDist;
-					npcdDeviation[i*3+2] += v2ij*wS/partDist;
+					dst = dst*invPartDist;
+					wS = weight(dst, reS*invPartDist, weightType);;
+					npcdDeviation[i*3  ] += v0ij*wS*invPartDist;
+					npcdDeviation[i*3+1] += v1ij*wS*invPartDist;
+					npcdDeviation[i*3+2] += v2ij*wS*invPartDist;
 					wSum += wS;
 			}}}
 			j = nextParticleInSameBucket[j];
@@ -2692,7 +2737,8 @@ void MpsParticle::updateParticleBC() {
 
 				int ix, iy, iz;
 				bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-				for(int jz=iz-1;jz<=iz+1;jz++) {
+				int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+				for(int jz=minZ;jz<=maxZ;jz++) {
 				for(int jy=iy-1;jy<=iy+1;jy++) {
 				for(int jx=ix-1;jx<=ix+1;jx++) {
 					int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -2926,7 +2972,7 @@ void MpsParticle::calcPressWCMPS() {
 void MpsParticle::solvePressurePoissonPnd() {
 
 	using T = Eigen::Triplet<double>;
-	double lap_r = reL/partDist;
+	double lap_r = reL*invPartDist;
 	int n_size = (int)(pow(lap_r * 2, dim)); // maximum number of neighbors
 	Eigen::SparseMatrix<double> matA(numParticles, numParticles); // declares a column-major sparse matrix type of double
 	sourceTerm.resize(numParticles); // Resizing a dynamic-size matrix
@@ -2948,7 +2994,8 @@ void MpsParticle::solvePressurePoissonPnd() {
 
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -3037,7 +3084,7 @@ void MpsParticle::solvePressurePoissonPnd() {
 void MpsParticle::solvePressurePoissonPndDivU() {
 
 	using T = Eigen::Triplet<double>;
-	double lap_r = reL/partDist;
+	double lap_r = reL*invPartDist;
 	int n_size = (int)(pow(lap_r * 2, dim)); // maximum number of neighbors
 	Eigen::SparseMatrix<double> matA(numParticles, numParticles); // declares a column-major sparse matrix type of double
 	sourceTerm.resize(numParticles); // Resizing a dynamic-size matrix
@@ -3059,7 +3106,8 @@ void MpsParticle::solvePressurePoissonPndDivU() {
 
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -3116,7 +3164,7 @@ void MpsParticle::solvePressurePoissonPndDivU() {
 		//sourceTerm(i) = - coeffPPESource*density*(ni - pndSmallZero) + (1.0-relaxPND)*density*velDivergence[i]/timeStep;
 		sourceTerm(i) = - coeffPPESource*density*(pndki[i] - pndSmallZero) + (1.0-relaxPND)*density*velDivergence[i]/timeStep;
 		//sourceTerm(i) = - 4.0*density*(ni - pndSmallZero)/(partDist*partDist*pndSmallZero) 
-		//				+ 2.0*density*velDivergence[i]/partDist;
+		//				+ 2.0*density*velDivergence[i]*invPartDist;
 
 		// Sun et al., 2015. Modified MPS method for the 2D fluid structure interaction problem with free surface
 		////double dtPhysical = partDist/20.0;
@@ -3228,7 +3276,8 @@ void MpsParticle::calcVelDivergence() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -3313,7 +3362,8 @@ void MpsParticle::calcWallSlipVelDivergence() {
 
 			int ix, iy, iz;
 			bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-			for(int jz=iz-1;jz<=iz+1;jz++) {
+			int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+			for(int jz=minZ;jz<=maxZ;jz++) {
 			for(int jy=iy-1;jy<=iy+1;jy++) {
 			for(int jx=ix-1;jx<=ix+1;jx++) {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -3433,7 +3483,8 @@ void MpsParticle::calcWallNoSlipVelDivergence() {
 
 			int ix, iy, iz;
 			bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-			for(int jz=iz-1;jz<=iz+1;jz++) {
+			int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+			for(int jz=minZ;jz<=maxZ;jz++) {
 			for(int jy=iy-1;jy<=iy+1;jy++) {
 			for(int jx=ix-1;jx<=ix+1;jx++) {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -3504,7 +3555,8 @@ void MpsParticle::extrapolatePressParticlesWallDummy() {
 			
 			int ix, iy, iz;
 			bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-			for(int jz=iz-1;jz<=iz+1;jz++) {
+			int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+			for(int jz=minZ;jz<=maxZ;jz++) {
 			for(int jy=iy-1;jy<=iy+1;jy++) {
 			for(int jx=ix-1;jx<=ix+1;jx++) {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -3560,7 +3612,8 @@ void MpsParticle::extrapolatePressParticlesNearPolygonWall() {
 			
 			int ix, iy, iz;
 			bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-			for(int jz=iz-1;jz<=iz+1;jz++) {
+			int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+			for(int jz=minZ;jz<=maxZ;jz++) {
 			for(int jy=iy-1;jy<=iy+1;jy++) {
 			for(int jx=ix-1;jx<=ix+1;jx++) {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -3682,7 +3735,8 @@ void MpsParticle::correctionMatrix() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -3702,9 +3756,10 @@ void MpsParticle::correctionMatrix() {
 				if(j != i) {
 					double dst = sqrt(dstij2);
 					double wS = weightGradient(dst, reS, weightType);
-					correcMatrixRow1[i*3  ] += wS*v0ij*v0ij/dstij2;	correcMatrixRow1[i*3+1] += wS*v0ij*v1ij/dstij2;	correcMatrixRow1[i*3+2] += wS*v0ij*v2ij/dstij2;
-					correcMatrixRow2[i*3  ] += wS*v1ij*v0ij/dstij2;	correcMatrixRow2[i*3+1] += wS*v1ij*v1ij/dstij2;	correcMatrixRow2[i*3+2] += wS*v1ij*v2ij/dstij2;
-					correcMatrixRow3[i*3  ] += wS*v2ij*v0ij/dstij2;	correcMatrixRow3[i*3+1] += wS*v2ij*v1ij/dstij2;	correcMatrixRow3[i*3+2] += wS*v2ij*v2ij/dstij2;
+					double invDstij2 = 1.0/dstij2;
+					correcMatrixRow1[i*3  ] += wS*v0ij*v0ij*invDstij2;	correcMatrixRow1[i*3+1] += wS*v0ij*v1ij*invDstij2;	correcMatrixRow1[i*3+2] += wS*v0ij*v2ij*invDstij2;
+					correcMatrixRow2[i*3  ] += wS*v1ij*v0ij*invDstij2;	correcMatrixRow2[i*3+1] += wS*v1ij*v1ij*invDstij2;	correcMatrixRow2[i*3+2] += wS*v1ij*v2ij*invDstij2;
+					correcMatrixRow3[i*3  ] += wS*v2ij*v0ij*invDstij2;	correcMatrixRow3[i*3+1] += wS*v2ij*v1ij*invDstij2;	correcMatrixRow3[i*3+2] += wS*v2ij*v2ij*invDstij2;
 				}}
 				j = nextParticleInSameBucket[j];
 				if(j == -1) break;
@@ -3717,7 +3772,7 @@ void MpsParticle::correctionMatrix() {
 		correcMatrixRow3[i*3  ] *= -coeffPressGrad;	correcMatrixRow3[i*3+1] *= -coeffPressGrad;	correcMatrixRow3[i*3+2] *= -coeffPressGrad;
 
 		// Inverse of the matrix
-		int rcv = inverseMatrix(dim,correcMatrixRow1[i*3],correcMatrixRow1[i*3+1],correcMatrixRow1[i*3+2],correcMatrixRow2[i*3],correcMatrixRow2[i*3+1],correcMatrixRow2[i*3+2],correcMatrixRow3[i*3],correcMatrixRow3[i*3+1],correcMatrixRow3[i*3+2]);
+		int rcv = inverseMatrix((int)(dim),correcMatrixRow1[i*3],correcMatrixRow1[i*3+1],correcMatrixRow1[i*3+2],correcMatrixRow2[i*3],correcMatrixRow2[i*3+1],correcMatrixRow2[i*3+2],correcMatrixRow3[i*3],correcMatrixRow3[i*3+1],correcMatrixRow3[i*3+2]);
 
 //		if(i == 200) {
 //			printf("\n X %e %e %e ", correcMatrixRow1[i*3  ], correcMatrixRow1[i*3+1], correcMatrixRow1[i*3+2]);
@@ -3741,8 +3796,9 @@ void MpsParticle::calcPressGradient() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
 		if(gradientType == 0 || gradientType == 2) {
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -3766,7 +3822,8 @@ void MpsParticle::calcPressGradient() {
 				if(j == -1) break;
 			}
 		}}}}
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -3893,8 +3950,9 @@ void MpsParticle::calcWallPressGradient() {
 			
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
 		if(gradientType == 0 || gradientType == 2) {
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -3918,7 +3976,7 @@ void MpsParticle::calcWallPressGradient() {
 				if(j == -1) break;
 			}
 		}}}}
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -4072,7 +4130,8 @@ void MpsParticle::calcVolumeFraction()
 			
 			int ix, iy, iz;
 			bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-			for(int jz=iz-1;jz<=iz+1;jz++) {
+			int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+			for(int jz=minZ;jz<=maxZ;jz++) {
 			for(int jy=iy-1;jy<=iy+1;jy++) {
 			for(int jx=ix-1;jx<=ix+1;jx++) {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -4108,7 +4167,8 @@ void MpsParticle::calcVolumeFraction()
 			
 			int ix, iy, iz;
 			bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-			for(int jz=iz-1;jz<=iz+1;jz++) {
+			int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+			for(int jz=minZ;jz<=maxZ;jz++) {
 			for(int jy=iy-1;jy<=iy+1;jy++) {
 			for(int jx=ix-1;jx<=ix+1;jx++) {
 				int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -4161,8 +4221,8 @@ void MpsParticle::calcViscosityInteractionVal() {
 
 	// Search free-surface particles for each interval of aa = 2 particles in wall
 	int aa = 2, kx, ky;
-	int kx_max = int((Xmax - Xmin) / aa / partDist) + 1;
-	int ky_max = int((Ymax - Ymin) / aa / partDist) + 1;
+	int kx_max = int((Xmax - Xmin) / aa * invPartDist) + 1;
+	int ky_max = int((Ymax - Ymin) / aa * invPartDist) + 1;
 
 	double Uxx, Uxy, Uxz, Uyx, Uyy, Uyz, Uzx, Uzy, Uzz;
 /*
@@ -4202,8 +4262,8 @@ void MpsParticle::calcViscosityInteractionVal() {
 		if(particleType[i] == fluid) {
 			double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
 		
-			kx = int((posXi - Xmin) / aa / partDist) + 1;
-			ky = int((posYi - Ymin) / aa / partDist) + 1;
+			kx = int((posXi - Xmin) / aa * invPartDist) + 1;
+			ky = int((posYi - Ymin) / aa * invPartDist) + 1;
 
 
 			//if(posZi > BL[kx][ky] && Cv[i] > 0.5) { BL[kx][ky] = posZi; PS[kx][ky] = pnew[i]; }
@@ -4225,7 +4285,8 @@ void MpsParticle::calcViscosityInteractionVal() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -4248,18 +4309,19 @@ void MpsParticle::calcViscosityInteractionVal() {
 					double vec_ijx = vel[j*3  ]-velXi;	
 					double vec_ijy = vel[j*3+1]-velYi;	
 					double vec_ijz = vel[j*3+2]-velZi;
+					double invDstij2 = 1.0/dstij2;
 
-					sum1 += vec_ijx*v0ij*wS/dstij2;
-					sum2 += vec_ijx*v1ij*wS/dstij2;
-					sum3 += vec_ijx*v2ij*wS/dstij2;
+					sum1 += vec_ijx*v0ij*wS*invDstij2;
+					sum2 += vec_ijx*v1ij*wS*invDstij2;
+					sum3 += vec_ijx*v2ij*wS*invDstij2;
 					
-					sum4 += vec_ijy*v0ij*wS/dstij2;
-					sum5 += vec_ijy*v1ij*wS/dstij2;
-					sum6 += vec_ijy*v2ij*wS/dstij2;
+					sum4 += vec_ijy*v0ij*wS*invDstij2;
+					sum5 += vec_ijy*v1ij*wS*invDstij2;
+					sum6 += vec_ijy*v2ij*wS*invDstij2;
 					
-					sum7 += vec_ijz*v0ij*wS/dstij2;
-					sum8 += vec_ijz*v1ij*wS/dstij2;
-					sum9 += vec_ijz*v2ij*wS/dstij2;
+					sum7 += vec_ijz*v0ij*wS*invDstij2;
+					sum8 += vec_ijz*v1ij*wS*invDstij2;
+					sum9 += vec_ijz*v2ij*wS*invDstij2;
 					
 					sum10 += press[j]*wS;
 				}}
@@ -4338,8 +4400,8 @@ void MpsParticle::calcViscosityInteractionVal() {
 				// normal stress calculation (mechanical pressure)
 				p_rheo_new[i] = p_smooth[i];
 
-				kx = int((posXi - Xmin) / aa / partDist) + 1;
-				ky = int((posYi - Ymin) / aa / partDist) + 1;
+				kx = int((posXi - Xmin) / aa * invPartDist) + 1;
+				ky = int((posYi - Ymin) / aa * invPartDist) + 1;
 
 				// Effective pressure = total pressure (from EOS) - hydrostatic pressure
 				//normal_stress=(BL[k]-posYi+DL/2.0)*(DNS_FL2)*9.81;	// normal_stress= Gama.H
@@ -4496,8 +4558,8 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 
 	// Search free-surface particles for each interval of aa = 2 particles in wall
 	int aa = 2, kx, ky;
-	int kx_max = int((Xmax - Xmin) / aa / partDist) + 1;
-	int ky_max = int((Ymax - Ymin) / aa / partDist) + 1;
+	int kx_max = int((Xmax - Xmin) / aa * invPartDist) + 1;
+	int ky_max = int((Ymax - Ymin) / aa * invPartDist) + 1;
 
 	double Uxx, Uxy, Uxz, Uyx, Uyy, Uyz, Uzx, Uzy, Uzz;
 	double aUxx, aUxy, aUxz, aUyx, aUyy, aUyz, aUzx, aUzy, aUzz;
@@ -4538,8 +4600,8 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 		if(particleType[i] == fluid) {
 			double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
 			
-			kx = int((posXi - Xmin) / aa / partDist) + 1;
-			ky = int((posYi - Ymin) / aa / partDist) + 1;
+			kx = int((posXi - Xmin) / aa * invPartDist) + 1;
+			ky = int((posYi - Ymin) / aa * invPartDist) + 1;
 
 			//if(posZi>BL[kx][ky] && Cv[i]>0.5) { BL[kx][ky] = posZi; PS[kx][ky] = pnew[i]; }
 			if(posZi>BL[kx][ky] && Cv[i]>0.5) { BL[kx][ky] = posZi; PS[kx][ky] = press[i]; }
@@ -4595,7 +4657,8 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -4739,8 +4802,8 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 				// normal stress calculation (mehcanical pressure)
 				p_rheo_new[i] = p_smooth[i];
 
-				kx = int((posXi - Xmin) / aa / partDist) + 1;
-				ky = int((posYi - Ymin) / aa / partDist) + 1;
+				kx = int((posXi - Xmin) / aa * invPartDist) + 1;
+				ky = int((posYi - Ymin) / aa * invPartDist) + 1;
 
 				// Effective pressure = total pressure (from EOS) - hydrostatic pressure
 				//normal_stress=(BL[k]-posYi+DL/2.0)*(DNS_FL2)*9.81;	// normal_stress= Gama.H
@@ -4885,8 +4948,8 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 
 	// Search free-surface particles for each interval of aa = 2 particles in wall
 	int aa = 2, kx, ky;
-	int kx_max = int((Xmax - Xmin) / aa / partDist) + 1;
-	int ky_max = int((Ymax - Ymin) / aa / partDist) + 1;
+	int kx_max = int((Xmax - Xmin) / aa * invPartDist) + 1;
+	int ky_max = int((Ymax - Ymin) / aa * invPartDist) + 1;
 
 	double Uxx, Uxy, Uxz, Uyx, Uyy, Uyz, Uzx, Uzy, Uzz;
 /*
@@ -4926,8 +4989,8 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 		if(particleType[i] == fluid) {
 			double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
 		
-			kx = int((posXi - Xmin) / aa / partDist) + 1;
-			ky = int((posYi - Ymin) / aa / partDist) + 1;
+			kx = int((posXi - Xmin) / aa * invPartDist) + 1;
+			ky = int((posYi - Ymin) / aa * invPartDist) + 1;
 
 			//if(posZi>BL[kx][ky] && Cv[i]>0.5) { BL[kx][ky] = posZi; PS[kx][ky] = pnew[i]; }
 			if(posZi>BL[kx][ky] && Cv[i]>0.5) { BL[kx][ky] = posZi; PS[kx][ky] = press[i]; }
@@ -5004,7 +5067,8 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -5134,8 +5198,8 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 				// normal stress calculation (mechanical pressure)
 				p_rheo_new[i] = p_smooth[i];
 
-				kx = int((posXi - Xmin) / aa / partDist) + 1;
-				ky = int((posYi - Ymin) / aa / partDist) + 1;
+				kx = int((posXi - Xmin) / aa * invPartDist) + 1;
+				ky = int((posYi - Ymin) / aa * invPartDist) + 1;
 
 				// Effective pressure = total pressure (from EOS) - hydrostatic pressure
 				//normal_stress=(BL[k]-posYi+DL/2.0)*(DNS_FL2)*9.81;	// normal_stress= Gama.H
@@ -5309,7 +5373,8 @@ void MpsParticle::calcWallSlipViscosity() {
 
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -5477,7 +5542,8 @@ void MpsParticle::calcWallNoSlipViscosity() {
 
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -5723,7 +5789,7 @@ void MpsParticle::transform2Dto3D(double *P1, double *RM) {
 // 	//int nPartNearMesh = partNearMesh.size();
 
 // 	double resForce_x, resForce_y, resForce_z, pForce_x, pForce_y, pForce_z;
-// 	double AreaForce = pow(partDist,dim-1);
+// 	double AreaForce = pow(partDist,dim-1.0);
 // 	resForce_x=0.0;	resForce_y=0.0;	resForce_z=0.0;
 // 	pForce_x=0.0;	pForce_y=0.0;	pForce_z=0.0;
 
@@ -5977,7 +6043,8 @@ void MpsParticle::calcShifting() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -6049,7 +6116,8 @@ void MpsParticle::calcNormalParticles() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -6141,7 +6209,8 @@ void MpsParticle::calcWallNormalParticles() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -6273,7 +6342,8 @@ void MpsParticle::calcWallShifting() {
 
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -6360,7 +6430,8 @@ void MpsParticle::calcConcAndConcGradient() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -6405,7 +6476,8 @@ void MpsParticle::calcConcAndConcGradient() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -6531,7 +6603,8 @@ void MpsParticle::calcWallConcAndConcGradient() {
 
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;
@@ -6628,7 +6701,8 @@ void MpsParticle::updateVelocityParticlesWallDummy() {
 		
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
-		for(int jz=iz-1;jz<=iz+1;jz++) {
+		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
 			int jb = jz*numBucketsXY + jy*numBucketsX + jx;

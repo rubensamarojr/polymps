@@ -129,7 +129,8 @@ public:
 	// Set initial PND and number of neighbors
 	void setInitialPndNumberOfNeigh();
 	// Update particle ID's in buckets
-	void updateBuckets();
+	void updateBuckets2D();
+	void updateBuckets3D();
 	// Acceleration due to Laplacian of velocity and gravity
 	void calcViscosityGravity();
 	// Prediction of pressure gradient
@@ -333,6 +334,7 @@ public:
  	// Numerical
  	double dim;				// Dimension
  	double partDist;		// Average particle distance (m)
+ 	double invPartDist;		// Inverse of average particle distance (m)
  	double timeStep;		// Time step (s)
  	double timeSimulation;	// Time of simulation (s)
  	int iterOutput;			// Number of iterations to determine the output interval
@@ -596,6 +598,7 @@ private:
 	// Numerical
 	// double dim;				// Dimension
 	// double partDist;		// Average particle distance (m)
+	// double invPartDist;		// Inverse of average particle distance (m)
 	// double timeStep;		// Time step (s)
 	// double timeSimulation;	// Time of simulation (s)
 	// int iterOutput;			// Number of iterations to determine the output interval

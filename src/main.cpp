@@ -115,7 +115,7 @@ void initMesh(MpsParticle* part, PolygonMesh* mesh){
 	// Creation of the wall weight (Zij) and number of neighboors functions (numNeighWall)
 	// std::cout << " reS: " << part->reS << " reL: " << part->reL << std::endl;
 	for(int me = 0; me < part->numOfMeshs; me++) {
-		mesh[me].initWijnNeigh(part->dim, part->weightType, part->partDist, part->reL, part->reS);
+		mesh[me].initWijnNeigh((int)part->dim, part->weightType, part->partDist, part->reL, part->reS);
 	}
 
 	//////////////////////////////
@@ -199,7 +199,12 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 		/// Numerical simulation //
 		///////////////////////////
 		// Update particle ID's in buckets
-		part->updateBuckets();
+		if((int)part->dim == 2) {
+			part->updateBuckets2D();
+		}
+		else {
+			part->updateBuckets3D();
+		}
 
 		// if(part->fluidType == viscType::NON_NEWTONIAN) 
 		// {
