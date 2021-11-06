@@ -129,8 +129,7 @@ public:
 	// Set initial PND and number of neighbors
 	void setInitialPndNumberOfNeigh();
 	// Update particle ID's in buckets
-	void updateBuckets2D();
-	void updateBuckets3D();
+	void updateBuckets();
 	// Acceleration due to Laplacian of velocity and gravity
 	void calcViscosityGravity();
 	// Prediction of pressure gradient

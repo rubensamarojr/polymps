@@ -73,12 +73,7 @@ void MpsParticle::init() {
 	// Setting parameters
 	setParameters();
 	// Update particle ID's in buckets
-	if((int)dim == 2) {
-		updateBuckets2D();
-	}
-	else {
-		updateBuckets3D();
-	}
+	updateBuckets();
 }
 
 // Update variables at 0th step
@@ -958,37 +953,37 @@ void MpsParticle::checkParticleOutDomain() {
 }
 
 // Update particle ID's in buckets
-// Update particle ID's in buckets
-void MpsParticle::updateBuckets2D() {
-	for(int i=0; i<numBucketsXY ;i++) 	{	firstParticleInBucket[i] = -1;	}
-	for(int i=0; i<numBucketsXY ;i++) 	{	lastParticleInBucket[i] = -1;	}
-	for(int i=0; i<numParticles ;i++) 	{	nextParticleInSameBucket[i] = -1;	}
-	for(int i=0; i<numParticles; i++) {
-		if(particleType[i] == ghost) continue;
-		int ix = (int)((pos[i*3  ] - domainMinX)*invBucketSide) + 1;
-		int iy = (int)((pos[i*3+1] - domainMinY)*invBucketSide) + 1;
-		int ib = iy*numBucketsX + ix;
-		int j = lastParticleInBucket[ib];
-		lastParticleInBucket[ib] = i;
-		if(j == -1) {	firstParticleInBucket[ib] = i;	}
-		else 		{	nextParticleInSameBucket[j] = i;}
+void MpsParticle::updateBuckets() {
+	if((int)dim == 2) {
+		for(int i=0; i<numBucketsXY ;i++) 	{	firstParticleInBucket[i] = -1;	}
+		for(int i=0; i<numBucketsXY ;i++) 	{	lastParticleInBucket[i] = -1;	}
+		for(int i=0; i<numParticles ;i++) 	{	nextParticleInSameBucket[i] = -1;	}
+		for(int i=0; i<numParticles; i++) {
+			if(particleType[i] == ghost) continue;
+			int ix = (int)((pos[i*3  ] - domainMinX)*invBucketSide) + 1;
+			int iy = (int)((pos[i*3+1] - domainMinY)*invBucketSide) + 1;
+			int ib = iy*numBucketsX + ix;
+			int j = lastParticleInBucket[ib];
+			lastParticleInBucket[ib] = i;
+			if(j == -1) {	firstParticleInBucket[ib] = i;	}
+			else 		{	nextParticleInSameBucket[j] = i;}
+		}
 	}
-}
-
-void MpsParticle::updateBuckets3D() {
-	for(int i=0; i<numBucketsXYZ ;i++) 	{	firstParticleInBucket[i] = -1;	}
-	for(int i=0; i<numBucketsXYZ ;i++) 	{	lastParticleInBucket[i] = -1;	}
-	for(int i=0; i<numParticles ;i++) 	{	nextParticleInSameBucket[i] = -1;	}
-	for(int i=0; i<numParticles; i++) {
-		if(particleType[i] == ghost) continue;
-		int ix = (int)((pos[i*3  ] - domainMinX)*invBucketSide) + 1;
-		int iy = (int)((pos[i*3+1] - domainMinY)*invBucketSide) + 1;
-		int iz = (int)((pos[i*3+2] - domainMinZ)*invBucketSide) + 1;
-		int ib = iz*numBucketsXY + iy*numBucketsX + ix;
-		int j = lastParticleInBucket[ib];
-		lastParticleInBucket[ib] = i;
-		if(j == -1) {	firstParticleInBucket[ib] = i;	}
-		else 		{	nextParticleInSameBucket[j] = i;}
+	else {
+		for(int i=0; i<numBucketsXYZ ;i++) 	{	firstParticleInBucket[i] = -1;	}
+		for(int i=0; i<numBucketsXYZ ;i++) 	{	lastParticleInBucket[i] = -1;	}
+		for(int i=0; i<numParticles ;i++) 	{	nextParticleInSameBucket[i] = -1;	}
+		for(int i=0; i<numParticles; i++) {
+			if(particleType[i] == ghost) continue;
+			int ix = (int)((pos[i*3  ] - domainMinX)*invBucketSide) + 1;
+			int iy = (int)((pos[i*3+1] - domainMinY)*invBucketSide) + 1;
+			int iz = (int)((pos[i*3+2] - domainMinZ)*invBucketSide) + 1;
+			int ib = iz*numBucketsXY + iy*numBucketsX + ix;
+			int j = lastParticleInBucket[ib];
+			lastParticleInBucket[ib] = i;
+			if(j == -1) {	firstParticleInBucket[ib] = i;	}
+			else 		{	nextParticleInSameBucket[j] = i;}
+		}
 	}
 }
 
@@ -2654,8 +2649,7 @@ void MpsParticle::updateParticleBC() {
 	// coeffPressWCMPS = soundSpeed*soundSpeed
 	double pressure = 0.0;
 */		
-		if(particleType[i] == dummyWall)
-		{
+		if(particleType[i] == dummyWall) {
 			particleBC[i] = other;
 			continue;
 		}
@@ -2668,8 +2662,7 @@ void MpsParticle::updateParticleBC() {
 			particleBC[i] = inner;
 		}
 
-		if(freeSurfType == calcBCType::PND_NEIGH)
-		{
+		if(freeSurfType == calcBCType::PND_NEIGH) {
 			if(pndSmall[i] < betaPnd && numNeigh[i] < betaNeigh) {
 			//if(pndi[i] < betaPnd && numNeigh[i] < betaNeigh) {
 				particleBC[i] = surface;
@@ -2678,8 +2671,7 @@ void MpsParticle::updateParticleBC() {
 				particleBC[i] = inner;
 			}
 		}
-		else if(freeSurfType == calcBCType::PND_NPCD)
-		{
+		else if(freeSurfType == calcBCType::PND_NPCD) {
 			// Boundary particle verification based on relative distance and weight (NPCD)
 			// 2016 - Fluid interface detection technique based on neighborhood particles 
 			// centroid deviation (NPCD) for particle methods
@@ -2689,8 +2681,7 @@ void MpsParticle::updateParticleBC() {
 				}
 			}
 		}
-		else if(freeSurfType == calcBCType::PND_ARC)
-		{
+		else if(freeSurfType == calcBCType::PND_ARC) {
 			double normalXi = normal[i*3  ];	double normalYi = normal[i*3+1];	double normalZi = normal[i*3+2];
 			double norm2 = normalXi*normalXi + normalYi*normalYi + normalZi*normalZi;
 			// 2017 - A multiphase MPS solver for modeling multi-fluid interaction with 
@@ -2780,7 +2771,7 @@ void MpsParticle::updateParticleBC() {
 								goto endloop;
 							}
 							*/
-							if (dstij2 >= dstThreshold2 && dstinj2 < hThreshold2){
+							if (dstij2 >= dstThreshold2 && dstinj2 < hThreshold2) {
 								particleBC[i] == inner;
 								goto endloop;
 							}
@@ -2836,7 +2827,7 @@ void MpsParticle::updateParticleBC() {
 
 									*/
 
-									if (dstimj2 >= dstThreshold2 && dstimnj2 < hThreshold2){
+									if (dstimj2 >= dstThreshold2 && dstimnj2 < hThreshold2) {
 										particleBC[i] == inner;
 										goto endloop;
 									}
@@ -3679,8 +3670,7 @@ int MpsParticle::inverseMatrix(int dim, double &M11, double &M12, double &M13, d
 	Maux[1][0] = M21;	Maux[1][1] = M22;	Maux[1][2] = M23;
 	Maux[2][0] = M31;	Maux[2][1] = M32;	Maux[2][2] = M33;
 
-	if(dim == 2)
-		Maux[2][2] = 1.0;
+	if(dim == 2) Maux[2][2] = 1.0;
 
 	// Convert matrix to identity
 	for(int i = 0; i < 3; i++)
@@ -3699,8 +3689,7 @@ int MpsParticle::inverseMatrix(int dim, double &M11, double &M12, double &M13, d
 		}
 
 		for(int i = 0; i < dim; i++) {
-			if(i == k)
-			continue;
+			if(i == k) continue;
 
 			double m = Maux[i][k]/Maux[k][k];
 

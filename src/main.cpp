@@ -199,12 +199,7 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 		/// Numerical simulation //
 		///////////////////////////
 		// Update particle ID's in buckets
-		if((int)part->dim == 2) {
-			part->updateBuckets2D();
-		}
-		else {
-			part->updateBuckets3D();
-		}
+		part->updateBuckets();
 
 		// if(part->fluidType == viscType::NON_NEWTONIAN) 
 		// {

@@ -550,7 +550,7 @@ void PolygonMesh::updateParticlesNearPolygonMesh(double reS2, double reL2, int n
 		std::vector<int> particlesNearMesh_private;
 #pragma omp for nowait //fill vec_private in parallel
 		for(int i=0;i<nP;i++) {
-			niw[i] = 0;
+			niw[i] = 0.0;
 			numNeighw[i] = 0;
 		//      if(Typ[i] == fld) {
 			double x2 = riw2[i];
