@@ -795,9 +795,9 @@ void MpsParticle::setInitialPndNumberOfNeigh() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -1010,9 +1010,9 @@ void MpsParticle::calcViscosityGravity() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -1084,9 +1084,9 @@ void MpsParticle::predictionPressGradient() {
 				while(true) {
 					double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-					// Particle distance r_ij = Xj - Xi_temporary_position
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 					sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 					// If j is inside the neighborhood of i and 
@@ -1110,9 +1110,9 @@ void MpsParticle::predictionPressGradient() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -1208,9 +1208,9 @@ void MpsParticle::predictionWallPressGradient() {
 					while(true) {
 						double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-						// Particle distance r_ij = Xj - Xi_temporary_position
+						// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 						sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-						// Mirror particle distance r_imj = Xj - Xim_temporary_position
+						// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 						sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 						// If j is inside the neighborhood of i and 
@@ -1233,9 +1233,9 @@ void MpsParticle::predictionWallPressGradient() {
 				while(true) {
 					double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 					
-					// Particle distance r_ij = Xj - Xi_temporary_position
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 					sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 					// If j is inside the neighborhood of i and im (intersection) and 
@@ -1427,9 +1427,9 @@ void MpsParticle::checkParticleCollisions() {
 				while(true) {
 					double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 					
-					// Particle distance r_ij = Xj - Xi_temporary_position
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 					sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 					// If j is inside the neighborhood of i and 
@@ -1545,9 +1545,9 @@ void MpsParticle::checkDynamicParticleCollisions() {
 				while(true) {
 					double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 					
-					// Particle distance r_ij = Xj - Xi_temporary_position
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 					sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 					// If j is inside the neighborhood of i and 
@@ -1726,9 +1726,9 @@ void MpsParticle::calcWallNPCD() {
 				while(true) {
 					double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 					
-					// Particle distance r_ij = Xj - Xi_temporary_position
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 					sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 					// If j is inside the neighborhood of i and im (intersection) and 
@@ -1788,9 +1788,9 @@ void MpsParticle::calcPndnNeighNPCD() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -1929,9 +1929,9 @@ void MpsParticle::calcPndDiffusiveTerm() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -2094,9 +2094,9 @@ void MpsParticle::calcWallSlipPndDiffusiveTerm() {
 				while(true) {
 					double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 					
-					// Particle distance r_ij = Xj - Xi_temporary_position
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 					sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 					// If j is inside the neighborhood of i and im (intersection) and 
@@ -2223,9 +2223,9 @@ void MpsParticle::calcWallNoSlipPndDiffusiveTerm() {
 				while(true) {
 					double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 					
-					// Particle distance r_ij = Xj - Xi_temporary_position
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 					sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 					// If j is inside the neighborhood of i and im (intersection) and 
@@ -2329,9 +2329,9 @@ void MpsParticle::meanPndParticlesWallDummySurface() {
 				while(true) {
 					double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 					
-					// Particle distance r_ij = Xj - Xi_temporary_position
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 					sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 					// If j is inside the neighborhood of i and 
@@ -2400,9 +2400,9 @@ void MpsParticle::meanWallPnd() {
 				while(true) {
 					double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 					
-					// Particle distance r_ij = Xj - Xi_temporary_position
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 					sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 					// If j is inside the neighborhood of i and im (intersection) and 
@@ -2457,9 +2457,9 @@ void MpsParticle::meanPnd() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -2515,9 +2515,9 @@ void MpsParticle::meanNeighFluidPnd() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -2569,9 +2569,9 @@ void MpsParticle::updateParticleBC() {
 		while(true) {
 			double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 			
-			// Particle distance r_ij = Xj - Xi_temporary_position
+			// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 			sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-			// Mirror particle distance r_imj = Xj - Xim_temporary_position
+			// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 			sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 			// If j is inside the neighborhood of i and 
@@ -2738,9 +2738,9 @@ void MpsParticle::updateParticleBC() {
 					while(true) {
 						double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 						
-						// Particle distance r_ij = Xj - Xi_temporary_position
+						// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 						sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-						// Mirror particle distance r_imj = Xj - Xim_temporary_position
+						// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 						sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 						// Real particle i and neighbor j
@@ -2995,9 +2995,9 @@ void MpsParticle::solvePressurePoissonPnd() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -3107,9 +3107,9 @@ void MpsParticle::solvePressurePoissonPndDivU() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -3277,9 +3277,9 @@ void MpsParticle::calcVelDivergence() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -3363,9 +3363,9 @@ void MpsParticle::calcWallSlipVelDivergence() {
 				while(true) {
 					double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 					
-					// Particle distance r_ij = Xj - Xi_temporary_position
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 					sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 					// If j is inside the neighborhood of i and im (intersection) and 
@@ -3484,9 +3484,9 @@ void MpsParticle::calcWallNoSlipVelDivergence() {
 				while(true) {
 					double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 					
-					// Particle distance r_ij = Xj - Xi_temporary_position
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 					sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 					// If j is inside the neighborhood of i and im (intersection) and 
@@ -3556,7 +3556,7 @@ void MpsParticle::extrapolatePressParticlesWallDummy() {
 				while(true) {
 					double v0ij, v1ij, v2ij, dstij2;
 					
-					// Particle distance r_ij = Xj - Xi_temporary_position
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
 
 					if(dstij2 < reS2) {
@@ -3613,9 +3613,9 @@ void MpsParticle::extrapolatePressParticlesNearPolygonWall() {
 				while(true) {
 					double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 					
-					// Particle distance r_ij = Xj - Xi_temporary_position
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-					// Mirror particle distance r_imj = Xj - Xim_temporary_position
+					// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 					sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 					// If j is inside the neighborhood of i and 
@@ -3734,9 +3734,9 @@ void MpsParticle::correctionMatrix() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -3796,9 +3796,9 @@ void MpsParticle::calcPressGradient() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -3821,9 +3821,9 @@ void MpsParticle::calcPressGradient() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -3950,9 +3950,9 @@ void MpsParticle::calcWallPressGradient() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -3974,9 +3974,9 @@ void MpsParticle::calcWallPressGradient() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and im (intersection) and 
@@ -4129,7 +4129,7 @@ void MpsParticle::calcVolumeFraction()
 				while(true) {
 					double v0ij, v1ij, v2ij, dstij2;
 					
-					// Particle distance r_ij = Xj - Xi_temporary_position
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
 					
 					if(dstij2 < reS2) {
@@ -4166,7 +4166,7 @@ void MpsParticle::calcVolumeFraction()
 				while(true) {
 					double v0ij, v1ij, v2ij, dstij2;
 					
-					// Particle distance r_ij = Xj - Xi_temporary_position
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
 
 					if(dstij2 < reS2) {
@@ -4284,9 +4284,9 @@ void MpsParticle::calcViscosityInteractionVal() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -4656,9 +4656,9 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and im (intersection) and 
@@ -5066,9 +5066,9 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and im (intersection) and 
@@ -5372,9 +5372,9 @@ void MpsParticle::calcWallSlipViscosity() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and im (intersection) and 
@@ -5541,9 +5541,9 @@ void MpsParticle::calcWallNoSlipViscosity() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and im (intersection) and 
@@ -6042,9 +6042,9 @@ void MpsParticle::calcShifting() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -6115,9 +6115,9 @@ void MpsParticle::calcNormalParticles() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -6208,9 +6208,9 @@ void MpsParticle::calcWallNormalParticles() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and im (intersection) and 
@@ -6341,9 +6341,9 @@ void MpsParticle::calcWallShifting() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and im (intersection) and 
@@ -6429,9 +6429,9 @@ void MpsParticle::calcConcAndConcGradient() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -6475,9 +6475,9 @@ void MpsParticle::calcConcAndConcGradient() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and 
@@ -6602,9 +6602,9 @@ void MpsParticle::calcWallConcAndConcGradient() {
 			while(true) {
 				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
-				// Mirror particle distance r_imj = Xj - Xim_temporary_position
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2);
 
 				// If j is inside the neighborhood of i and im (intersection) and 
@@ -6700,7 +6700,7 @@ void MpsParticle::updateVelocityParticlesWallDummy() {
 			while(true) {
 				double v0ij, v1ij, v2ij, dstij2;
 				
-				// Particle distance r_ij = Xj - Xi_temporary_position
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 				sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2);
 
 				if(dstij2 < reS2) {

@@ -1,6 +1,6 @@
 # PolyMPS
 
-A C++ code for numerical modelling of free-surface flow using Explicit, Weakly Compressible or Incompressible Moving Particle Simulation/Semi-implicit (**MPS**) method with Boundary **Poly**gon walls.
+A C++ code for numerical modelling of free-surface flow using Explicit, Weakly Compressible or Incompressible Moving Particle Simulation/Semi-implicit (**MPS**) method. Boundary walls modeled by polygonal mesh (triangles) or particles (walls and dummies).
 
 <img src='/output/dambreak01_movie.gif' width="96%">
 
@@ -25,7 +25,9 @@ Eigen, libigl and JSON for Modern C++ are third party [header-only](https://en.w
 
 ## MPS input files
 
-1. **SOLID DOMAIN**: represented by boundary walls using triangular meshes. Therefore, it is necessary to create a file (extension **.stl**) with informations about the initial geometry.
+1. **SOLID DOMAIN**: 
+1.1. Boundary walls using triangular meshes. It is necessary to create a file (extension **.stl**) with informations about the initial geometry.
+1.2. Particle walls. Necessary to add wall particles (material ID = 2) and dummy particles (material ID = 3) in the **.grid** file.
 
 2. **FLUID DOMAIN**: it is necessary to create a file (extension **.grid**) with informations about the initial geometry and some numerical and physical parameters:
 - First line: **0**
