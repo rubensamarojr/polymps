@@ -26,8 +26,8 @@ Eigen, libigl and JSON for Modern C++ are third party [header-only](https://en.w
 ## MPS input files
 
 1. **SOLID DOMAIN**: 
-1.1. Boundary walls using triangular meshes. It is necessary to create a file (extension **.stl**) with informations about the initial geometry.
-1.2. Particle walls. Necessary to add wall particles (material ID = 2) and dummy particles (material ID = 3) in the **.grid** file.
+- Boundary walls using **triangular meshes**. It is necessary to create a file (extension **.stl**) with informations about the initial geometry.
+- Boundary walls using **particles**. Necessary to add one layer of wall particles (material ID = 2) and two layers of dummy particles (material ID = 3) in the **.grid** file.
 
 2. **FLUID DOMAIN**: it is necessary to create a file (extension **.grid**) with informations about the initial geometry and some numerical and physical parameters:
 - First line: **0**
