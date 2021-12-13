@@ -73,6 +73,11 @@ enum colType {
 	DPC = 1
 };
 
+enum domainBC {
+	NONE_BC = 0,
+	PERIODIC = 1
+};
+
 
 class MpsParticle {
 public:
@@ -113,6 +118,12 @@ public:
 	// Return the square distance between thwo particles "i" and "j"
 	void sqrDistBetweenParticles(const int j, const double rxi, const double ryi, 
 		const double rzi, double &rx, double &ry, double &rz, double &rij2);
+	// Return the square distance between thwo particles "i" and "j" considering Periodic BC
+	void sqrDistBetweenParticles(const int j, const double rxi, const double ryi, 
+		const double rzi, double &rx, double &ry, double &rz, double &rij2,
+		const double plx, const double ply, const double plz);
+	// Get Periodic lenghts
+	void getPeriodicLengths(const int jb, double &perlx, double &perly, double &perlz);
 	// Weight function
 	double weight(const double dst, const double re, const int wijType);
 	// Weight function for gradient
@@ -128,6 +139,12 @@ public:
 	void setParameters();
 	// Set initial PND and number of neighbors
 	void setInitialPndNumberOfNeigh();
+	// Compute domain limits
+	void calcDomainLimits();
+	// Set Periodic Boundary Condition of the bucket
+	void setBucketBC();
+	// Copy data from periodic buckets to border buckets
+	void copyDataBetweenBuckets(const int b);
 	// Update particle ID's in buckets
 	void updateBuckets();
 	// Acceleration due to Laplacian of velocity and gravity
@@ -255,263 +272,87 @@ public:
 	void writeHeaderTxtFiles();
 
 	// Files
-// 	// MpsParticle data json file
-// 	FILE* js;
-// 	// MpsParticle data vtu files
-// 	FILE* fp;
-// 	// Pressure txt file
-// 	FILE* pressTxt;
 	// Force txt file
 	FILE* forceTxtFile;
 
-// 	std::string gridFilename;
- 	std::string meshRigidFilename;
- 	std::string meshDeformableFilename;
- 	std::string meshForcedFilename;
- 	std::string vtuOutputFoldername;
- 	std::string forceTxtFilename;
- 	std::string pressTxtFilename;
+	std::string meshRigidFilename;
+	std::string meshDeformableFilename;
+	std::string meshForcedFilename;
+	std::string vtuOutputFoldername;
+	std::string forceTxtFilename;
+	std::string pressTxtFilename;
 
-// 	bool outputPnd;
-// 	bool outputNeigh;
-// 	bool outputDeviation;
-// 	bool outputConcentration;
-// 	bool outputAuxiliar;
-// 	bool outputNonNewtonian;
-	
-// 	// Flags of type
- 	bool femOn;
- 	bool forcedOn;
- 	bool freeSurfWall;
- 	int wallType;
- 	int vtuType;
- 	bool txtPress;
- 	bool txtForce;
+	// Flags of type
+	bool femOn;
+	bool forcedOn;
+	bool freeSurfWall;
+	int wallType;
+	int vtuType;
+	bool txtPress;
+	bool txtForce;
 
-// 	///////////// INPUTS /////////////
-// 	// Geometry dimensions limits
-// 	double domainMinX;		// Minimum value in the x direction of the analysis domain (m)
-// 	double domainMinY;		// Minimum value in the y direction of the analysis domain (m)
-// 	double domainMinZ;		// Minimum value in the z direction of the analysis domain (m)
-// 	double domainMaxX;		// Minimum value in the x direction of the analysis domain (m)
-// 	double domainMaxY;		// Minimum value in the y direction of the analysis domain (m)
-// 	double domainMaxZ;		// Minimum value in the z direction of the analysis domain (m)
+	///////////// INPUTS /////////////
+	int fluidType;		// Newtonian:0 , Non Newtonian:1 
 
-// 	// Physical parameters
-// 	double densityFluid;	// Fluid particle density (kg/m3)
-// 	double densityWall;		// Wall particle density (kg/m3)
-// 	double gravityX;		// Gravity x (m/s2)
-// 	double gravityY;		// Gravity y (m/s2)
-// 	double gravityZ;		// Gravity z (m/s2)
-// 	// Rheological parameters
-// 	double KNM_VS1;			// Kinematic viscosity phase 1 (m2/s)
-// 	double KNM_VS2;			// Kinematic viscosity phase 2 (m2/s)
-// 	double DNS_FL1;			// Fluid particle density phase 1 (kg/m3)
-// 	double DNS_FL2;			// Fluid particle density phase 2 (kg/m3)
-// 	double DNS_SDT;			// Sediment density (kg/m3)
- 	int fluidType;		// Newtonian:0 , Non Newtonian:1 
-// 	double N;				// flow behaviour (power law) index
-// 	double MEU0;			// consistency index
-// 	double PHI;				// friction angle (RAD) lower limit
-// 	double PHI_WAL;			// friction angle (RAD)
-// 	double PHI_BED;			// friction angle (RAD)
-// 	double PHI_2;			// second friction angle Values are based on  Minatti & Paris (2015) upper limit
-// 	double cohes;			// cohesiveness coefficient
-// 	int Fraction_method;	// Method of calculation of volume of fraction. 1: Linear dist across the interface, 2: smoothed value
-// 	//int visc_max;			// maximum viscosity uses to avoid singularity
-// 	double DG;				// grain size
-// 	double I0;				// I0 value in Meu9I0 rheology     Values are based on  Minatti &  Paris (2015)
-// 	double mm;				// Regularization parameter. Control the viscosity grows
-// 	int stress_calc_method;	// Method 1; viscosity is directly used in momentum equation. Method 2: first the stress tensor is calculated then it is used in momentum equation
-// 	int visc_itr_num;
-// 	double visc_error;
-// 	double visc_ave;
-// 	double Cd;				// Drag coefficient
-// 	double VF_min;			// Minimum volume fraction
-// 	double VF_max;			// Maximum volume fraction
-
- 	// Numerical
- 	double dim;				// Dimension
- 	double partDist;		// Average particle distance (m)
- 	double invPartDist;		// Inverse of average particle distance (m)
- 	double timeStep;		// Time step (s)
- 	double timeSimulation;	// Time of simulation (s)
- 	int iterOutput;			// Number of iterations to determine the output interval
-// 	double cflNumber;		// Courant (CFL) condition number
- 	int numOfIterations;	// Number of iterations
- 	int fileNumber;			// File number
- 	double timeCurrent, velMax, CFLcurrent, timerStart, timerEnd;	// Variables to show in screen
- 	double reS;				// Influence radius small
- 	double reL;				// Influence radius large
- 	double reS2;			// Influence radius small to square
- 	double reL2;			// Influence radius large to square
-// 	double eps_reS;
- 	int mpsType;			// Explicit MPS = 0;  Weakly compressible MPS = 1
- 	int weightType;			// Weight function re/rij - 1 = 0; re/rij + rij/re - 2 = 1; re/rij - rij/re = 2; pow(1-rij/re,3.0) = 3;
- 	int slipCondition;		// No-slip = 0 ; Free-slip = 1 
-// 	int gradientType;		// Pressure gradient: Pj - Pmin = 0; Pj + Pi = 1; Pj + Pi - 2*Pmin = 2; ni*Pj/nj + nj*Pi/ni = 3
- 	bool gradientCorrection;// Corrected pressure gradient. No = 0; Yes = 1
- 	double relaxPress;		// Relaxation factor for pressure correction (<= 1)
-// 	double soundSpeed;		// Sound speed (m/s) (10)
-// 	double gamma;			// Gamma weakly compressible MPS
- 	double shiftingType;	// Adjusted velocity: No = 0; DW*Uij = 1; GradCi = 2
-// 	double dri;				// Adjusted velocity paramater (DW*Uij) dri <= 0.01
-// 	double coefA;			// Dimensionless number 1-6 (GradCi) coefA = 2.0 provide a good compromise
-// 	double machNumber;		// Mach number 0.1 (GradCi)
-// 	double VEL_A;			// Adjusted velocity paramater (3) a = 0.9 (NOT IMPLEMENTED !!!)
- 	int pndType;			// PND = Soma(wij) = 0; PND = soma(PNDj)*wij/soma(wij) = 1; PND = Diffusive term = 2
-// 	double diffusiveCoef;	// Diffusive term coefficient
-// 	int repulsiveForceType;				// Wall repulsive force: Harada = 0, Mitsume = 1; Lennard-Jones = 2; Monaghan-Kajtar = 3
-// 	double reRepulsiveForce;			// Influence radius for repulsive force
-//	double expectMaxVelocity;			// Expected maximum velocity
-// 	double repForceCoefMitsume;			// Wall coefficent repulsive force (10000/100000) (500000) (Mitusme)
-// 	double repForceCoefLennardJones;	// Wall coefficent repulsive force (1-10) (Lennard-Jones)
-// 	double repForceCoefMonaghanKajtar;	// Wall coefficent repulsive force (1-10) (Monaghan-Kajtar)
-// 	double EPS_RE;			//
+	// Numerical
+	double dim;				// Dimension
+	double partDist;		// Average particle distance (m)
+	double invPartDist;		// Inverse of average particle distance (m)
+	double timeStep;		// Time step (s)
+	double timeSimulation;	// Time of simulation (s)
+	int iterOutput;			// Number of iterations to determine the output interval
+	int numOfIterations;	// Number of iterations
+	int fileNumber;			// File number
+	double timeCurrent, velMax, CFLcurrent, CFLvisc, timerStart, timerEnd;	// Variables to show in screen
+	double reS;				// Influence radius small
+	double reL;				// Influence radius large
+	double reS2;			// Influence radius small to square
+	double reL2;			// Influence radius large to square
+	int mpsType;			// Explicit MPS = 0;  Weakly compressible MPS = 1
+	int weightType;			// Weight function re/rij - 1 = 0; re/rij + rij/re - 2 = 1; re/rij - rij/re = 2; pow(1-rij/re,3.0) = 3;
+	int slipCondition;		// No-slip = 0 ; Free-slip = 1 
+	bool gradientCorrection;// Corrected pressure gradient. No = 0; Yes = 1
+	double relaxPress;		// Relaxation factor for pressure correction (<= 1)
+	double shiftingType;	// Adjusted velocity: No = 0; DW*Uij = 1; GradCi = 2
+	int pndType;			// PND = Soma(wij) = 0; PND = soma(PNDj)*wij/soma(wij) = 1; PND = Diffusive term = 2
 	int freeSurfType;		// Free surface condition
-// 	double pndThreshold;	// Surface threshold PND (2D - 0.97/ 3D - 0.93)
-//	double betaPnd;			// Surface cte PND
-//	double neighThreshold;	// Surface threshold Neighbors
-//	double betaNeigh;		// Surface cte Neighbors
-//	double npcdThreshold;	// Surface threshold NPCD
-//	double delta2;			// Surface cte NPCD
-//	double thetaThreshold;	// Surface threshold ARC
-//	double thetaArc;		// Surface cte theta ARC
-//	double hThreshold2;		// Surface cte radius ARC
-//	double dstThreshold2;	// Surface cte radius ARC
-//	double normThreshold;	// Surface threshold Normal
-//	double normThreshold2;	// Surface cte Normal
-// 	double collisionRatio;	// Collision ratio
-// 	double distLimitRatio;	// Coefficient of distance which does not allow any further access between particles (0.9)
- 	int collisionType;		// Particle collision type (PC or DPC)
- 	int ghost;				// Ghost particle ID
- 	int fluid;				// Fluid particle ID
-// 	int wall;				// Wall particle ID
-// 	int dummyWall;			// Dummy wall particle ID
-// 	int surface;			// Free-surface particle BC
-// 	int inner;				// Inner particle BC
-// 	int other;				// Other particle BC
-// 	int numPartTypes;		// Number of particle types
- 	int numOfMeshs;			// Number of meshs
- 	int numOfRigidMesh;		// Number of fixed rigid meshs
- 	int numOfDeformableMesh;// Number of deformable meshs
- 	int numOfForcedMesh;	// Number of forced meshs
+	int collisionType;		// Particle collision type (PC or DPC)
+	int ghost;				// Ghost particle ID
+	int fluid;				// Fluid particle ID
+	int numOfMeshs;			// Number of meshs
+	int numOfRigidMesh;		// Number of fixed rigid meshs
+	int numOfDeformableMesh;// Number of deformable meshs
+	int numOfForcedMesh;	// Number of forced meshs
 
-// 	///////////// INPUTS /////////////
-
-// 	// Buckets
-// 	double bucketSide;			// Length of one bucket side
-// 	double bucketSide2;			// Length of one bucket side to square
-// 	double invBucketSide;		// Inverse of length of one bucket side
-// 	int numBucketsX;			// Number of buckets in the x direction in the analysis domain
-// 	int numBucketsY;			// Number of buckets in the y direction in the analysis domain
-// 	int numBucketsZ;			// Number of buckets in the z direction in the analysis domain
-// 	int numBucketsXY;
-// 	int numBucketsXYZ;			// Number of buckets in analysis area
-// 	int *firstParticleInBucket;	// First particle number stored in the bucket
-// 	int *lastParticleInBucket;	// Last particle number stored in the bucket
-// 	int *nextParticleInSameBucket;	// Next particle number in the same bucket
-
-// 	// Model
-// 	double pndSmallZero;		// Initial particle number density (small)
-// 	double pndLargeZero;		// Initial particle number density (large)
-// 	double pndGradientZero;		// Initial particle number density (gradient operator)
-// 	double lambdaZero;			// Coefficient λ of Laplacian model
-// 	double numNeighZero;		// Initial number of neighbors
-// 	double coeffViscosity;		// Coefficient used to calculate viscosity term Multiphase
-// 	double coeffPressEMPS;		// Coefficient used to calculate pressure E-MPS
-// 	double coeffPressGrad;		// Coefficient used to calculate pressure gradient term
-// 	double coeffPressWCMPS;		// Coefficient used to calculate pressure WC-MPS
-// 	double coeffShifting1;		// Coefficient used to adjust velocity type 1
-// 	double coeffShifting2;		// Coefficient used to adjust velocity type 2
-// 	double distCollisionLimit;	// A distance that does not allow further access between particles
-// 	double distCollisionLimit2;	// distCollisionLimit to square
-// 	double restitutionCollision;
-	
-// 	// Scalars
- 	int numParticles;		// Number of particles
- 	int *particleType;		// Particle type
-// 	int *particleBC;		// BC particle type
-// 	int *numNeigh;			// Number of neighbors
-
+	///////////// INPUTS /////////////
+	// Scalars
+	int numParticles;		// Number of particles
+	int *particleType;		// Particle type
 	double *press;			// Particle pressure
 	double *pressAverage;	// Time averaged particle pressure
-// 	double *pndi;			// PND
-// 	double *pndSmall;		// PND small = sum(wij)
-// 	double *npcdDeviation2;	// NPCD deviation modulus
-// 	double *concentration;	// Concentration
-// 	double *velDivergence;	// Divergence of velocity
-// 	double *diffusiveTerm;	// Diffusive term
-// 	double *Dns, *invDns;	// Density and its inverse
+	// Vectors
+	double *pos;				// Particle position
 
-// 	// Vectors
-// 	double *acc;				// Particle acceleration
-// 	double *accStar;			// Particle acceleration due gravity and viscosity
- 	double *pos;				// Particle position
-// 	double *vel;				// Particle velocity
-// 	double *npcdDeviation;		// NPCD deviation
-// 	double *gradConcentration;	// Gradient of concentration
-// 	double *correcMatrixRow1;	// Correction matrix - Row 1
-// 	double *correcMatrixRow2;	// Correction matrix - Row 2
-// 	double *correcMatrixRow3;	// Correction matrix - Row 3
-// 	double *normal;				// Particle normal
-
-// 	// Polygons
-// 	// Scalars
+	// Polygons
+	// Scalars
 	int *nearMeshType;				// Particle near deformable mesh
- 	bool *particleNearWall;			// Particle near wall (true or false)
- 	int *numNeighWallContribution;	// Number of neighbors due wall
+	bool *particleNearWall;			// Particle near wall (true or false)
+	int *numNeighWallContribution;	// Number of neighbors due wall
 
- 	double *pndWallContribution;			// PND wall
-// 	double *deviationDotPolygonNormal;		// Deviation vector X polygonal wall
-// 	double *numNeighborsSurfaceParticles;	// Number of free-surface particle neighbors
- 	double *distParticleWall2;				// Squared distance of particle to triangle mesh
-// 	// Vectors
- 	double *particleAtWallPos;	// Particle at wall coordinate
- 	double *mirrorParticlePos;	// Mirrored particle coordinate
-// 	double *wallParticleForce1;	// Wall-Particle force
-// 	double *wallParticleForce2;	// Wall-Particle force
+	double *pndWallContribution;			// PND wall
+	double *distParticleWall2;				// Squared distance of particle to triangle mesh
+	// Vectors
+	double *particleAtWallPos;	// Particle at wall coordinate
+	double *mirrorParticlePos;	// Mirrored particle coordinate
 	double *polygonNormal;		// Polygon normal
-	
-// //	double *Posk;			// Particle coordinates
-// //	double *Velk;			// Particle velocity
-// //	double *Acv;			// Part
 
-// 	// Non-Newtonian
-// 	// Scalars
-// 	int *PTYPE;				// Type of fluid
-	
-// 	double coeffViscMultiphase, NEU;
-// 	double *Cv;				// Concentration
-// 	double *II;				// Invariant
-// 	double *MEU;			// Dynamic viscosity
-// 	double *MEU_Y;			// Dynamic viscosity ??
-// 	double *Inertia;		//
-// 	double *pnew;			// New pressure
-// 	double *p_rheo_new;		//
-// 	double *RHO;			// Fluid density
-// 	double *p_smooth;		//
-// 	double *VF;				//
-// 	double *S12;			//
-// 	double *S13;			//
-// 	double *S23;			//
-// 	double *S11;			//
-// 	double *S22;			//
-// 	double *S33;			//
-
-// 	// FSI
-// 	// Scalars
+	// FSI
+	// Scalars
 	int *elementID;			// Element ID
-// 	// Vectors
+	// Vectors
 	double *forceWall;		// Force on wall
 
-// 	double *nodeX, *nodeY, *nodeZ;		// Nodal positions
-// 	double *nodeDX, *nodeDY, *nodeDZ;	// Nodal displacements
-// 	double *nodeUX, *nodeUY, *nodeUZ;	// Nodal velocities
-// 	double *nodeFx, *nodeFy, *nodeFz;	// Nodal equivalent forces
-// 	int *elemNode1id, *elemNode2id, *elemNode3id; // Global node ID
-
- 	// Forced rigid wall
+	// Forced rigid wall
 	double velVWall[3]; // Uniform wall velocity 
 
 protected:
@@ -531,12 +372,6 @@ private:
 	FILE* pressTxtFile;
 
 	std::string gridFilename;
-	// std::string meshRigidFilename;
-	// std::string meshDeformableFilename;
-	// std::string meshForcedFilename;
-	// std::string vtuOutputFoldername;
-	// std::string forceTxtFilename;
-	// std::string pressTxtFilename;
 
 	bool outputPnd;
 	bool outputNeigh;
@@ -545,21 +380,20 @@ private:
 	bool outputAuxiliar;
 	bool outputNonNewtonian;
 	
-	// Flags of type
-	// bool femOn;
-	// bool forcedOn;
-	// bool freeSurfWall;
-	// int wallType;
-	// int vtuType;
-
 	///////////// INPUTS /////////////
 	// Geometry dimensions limits
 	double domainMinX;		// Minimum value in the x direction of the analysis domain (m)
 	double domainMinY;		// Minimum value in the y direction of the analysis domain (m)
 	double domainMinZ;		// Minimum value in the z direction of the analysis domain (m)
-	double domainMaxX;		// Minimum value in the x direction of the analysis domain (m)
-	double domainMaxY;		// Minimum value in the y direction of the analysis domain (m)
-	double domainMaxZ;		// Minimum value in the z direction of the analysis domain (m)
+	double domainMaxX;		// Maximum value in the x direction of the analysis domain (m)
+	double domainMaxY;		// Maximum value in the y direction of the analysis domain (m)
+	double domainMaxZ;		// Maximum value in the z direction of the analysis domain (m)
+	double physDomMinX;		// Minimum value in the x direction of the physical domain (m)
+	double physDomMinY;		// Minimum value in the y direction of the physical domain (m)
+	double physDomMinZ;		// Minimum value in the z direction of the physical domain (m)
+	double physDomMaxX;		// Maximum value in the x direction of the physical domain (m)
+	double physDomMaxY;		// Maximum value in the y direction of the physical domain (m)
+	double physDomMaxZ;		// Maximum value in the z direction of the physical domain (m)
 
 	// Physical parameters
 	double densityFluid;	// Fluid particle density (kg/m3)
@@ -573,16 +407,14 @@ private:
 	double DNS_FL1;			// Fluid particle density phase 1 (kg/m3)
 	double DNS_FL2;			// Fluid particle density phase 2 (kg/m3)
 	double DNS_SDT;			// Sediment density (kg/m3)
-	//int fluidType;		// Newtonian:0 , Non Newtonian:1
 	double N;				// flow behaviour (power law) index
 	double MEU0;			// consistency index
-	double PHI;				// friction angle (RAD) lower limit
+	double PHI_1;				// friction angle (RAD) lower limit
 	double PHI_WAL;			// friction angle (RAD)
 	double PHI_BED;			// friction angle (RAD)
 	double PHI_2;			// second friction angle Values are based on  Minatti & Paris (2015) upper limit
 	double cohes;			// cohesiveness coefficient
 	int Fraction_method;	// Method of calculation of volume of fraction. 1: Linear dist across the interface, 2: smoothed value
-	//int visc_max;			// maximum viscosity uses to avoid singularity
 	double DG;				// grain size
 	double I0;				// I0 value in Meu9I0 rheology     Values are based on  Minatti &  Paris (2015)
 	double mm;				// Regularization parameter. Control the viscosity grows
@@ -595,35 +427,15 @@ private:
 	double VF_max;			// Maximum volume fraction
 
 	// Numerical
-	// double dim;				// Dimension
-	// double partDist;		// Average particle distance (m)
-	// double invPartDist;		// Inverse of average particle distance (m)
-	// double timeStep;		// Time step (s)
-	// double timeSimulation;	// Time of simulation (s)
-	// int iterOutput;			// Number of iterations to determine the output interval
 	double cflNumber;		// Courant (CFL) condition number
-	// int numOfIterations;	// Number of iterations
-	// int fileNumber;			// File number
-	// double timeCurrent, velMax, CFLcurrent, timerStart, timerEnd;
-	// double reS;				// Influence radius small
-	// double reL;				// Influence radius large
-	// double reS2;			// Influence radius small to square
-	// double reL2;			// Influence radius large to square
 	double eps_reS;
-	// int mpsType;			// Explicit MPS = 0;  Weakly compressible MPS = 1
-	// int weightType;			// Weight function re/rij - 1 = 0; re/rij + rij/re - 2 = 1; re/rij - rij/re = 2; pow(1-rij/re,3.0) = 3;
-	// int slipCondition;		// No-slip = 0 ; Free-slip = 1
 	int gradientType;		// Pressure gradient: Pj - Pmin = 0; Pj + Pi = 1; Pj + Pi - 2*Pmin = 2; ni*Pj/nj + nj*Pi/ni = 3
-	// bool gradientCorrection;// Corrected pressure gradient. No = 0; Yes = 1
-	//double relaxPress;		// Relaxation factor for pressure correction (<= 1)
 	double soundSpeed;		// Sound speed (m/s) (10)
 	double gamma;			// Gamma weakly compressible MPS
-	// double shiftingType;	// Adjusted velocity: No = 0; DW*Uij = 1; GradCi = 2
 	double dri;				// Adjusted velocity paramater (DW*Uij) dri <= 0.01
 	double coefA;			// Dimensionless number 1-6 (GradCi) coefA = 2.0 provide a good compromise
 	double machNumber;		// Mach number 0.1 (GradCi)
 	double VEL_A;			// Adjusted velocity paramater (3) a = 0.9 (NOT IMPLEMENTED !!!)
-	// int pndType;			// PND = Soma(wij) = 0; PND = soma(PNDj)*wij/soma(wij) = 1; PND = Diffusive term = 2
 	double diffusiveCoef;	// Diffusive term coefficient
 	int repulsiveForceType;				// Wall repulsive force: Harada = 0, Mitsume = 1; Lennard-Jones = 2; Monaghan-Kajtar = 3
 	double reRepulsiveForce;			// Influence radius for repulsive force
@@ -632,7 +444,6 @@ private:
 	double repForceCoefLennardJones;	// Wall coefficent repulsive force (1-10) (Lennard-Jones)
 	double repForceCoefMonaghanKajtar;	// Wall coefficent repulsive force (1-10) (Monaghan-Kajtar)
 	double EPS_RE;			// 
-	//int freeSurfType;		// Free surface condition
 	double pndThreshold;	// Surface threshold PND (2D - 0.97/ 3D - 0.93)
 	double betaPnd;			// Surface cte PND
 	double neighThreshold;	// Surface threshold Neighbors
@@ -645,23 +456,15 @@ private:
 	double dstThreshold2;	// Surface cte radius ARC
 	double normThreshold;	// Surface threshold Normal
 	double normThreshold2;	// Surface cte Normal
-	// int collisionType;		// Particle collision type (PC or DPC)
 	double collisionRatio;	// Collision ratio
 	double distLimitRatio;	// Coefficient of distance which does not allow any further access between particles (0.9)
 	double lambdaCollision;		// Non-dimensional coefficient used to adjust background pressure
-	// int ghost;				// Ghost particle ID
-	// int fluid;				// Fluid particle ID
 	int wall;				// Wall particle ID
 	int dummyWall;			// Dummy wall particle ID
 	int surface;			// Free-surface particle BC
 	int inner;				// Inner particle BC
 	int other;				// Other particle BC
 	int numPartTypes;		// Number of particle types
-	// int numPartTypes;		// Number of particle types
- 	// int numOfMeshs;			// Number of meshs
- 	// int numOfRigidMesh;		// Number of fixed rigid meshs
- 	// int numOfDeformableMesh;// Number of deformable meshs
- 	// int numOfForcedMesh;	// Number of forced meshs
  	double relaxPND;		// Relaxation coefficent for pressure source term PND
  	double alphaCompressibility;	// Compressibility leads to a diagonal dominant matrix
 
@@ -685,6 +488,7 @@ private:
 	int *firstParticleInBucket;	// First particle number stored in the bucket
 	int *lastParticleInBucket;	// Last particle number stored in the bucket
 	int *nextParticleInSameBucket;	// Next particle number in the same bucket
+	int *bucketPeriodicBC;		// Periodic Boundary Condition of the bucket
 
 	// Model
 	double pndSmallZero;		// Initial particle number density (small)
@@ -703,15 +507,21 @@ private:
 	double restitutionCollision;// Restitution related to Kinetic energy variation of the particles
 	double coeffPPE;			// Coefficient used to PPE
 	double coeffPPESource;		// Coefficient used to PPE source term
+	int numBC;					// Number of boundary conditions
+	int domainTypeBC;			// Type of Domain Boundary Condition
+	int limitTypeBC;			// Type of domain limit to be used in the Boundary Condition
+	int *bucketTypeBC;			// Type of Domain Boundary Condition in Bucket
+	bool *periodicDirection;		// Periodic direction in domain (x, y, or z)
+	//double *periodicLength;		// Periodic length in x, y and z direction
+	double periodicLength[3];		// Periodic length in x, y and z direction
+	bool periodicDirectionX;		// Input periodic direction in domain X
+	bool periodicDirectionY;		// Input periodic direction in domain Y
+	bool periodicDirectionZ;		// Input periodic direction in domain Z
 	
 	// Scalars
-	// int numParticles;		// Number of particles
-	// int *particleType;		// Particle type
 	int *particleBC;		// BC particle type
 	int *numNeigh;			// Number of neighbors
 
-	// double *press;			// Particle pressure
-	// double *pressAverage;	// Time averaged particle pressure
 	double *pndi;			// Particle number density at particle i
 	double *pndki;			// Particle number density at particle i, step k
 	double *pndski;			// Mean neighbor fluid Particle number density, step k
@@ -737,24 +547,12 @@ private:
 
 	// Polygons
 	// Scalars
-	// int *nearMeshType;				// Particle near deformable mesh
-	// bool *particleNearWall;			// Particle near wall (true or false)
-	// int *numNeighWallContribution;	// Number of neighbors due wall
-
-	// double *pndWallContribution;			// PND wall
 	double *deviationDotPolygonNormal;		// Deviation vector X polygonal wall
 	double *numNeighborsSurfaceParticles;	// Number of free-surface particle neighbors
-	// double *distParticleWall2;				// Squared distance of particle to triangle mesh
+
 	// Vectors
-	// double *particleAtWallPos;	// Particle at wall coordinate
-	// double *mirrorParticlePos;	// Mirrored particle coordinate
 	double *wallParticleForce1;	// Wall-Particle force
 	double *wallParticleForce2;	// Wall-Particle force
-	// double *polygonNormal;		// Polygon normal
-	
-//	double *Posk;			// Particle coordinates
-//	double *Velk;			// Particle velocity
-//	double *Acv;			// Part
 
 	// Non-Newtonian
 	// Scalars
@@ -779,19 +577,12 @@ private:
 	double *S33;			//
 
 	// FSI
-	// Scalars
-	// int *elementID;			// Element ID
 	// Vectors
-	// double *forceWall;		// Force on wall
-
 	double *nodeX, *nodeY, *nodeZ;		// Nodal positions
 	double *nodeDX, *nodeDY, *nodeDZ;	// Nodal displacements
 	double *nodeUX, *nodeUY, *nodeUZ;	// Nodal velocities
 	double *nodeFx, *nodeFy, *nodeFz;	// Nodal equivalent forces
 	int *elemNode1id, *elemNode2id, *elemNode3id; // Global node ID
-
-	// Forced rigid wall
-	// double velVWall[3]; // Uniform wall velocity 
 };
 
 #endif // EMPS_INCLUDE_MPSPARTICLE_H_

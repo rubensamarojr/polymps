@@ -42,6 +42,16 @@
 			"x":	1.1, 
 			"y":	2.1,
 			"z":	0.0
+		},
+		// type: periodic
+		"boundary": {
+			"type": 0,					// 0: None; 1: Periodic
+			"limit": 0,					// 0: Border particle positions; 1: Domain limits min and max
+			"direction": {
+				"x":	false, 
+				"y":	false,
+				"z":	false
+			}
 		}
 	},
 	// Physical parameters

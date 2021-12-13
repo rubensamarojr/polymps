@@ -57,14 +57,20 @@ int main( int argc, char** argv) {
 	particles = new MpsParticle();
 	particles->init();
 
+	printf("Particle class initialized.\n");
+
 	if(particles->wallType == boundaryWallType::POLYGON) {
 		// Create an array of PolygonMesh class
 		solidMesh = new PolygonMesh[particles->numOfMeshs];
 		initMesh(particles, solidMesh);
+
+		printf("Mesh class initialized.\n");
 	}
 
+	printf("Initial Step... ");
 	// Update variables at 0th step
 	particles->stepZero();
+	printf("OK\n");
 
 	printf("\nStart Main Loop of Simulation\n\n");
 	///////////////////////////
@@ -201,11 +207,10 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 		// Update particle ID's in buckets
 		part->updateBuckets();
 
-		// if(part->fluidType == viscType::NON_NEWTONIAN) 
-		// {
-		// 	part->calcVolumeFraction(); // Volume of fraction if phase II in the mixture
-		// 	part->calcViscosityInteractionVal();// Viscosity interaction values for "real" fluid particles
-		// }
+		if(part->fluidType == viscType::NON_NEWTONIAN) {
+			part->calcVolumeFraction(); // Volume of fraction if phase II in the mixture
+			part->calcViscosityInteractionVal();// Viscosity interaction values for "real" fluid particles
+		}
 
 		// Calculation of acceleration due laplacian of viscosity and gravity
 		part->calcViscosityGravity();
@@ -219,12 +224,10 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 		// Update velocity and positions. Set some variables to zero or inf
 		part->updateVelocityPosition1st();
 		// Check collision between particles
-		if(part->collisionType == colType::PC)
-		{
+		if(part->collisionType == colType::PC) {
 			part->checkParticleCollisions();
 		}
-		else
-		{
+		else {
 			part->checkDynamicParticleCollisions();
 		}
 
@@ -253,6 +256,11 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 			part->calcWallNPCD();
 		}
 
+		// Compute correction matrix
+		if(part->gradientCorrection == true) {
+			part->correctionMatrix();
+		}
+		
 		// PND, number of neighbors and NPCD calculation
 		part->calcPndnNeighNPCD();
 		// Diffusion term
@@ -293,6 +301,7 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 			}
 		}
 		part->updateParticleBC();
+
 		// Pressure calculation
 		if(part->mpsType == calcPressType::EXPLICIT) {
 			part->calcPressEMPS();
@@ -300,12 +309,10 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 		else if(part->mpsType == calcPressType::WEAKLY) {
 			part->calcPressWCMPS();
 		}
-		else if(part->mpsType == calcPressType::IMPLICIT_PND)
-		{
+		else if(part->mpsType == calcPressType::IMPLICIT_PND) {
 			part->solvePressurePoissonPnd();
 		}
-		else if(part->mpsType == calcPressType::IMPLICIT_PND_DIVU)
-		{
+		else if(part->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
 			part->calcVelDivergence();
 			if(part->wallType == boundaryWallType::POLYGON) {
 				if(part->slipCondition == slipBC::FREE_SLIP) {
@@ -386,9 +393,9 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 			}
 		}
 		// Wall and dummy velocity
-		// if(part->wallType == boundaryWallType::PARTICLE) {
-		// 	part->updateVelocityParticlesWallDummy();
-		// }
+		if(part->wallType == boundaryWallType::PARTICLE) {
+			part->updateVelocityParticlesWallDummy();
+		}
 		// Pressure calculation
 		// if(part->mpsType == calcPressType::EXPLICIT) {
 		// 	part->calcPressEMPSandParticleBC();
