@@ -114,7 +114,7 @@ The PolyMPS contains several files and directories:
 | --- | --- |
 | eigen | library for linear algebra: matrices, vectors, numerical solvers, and related algorithms |
 | include | header files |
-| input |	simple input examples (json, grid and stl files) compressed in a folder|
+| input |	simple input examples (json, grid and stl files). Grid files compressed in a folder|
 | libigl | geometry processing library |
 | json | file that uses human-readable text to store and transmit data objects |
 | output |ouput files (pvd, vtu and txt files) |
