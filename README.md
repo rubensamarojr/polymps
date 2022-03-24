@@ -1,6 +1,6 @@
 # PolyMPS
 
-A C++ code for numerical modelling of free-surface flow using Explicit, Weakly Compressible or Incompressible Moving Particle Simulation/Semi-implicit (**MPS**) method. Boundary walls modeled by polygonal mesh (triangles) or particles (walls and dummies).
+A C++ code for numerical modelling of free-surface flow :ocean: using Explicit, Weakly Compressible or Incompressible Moving Particle Simulation/Semi-implicit (**MPS**) method. Boundary walls modeled by polygonal mesh (triangles) or particles (walls and dummies).
 
 <img src='/output/dambreak01_movie.gif' width="96%">
 
@@ -21,7 +21,7 @@ The following Packages should be selected during the Cygwin installation:
 - libstdc++
 - make
 
-Eigen, libigl and JSON for Modern C++ are third party [header-only](https://en.wikipedia.org/wiki/Header-only) libraries.
+Eigen, libigl and JSON for Modern C++ are third party [header-only](https://en.wikipedia.org/wiki/Header-only) libraries, i.e., they do not need to be separately compiled, packaged and installed to be used :heart_eyes:.
 
 ## MPS input files
 
@@ -29,7 +29,7 @@ Eigen, libigl and JSON for Modern C++ are third party [header-only](https://en.w
 - Boundary walls using **triangular meshes**. It is necessary to create a file (extension **.stl**) with informations about the initial geometry.
 - Boundary walls using **particles**. Necessary to add one layer of wall particles (material ID = 2) and two layers of dummy particles (material ID = 3) in the **.grid** file.
 
-2. **FLUID DOMAIN**: it is necessary to create a file (extension **.grid**) with informations about the initial geometry and some numerical and physical parameters:
+2. **FLUID DOMAIN**<a id='fluid_input'></a>: it is necessary to create a file (extension **.grid**) with informations about the initial geometry and some numerical and physical parameters:
 - First line: **0**
 - Second line: **number of particles**
 - Next lines in the columns: **material ID** coordinates of particles **X** **Y** **Z** the initial fluid velocities (generally 0.0) **VX** **VY** **VZ** the initial particle pressure (generally 0.0) **P** and presure average (generally 0.0) **PAV**
@@ -92,6 +92,9 @@ bin\main.exe
 ```
 2nd way - Move the *main.exe* from the folder **bin** to the root folder **polymps**. After that, double click on *main.exe*.
 
+## Additional Note
+:warning: If the terminal shows an error message at this step, the problem may be related to the input file **dam1610_3D_fluid_lo0p010_mps.grid**. Please, go to the directory **input/grid** and extract the compressed folder **grid.zip** in the grid directory itself. Check if **dam1610_3D_fluid_lo0p010_mps.grid** contains the data mentioned before in [FLUID DOMAIN](#fluid_input). After that, try to run the code again.
+
 ## Input
 Type the name of the json input file (located in input directory), e.g.
 
@@ -100,8 +103,8 @@ MpsInputExample
 ```
 
 ## Output
-This code writes pvd (header file) and corresponding vtu files as output.
-You can visualize them by open the pvd file with [Paraview](https://www.paraview.org).
+This code writes pvd (header file) and corresponding vtu files as output. Look in the **output** directory.
+You can visualize them by open the pvd file with [Paraview](https://www.paraview.org) :eyeglasses:.
 
 ## Directories
 
@@ -111,7 +114,7 @@ The PolyMPS contains several files and directories:
 | --- | --- |
 | eigen | library for linear algebra: matrices, vectors, numerical solvers, and related algorithms |
 | include | header files |
-| input |	simple input examples (json, grid and stl files) |
+| input |	simple input examples (json, grid and stl files) compressed in a folder|
 | libigl | geometry processing library |
 | json | file that uses human-readable text to store and transmit data objects |
 | output |ouput files (pvd, vtu and txt files) |
