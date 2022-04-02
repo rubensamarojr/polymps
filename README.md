@@ -4,6 +4,11 @@ A C++ code for numerical modelling of free-surface flow :ocean: using Explicit, 
 
 <img src='/output/dambreak01_movie.gif' width="96%">
 
+## How to cite PolyMPS ?
+If you use PolyMPS, please cite the following reference:
+
+Rubens Augusto Amaro Junior, Alfredo Gay Neto and Liang-Yee Cheng, "3D WC-MPS coupled with geometrically nonlinear shell for hydro-elastic free-surface flows", International Journal for Numerical Methods in Fluids. https://doi.org/10.1002/fld.5083
+
 ## Requirements
 
 - [GCC (GNU Compiler Collection)](https://gcc.gnu.org)
