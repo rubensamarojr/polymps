@@ -120,7 +120,7 @@
 		"slip_condition":	0,			// No-slip = 0; Free-slip = 1 
 		// Influence radius
 		"effective_radius": {
-			// 2D: small = 3.1; large = 3.1
+			// 2D: small = 2.1; large = 3.1
 			// 3D: small = 2.1; large = 2.1
 			"small":		2.1,
 			"large":		2.1
@@ -135,15 +135,15 @@
 		// MPS type
 		// 0:Explicit
 		// 1:Weakly compressible
-		// 2:Incompressible PND
-		// 3:Incompressible PND + DivU
+		// 2:Incompressible PND (Change below pnd type to 0)
+		// 3:Incompressible PND + DivU (Change below pnd type to 0)
 		"mps_type":			2,
 		// Explicit or Weakly compressible MPS
 		"explicit_mps": {
 			"equation_state": {
 				// Recomendable values: Sound of speed ~10*sqrt(g*H) (m/s) and gamma = 7.0
-				"speed_sound": 	15.00,
-				"gamma":	 	7.0
+				"speed_sound":	15.00,
+				"gamma":		7.0
 			}
 		},
 		// Incompressible MPS
@@ -193,7 +193,7 @@
 			"normal":	0.2
 		},
 		"particle_collision": {
-			"type": 			1,		// 0: PC, 1: DPC
+			"type": 			0,		// 0: PC, 1: DPC
 			"ratio": 			0.2,	// Collision ratio (~0.2)
 			"dist_limit_ratio": 0.85,	// Coefficient of distance which does not allow any further access between particles (~0.9)
 			// Non-dimensional coefficient used to adjust background pressure (0.1~0.2)

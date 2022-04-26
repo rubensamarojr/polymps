@@ -137,16 +137,15 @@
 		// MPS type
 		// 0:Explicit
 		// 1:Weakly compressible
-		// 2:Incompressible PND (Change below pnd type = 0)
-		// 3:Incompressible PND + DivU (Change below pnd type = 0)
+		// 2:Incompressible PND (Change below pnd type to 0)
+		// 3:Incompressible PND + DivU (Change below pnd type to 0)
 		"mps_type":			3,
-
 		// Explicit or Weakly compressible MPS
 		"explicit_mps": {
 			"equation_state": {
 				// Recomendable values: Sound of speed ~10*sqrt(g*H) (m/s) and gamma = 7.0
-				"speed_sound": 	15.00,
-				"gamma":	 	7.0
+				"speed_sound":	15.00,
+				"gamma":		7.0
 			}
 		},
 		

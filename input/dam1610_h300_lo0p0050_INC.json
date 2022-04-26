@@ -27,7 +27,7 @@
 		"mesh_rigid_file": 		"input/stl/dam1610.stl",
 		"mesh_deformable_file": "input/stl/elastic_beam_16.stl", // (NOT WORKING !!)
 		"mesh_forced_file": 	"input/stl/tank_liao_forced_gate.stl",
-		"vtu_output_folder":	"output/dam1610_h300_lo0p0050_WC_DPC_CD_PMAX_DIF",
+		"vtu_output_folder":	"output/dam1610_h300_lo0p0050_INC",
 		"forceTxt_file":		"output/dambreak01_force.txt",
 		"pressTxt_file":		"output/dambreak01_press.txt"
 	},
@@ -41,7 +41,17 @@
 		"max": {
 			"x":	1.7, 
 			"y":	0.8,
-			"z":	0.0
+			"z":	0.8
+		},
+		// type: periodic
+		"boundary": {
+			"type": 0,					// 0: None; 1: Periodic
+			"limit": 0,					// 0: Border particle positions; 1: Domain limits min and max
+			"direction": {
+				"x":	false, 
+				"y":	false,
+				"z":	false
+			}
 		}
 	},
 	// Physical parameters
@@ -98,7 +108,7 @@
 		"dimension": 		2,			// Dimension (2 or 3)
 		"particle_dist": 	0.005,		// Average particle distance (m) (10/5) (0.01)
 		"time_step": 		0.00025,		// Time step (s) (0.02/0.01/0.005) (0.00025/0.00025/0.000125)
-		"final_time": 		3.0,		// Time of simulation (s)
+		"final_time": 		1.0,		// Time of simulation (s)
 		"iter_output": 		200,			// Number of iterations to determine the output interval
 		"CFL_number":	 	0.2,		// Courant (CFL) condition number (0.2)
 		// Weight function
@@ -110,7 +120,7 @@
 		"slip_condition":	0,			// No-slip = 0; Free-slip = 1 
 		// Influence radius
 		"effective_radius": {
-			// 2D: small = 3.1; large = 3.1
+			// 2D: small = 2.1; large = 3.1
 			// 3D: small = 2.1; large = 2.1
 			"small":		2.1,
 			"large":		3.1
@@ -125,15 +135,15 @@
 		// MPS type
 		// 0:Explicit
 		// 1:Weakly compressible
-		// 2:Incompressible PND
-		// 3:Incompressible PND + DivU
-		"mps_type":			1,
+		// 2:Incompressible PND (Change below pnd type to 0)
+		// 3:Incompressible PND + DivU (Change below pnd type to 0)
+		"mps_type":			2,
 		// Explicit or Weakly compressible MPS
 		"explicit_mps": {
 			"equation_state": {
 				// Recomendable values: Sound of speed ~10*sqrt(g*H) (m/s) and gamma = 7.0
-				"speed_sound": 	10.00,
-				"gamma":	 	7.0
+				"speed_sound":	10.00,
+				"gamma":		7.0
 			}
 		},
 		// Incompressible MPS
@@ -156,13 +166,15 @@
 			"adj_vel_A":	0.9
 		},
 		// Particle number density
+		// IMPORTANT: Use 0 to incompressible MPS and 2 to Explicit or Weakly compressible MPS
 		"pnd": {
-			"type":			2,			// 0: ni = Soma(wij); 1: ni = soma(PNDj)*wij/soma(wij); 2: ni = Div(u)i + Diffusive term
+			"type":			0,			// 0: ni = Soma(wij); 1: ni = soma(PNDj)*wij/soma(wij); 2: ni = Div(u)i + Diffusive term
 			"diffusive_coeff": 	0.35
 		},
 		"wall_repulsive_force": {
 			"type": 		2,			// 0: Harada, 1: Mitsume; 2: Lennard-Jones; 3: Monaghan-Kajtar
 			"re":			0.5,		// Influence radius (0.5)
+			"maxVel":		4.0,		// Expected maximum velocity (e.g., dam-break wave front = 2*sqrt(gravity*WaterHeight))
 			"coefficient": {
 				"Mitsume":	40000000.0,
 				// Range for L-J and M-K ~ [1,10]
@@ -172,14 +184,16 @@
 			"eps_re":		0.01
 		},
 		"free_surface_threshold": {
-			"type": 	0,		// 0: PND + Neigh, 1: PND + NPCD
+			"type": 	0,		// 0: PND + Neigh, 1: PND + NPCD, 2: PND + Neigh + Normal + ARC
 			"pnd": 		0.97,	// 2D: 0.97; 3D: 0.98
 			"neigh":	0.85,	// 0.85
-			// NPCD >= 0.2
-			"NPCD": 	0.2
+			"NPCD": 	0.2,	// NPCD >= 0.2
+			"ARC":		45.0,	// ARC >= 30
+			// Normal >= 0.1
+			"normal":	0.2
 		},
 		"particle_collision": {
-			"type": 			1,		// 0: PC, 1: DPC
+			"type": 			0,		// 0: PC, 1: DPC
 			"ratio": 			0.2,	// Collision ratio (~0.2)
 			"dist_limit_ratio": 0.85,	// Coefficient of distance which does not allow any further access between particles (~0.9)
 			// Non-dimensional coefficient used to adjust background pressure (0.1~0.2)
