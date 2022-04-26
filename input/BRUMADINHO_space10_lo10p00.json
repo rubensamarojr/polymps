@@ -109,7 +109,7 @@
 		"particle_dist": 	10.0,		// Average particle distance (m) (10/5) (0.01)
 		"time_step": 		0.02,		// Time step (s) (0.02/0.01/0.005) (0.00025/0.00025/0.000125)
 		"final_time": 		10000.0,		// Time of simulation (s)
-		"iter_output": 		100,			// Number of iterations to determine the output interval
+		"iter_output": 		2500,			// Number of iterations to determine the output interval
 		"CFL_number":	 	0.2,		// Courant (CFL) condition number (0.2)
 		// Weight function
 		// 0: wij = re/rij - 1
