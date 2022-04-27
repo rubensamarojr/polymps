@@ -9,6 +9,10 @@ If you use PolyMPS, please cite the following reference:
 
 Rubens Augusto Amaro Junior, Alfredo Gay Neto and Liang-Yee Cheng, "3D WC-MPS coupled with geometrically nonlinear shell for hydro-elastic free-surface flows", International Journal for Numerical Methods in Fluids. https://doi.org/10.1002/fld.5083
 
+## Forum
+
+On the [PolyMPS Discussions](https://github.com/rubensamarojr/polymps/discussions) page you can ask questions, discuss about simulation issues, share ideas, and interact with other members.
+
 ## Requirements
 
 - [GCC (GNU Compiler Collection)](https://gcc.gnu.org)
