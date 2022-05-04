@@ -184,7 +184,7 @@
 			"eps_re":		0.01
 		},
 		"free_surface_threshold": {
-			"type": 	2,		// 0: PND + Neigh, 1: PND + NPCD, 2: PND + Neigh + Normal + ARC
+			"type": 	1,		// 0: PND + Neigh, 1: PND + NPCD, 2: PND + Neigh + Normal + ARC
 			"pnd": 		0.98,	// 2D: 0.97; 3D: 0.98
 			"neigh":	0.85,	// 0.85
 			"NPCD": 	0.2,	// NPCD >= 0.2

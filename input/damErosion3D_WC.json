@@ -160,7 +160,7 @@
 		"particle_shifting": {
 			"type": 		2,			// 0: OFF; 1: DW*Uij; 2: GradCi
 			"DRI": 			0.01,		// Type 1: Adjusted velocity paramater (DW*Uij) DRI <= 0.01
-			"coef_A":		1.0,		// Type 2: Dimensionless number 1-6 (GradCi) coef_A = 2.0 provide a good compromise
+			"coef_A":		2.0,		// Type 2: Dimensionless number 1-6 (GradCi) coef_A = 2.0 provide a good compromise
 			"mach_number":	0.1,		// Type 2: Mach number Ma~0.1 (GradCi)
 			// Type 3: a = 0.9 (NOT IMPLEMENTED !!!)
 			"adj_vel_A":	0.9

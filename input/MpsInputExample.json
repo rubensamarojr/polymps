@@ -160,7 +160,7 @@
 		"particle_shifting": {
 			"type": 		2,			// 0: OFF; 1: DW*Uij; 2: GradCi
 			"DRI": 			0.01,		// Type 1: Adjusted velocity paramater (DW*Uij) DRI <= 0.01
-			"coef_A":		1.0,		// Type 2: Dimensionless number 1-6 (GradCi) coef_A = 2.0 provide a good compromise
+			"coef_A":		2.0,		// Type 2: Dimensionless number 1-6 (GradCi) coef_A = 2.0 provide a good compromise
 			"mach_number":	0.1,		// Type 2: Mach number Ma~0.1 (GradCi)
 			// Type 3: a = 0.9 (NOT IMPLEMENTED !!!)
 			"adj_vel_A":	0.9
@@ -184,7 +184,7 @@
 			"eps_re":		0.01
 		},
 		"free_surface_threshold": {
-			"type": 	2,		// 0: PND + Neigh, 1: PND + NPCD, 2: PND + Neigh + Normal + ARC
+			"type": 	1,		// 0: PND + Neigh, 1: PND + NPCD, 2: PND + Neigh + Normal + ARC
 			"pnd": 		0.98,	// 2D: 0.97; 3D: 0.98
 			"neigh":	0.85,	// 0.85
 			"NPCD": 	0.2,	// NPCD >= 0.2
