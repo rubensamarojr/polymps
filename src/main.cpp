@@ -223,6 +223,8 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 		}
 		// Update velocity and positions. Set some variables to zero or inf
 		part->updateVelocityPosition1st();
+		// Verify if particle is out of the domain
+		part->checkParticleOutDomain();
 		// Check collision between particles
 		if(part->collisionType == colType::PC) {
 			part->checkParticleCollisions();
@@ -376,6 +378,8 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 		
 		// Update velocity and positions
 		part->updateVelocityPosition2nd();
+		// Verify if particle is out of the domain
+		part->checkParticleOutDomain();
 		// Shifting techniques
 		// Adjust velocity
 		if(part->shiftingType == 1) {

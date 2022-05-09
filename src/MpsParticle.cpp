@@ -168,9 +168,9 @@ void MpsParticle::getPeriodicLengths(const int jb, double &perlx, double &perly,
 // Return the bucket coordinates for particle "i"
 void MpsParticle::bucketCoordinates(int &bx, int &by, int &bz,
 	const double rxi, const double ryi, const double rzi) {
-	bx = (int)((rxi - domainMinX)*invBucketSide + 1.0e-8);
-	by = (int)((ryi - domainMinY)*invBucketSide + 1.0e-8);
-	bz = (int)((rzi - domainMinZ)*invBucketSide + 1.0e-8);
+	bx = (int)((rxi - domainMinX)*invBucketSide + 1.0e-8*partDist);
+	by = (int)((ryi - domainMinY)*invBucketSide + 1.0e-8*partDist);
+	bz = (int)((rzi - domainMinZ)*invBucketSide + 1.0e-8*partDist);
 }
 
 // Weight function
@@ -1309,11 +1309,17 @@ void MpsParticle::checkParticleOutDomain() {
 			particleNearWall[iLastParticle]=false;
 			nearMeshType[iLastParticle]=meshType::FIXED;
 			distParticleWall2[iLastParticle]=10e8*partDist;
-			// Set zero to position of lastParticle
+			// Set zero to velocity and press of lastParticle
 			for (int j = 0; j < 3; j++){
-				pos[iLastParticle*3+j]=0.0;
+				//pos[iLastParticle*3+j]=0.0;
 				//Posk[iLastParticle*3+j]=0.0;
+				vel[iLastParticle*3  ] = 0.0;
 			}
+			press[iLastParticle  ] = 0.0;
+			// Set maximum position to lastParticle
+			pos[iLastParticle*3  ] = domainMaxX;
+			pos[iLastParticle*3+1] = domainMaxY;
+			pos[iLastParticle*3+2] = domainMaxZ;
 			
 			// Decrease number of particles
 			numParticles--;
