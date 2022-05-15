@@ -22,6 +22,7 @@ LIB_DIR := lib
 CC := g++
 CXX := g++
 DEBUGS := -O3
+#DEBUGS := -O3 -g
 
 # Got some preprocessor flags to pass ?
 # -I is a preprocessor flag, not a compiler flag
@@ -35,7 +36,7 @@ CPPFLAGS := -I $(INCLUDE_DIR) -Ieigen -Ijson/single_include/nlohmann -Ilibigl/in
 # -L is a linker flag
 LDFLAGS := -L $(LIB_DIR)
 #LDLIBS := -lboost_regex
-LDLIBS :=
+LDLIBS := -lstdc++fs
 
 MKDIR := mkdir -p
 MV := mv -f

@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cmath>
 #include <fstream>
+#include <experimental/filesystem>
 // strings and c-strings
 #include <iostream>
 #include <cstring>
@@ -132,6 +133,10 @@ void MpsParticle::stepZero() {
 	}
 	// Write header for vtu files
 	writePvd();
+	// Delete all files inside the simulation folder
+	deleteDirectoryFiles();
+	// Write VTK file of buckets
+	writeBuckets();
 }
 
 // Return the square distance between thwo particles "i" and "j"
@@ -149,6 +154,7 @@ void MpsParticle::sqrDistBetweenParticles(const int j,
 	const double rxi, const double ryi, const double rzi,
 	double &rx, double &ry, double &rz, double &rij2, 
 	const double plx, const double ply, const double plz) {
+
 	rx = (pos[j*3  ] + plx) - rxi;
 	ry = (pos[j*3+1] + ply) - ryi;
 	rz = (pos[j*3+2] + plz) - rzi;
@@ -168,9 +174,9 @@ void MpsParticle::getPeriodicLengths(const int jb, double &perlx, double &perly,
 // Return the bucket coordinates for particle "i"
 void MpsParticle::bucketCoordinates(int &bx, int &by, int &bz,
 	const double rxi, const double ryi, const double rzi) {
-	bx = (int)((rxi - domainMinX)*invBucketSide + 1.0e-8*partDist);
-	by = (int)((ryi - domainMinY)*invBucketSide + 1.0e-8*partDist);
-	bz = (int)((rzi - domainMinZ)*invBucketSide + 1.0e-8*partDist);
+	bx = (int)((rxi - domainMinX)*invBucketSide + 1.0e-8);
+	by = (int)((ryi - domainMinY)*invBucketSide + 1.0e-8);
+	bz = (int)((rzi - domainMinZ)*invBucketSide + 1.0e-8);
 }
 
 // Weight function
@@ -549,6 +555,7 @@ void MpsParticle::readMpsParticleFile(const std::string& grid_file) {
 	int zeroZero;
 	fscanf(fp,"%d",&zeroZero);
 	fscanf(fp,"%d",&numParticles);									// Read number of particles
+	numParticlesZero = numParticles;
 	// printf("Number of particles: %d\n",numParticles);
 
 	// Memory allocation
@@ -746,6 +753,8 @@ void MpsParticle::allocateBuckets() {
 	periodicDirection =	 		(bool*)malloc(sizeof(bool) * numBC*3);		// Periodic direction in domain (x, y, or z)
 	//periodicLength = 	 		(double*)malloc(sizeof(double) * numBC*3);	// Periodic length in x, y and z direction
 	for(int b=0; b<numBC; b++){
+		// domainTypeBC == 0: None
+		// domainTypeBC == 1: Periodic
 		bucketTypeBC[b] = domainTypeBC;
 		periodicDirection[b*3  ] = periodicDirectionX;
 		periodicDirection[b*3+1] = periodicDirectionY;
@@ -931,6 +940,8 @@ void MpsParticle::calcDomainLimits()
 	limDom = new double *[3];
 	for(int i=0; i<3; i++) limDom[i] = new double[3];
 
+	// limitTypeBC = 0: Border particle positions
+	// limitTypeBC = 1: Domain limits min and max
 	if(limitTypeBC == 0) {
 		// wall_type = 0: Use border particle positions to define all domain limits
 		// wall_type = 1: Use border particle positions to define periodic domain limits
@@ -966,7 +977,17 @@ void MpsParticle::calcDomainLimits()
 		limDom[2][0] = domainMinZ; limDom[2][1] = domainMaxZ;
 	}
 
+	// domainTypeBC == 0: None
+	// domainTypeBC == 1: Periodic
 	if(domainTypeBC == 0 && wallType == boundaryWallType::PARTICLE) { // Whithout any special domain boundary condition
+		
+		// Shift half particle distance
+		limDom[0][0] -= 0.5*partDist;	limDom[0][1] += 0.5*partDist;
+		limDom[1][0] -= 0.5*partDist;	limDom[1][1] += 0.5*partDist;
+		if(dim==3) {
+			limDom[2][0] -= 0.5*partDist;	limDom[0][1] += 0.5*partDist;
+		}
+		
 		for(int k=0; k<dim; k++) {
 			limDom[k][0] -= bucketSide;
 			limDom[k][1] += bucketSide;
@@ -1226,13 +1247,29 @@ void MpsParticle::checkParticleOutDomain() {
 		}
 	}
 
+	int newNumParticles = numParticles;
+	double limMinX = domainMinX;
+	double limMaxX = domainMaxX;
+	double limMinY = domainMinY;
+	double limMaxY = domainMaxY;
+	double limMinZ = domainMinZ;
+	double limMaxZ = domainMaxZ;
+	// limitTypeBC = 0: Border particle positions
+	// limitTypeBC = 1: Domain limits min and max
+	////if(limitTypeBC == 0)
+	////{
+		limMinX += bucketSide; limMaxX -= bucketSide;
+		limMinY += bucketSide; limMaxY -= bucketSide;
+		limMinZ += bucketSide; limMaxZ -= bucketSide;
+	////}
 	for(int i=0; i<numParticles; i++) {
-		if(	pos[i*3  ]>domainMaxX || pos[i*3  ]<domainMinX ||
-			pos[i*3+1]>domainMaxY || pos[i*3+1]<domainMinY ||
-			pos[i*3+2]>domainMaxZ || pos[i*3+2]<domainMinZ) {
+		if(	particleType[i] == fluid && i < newNumParticles &&
+			(pos[i*3  ]>limMaxX || pos[i*3  ]<limMinX ||
+			pos[i*3+1]>limMaxY || pos[i*3+1]<limMinY ||
+			(dim == 3 && (pos[i*3+2]>limMaxZ || pos[i*3+2]<limMinZ)))) {
 			
 			// ID of last particle
-			int iLastParticle = numParticles - 1;
+			int iLastParticle = newNumParticles - 1;
 			// Move the data from "Last Particle" to i-th ghost particle
 
 			// Scalars
@@ -1317,13 +1354,18 @@ void MpsParticle::checkParticleOutDomain() {
 			}
 			press[iLastParticle  ] = 0.0;
 			// Set maximum position to lastParticle
-			pos[iLastParticle*3  ] = domainMaxX;
-			pos[iLastParticle*3+1] = domainMaxY;
-			pos[iLastParticle*3+2] = domainMaxZ;
+			pos[iLastParticle*3  ] = domainMaxX - partDist;
+			pos[iLastParticle*3+1] = domainMaxY - partDist;
+			if (dim == 2)
+				pos[iLastParticle*3+2] = 0.0;
+			else
+				pos[iLastParticle*3+2] = domainMaxZ - partDist;
 			
 			// Decrease number of particles
-			numParticles--;
+			newNumParticles--;
 		}
+		// Update number of particles
+		numParticles = newNumParticles;
 	}
 }
 
@@ -1400,7 +1442,7 @@ void MpsParticle::updateBuckets() {
 			lastParticleInBucket[i] = -1;
 		}
 #pragma omp parallel for
-		for(int i=0; i<numParticles; i++) {	
+		for(int i=0; i<numParticlesZero; i++) {	
 			nextParticleInSameBucket[i] = -1;
 		}
 		for(int i=0; i<numParticles; i++) {
@@ -1421,7 +1463,7 @@ void MpsParticle::updateBuckets() {
 			lastParticleInBucket[i] = -1;
 		}
 #pragma omp parallel for
-		for(int i=0; i<numParticles; i++) {
+		for(int i=0; i<numParticlesZero; i++) {
 			nextParticleInSameBucket[i] = -1;
 		}
 		for(int i=0; i<numParticles; i++) {
@@ -1454,7 +1496,7 @@ void MpsParticle::calcViscosityGravity() {
 		double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
 		double velXi = vel[i*3  ];	double velYi = vel[i*3+1];	double velZi = vel[i*3+2];
 		double posMirrorXi = mirrorParticlePos[i*3  ];	double posMirrorYi = mirrorParticlePos[i*3+1];	double posMirrorZi = mirrorParticlePos[i*3+2];
-		
+
 		int ix, iy, iz;
 		bucketCoordinates(ix, iy, iz, posXi, posYi, posZi);
 		int minZ = (iz-1)*((int)(dim-2.0)); int maxZ = (iz+1)*((int)(dim-2.0));
@@ -8896,4 +8938,56 @@ void MpsParticle::writePvd()
 
 	delete[] output_folder_char;
 	output_folder_char = NULL;
+}
+
+// Delete all files inside the simulation folder
+void MpsParticle::deleteDirectoryFiles()
+{
+	for (const auto& entry : std::experimental::filesystem::directory_iterator(vtuOutputFoldername)) 
+		std::experimental::filesystem::remove_all(entry.path());
+}
+
+// Write vtk file with initial bucktes
+void MpsParticle::writeBuckets() {
+
+	char output_filename[256];
+	char *output_folder_char = new char[vtuOutputFoldername.length()+1];
+	strcpy (output_folder_char, vtuOutputFoldername.c_str());
+	// output_folder_char now contains a c-string copy of vtuOutputFoldername
+
+	sprintf(output_filename, "%s/buckets.vtk",output_folder_char);
+
+	delete[] output_folder_char;
+	output_folder_char = NULL;
+
+	// ASCII FILE
+	fp = fopen(output_filename, "w");
+
+	int nDimX = numBucketsX + 1;
+	int nDimY = numBucketsY + 1;
+	int nDimZ = numBucketsZ;
+	if(dim==3) {
+		nDimZ += 1;
+	}
+	double originX = domainMinX;
+	double originY = domainMinY;
+	double originZ = domainMinZ;
+	int numCells = numBucketsXYZ;
+	
+	fprintf(fp,"# vtk DataFile Version 3.0\n");
+	fprintf(fp,"Initial Buckets\n");
+	fprintf(fp,"ASCII\n");
+	fprintf(fp,"DATASET STRUCTURED_POINTS\n");
+	fprintf(fp,"DIMENSIONS %d %d %d\n", nDimX, nDimY, nDimZ);
+	fprintf(fp,"ORIGIN %lf %lf %lf\n", domainMinX, domainMinY, domainMinZ);
+	fprintf(fp,"SPACING %lf %lf %lf\n", bucketSide, bucketSide, bucketSide);
+	fprintf(fp,"CELL_DATA %d\n", numBucketsXYZ);
+	fprintf(fp,"SCALARS density int 1\n");
+	fprintf(fp,"LOOKUP_TABLE default\n");
+	for(int i=0; i<numBucketsXYZ; i++)
+	{
+		fprintf(fp,"1 ");
+	}
+
+	fclose(fp);
 }

@@ -127,7 +127,7 @@
 		},
 		// Pressure gradient
 		"gradient": {
-			"type":			3,			// 0: Pj - Pmin; 1: Pj + Pi; 2: Pj + Pi - 2*Pmin; 3: ni*Pj/nj + nj*Pi/ni
+			"type":			0,			// 0: Pj - Pmin; 1: Pj + Pi; 2: Pj + Pi - 2*Pmin; 3: ni*Pj/nj + nj*Pi/ni
 			"correction":	false,		// Corrected pressure gradient (true or false)
 			// Relaxation factor (<= 1.0)
 			"relax_fact": 	1.0

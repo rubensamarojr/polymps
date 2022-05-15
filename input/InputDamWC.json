@@ -27,7 +27,7 @@
 		"mesh_rigid_file": 		"input/stl/dam1610.stl",
 		"mesh_deformable_file": "input/stl/elastic_beam_16.stl", // (NOT WORKING !!)
 		"mesh_forced_file": 	"input/stl/tank_liao_forced_gate.stl",
-		"vtu_output_folder":	"output/dambreak01_WC",
+		"vtu_output_folder":	"output/InpuDamWC",
 		"forceTxt_file":		"output/dambreak01_force.txt",
 		"pressTxt_file":		"output/dambreak01_press.txt"
 	},

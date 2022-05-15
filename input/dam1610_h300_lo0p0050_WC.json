@@ -27,7 +27,7 @@
 		"mesh_rigid_file": 		"input/stl/dam1610.stl",
 		"mesh_deformable_file": "input/stl/elastic_beam_16.stl", // (NOT WORKING !!)
 		"mesh_forced_file": 	"input/stl/tank_liao_forced_gate.stl",
-		"vtu_output_folder":	"output/dam1610_h300_lo0p0050_WC_DPC_CD_DUMMY_TIME",
+		"vtu_output_folder":	"output/dam1610_h300_lo0p0050_WC",
 		"forceTxt_file":		"output/dambreak01_force.txt",
 		"pressTxt_file":		"output/dambreak01_press.txt"
 	},
@@ -46,7 +46,7 @@
 		// type: periodic
 		"boundary": {
 			"type": 0,					// 0: None; 1: Periodic
-			"limit": 0,					// 0: Border particle positions; 1: Domain limits min and max
+			"limit": 1,					// 0: Border particle positions; 1: Domain limits min and max
 			"direction": {
 				"x":	false, 
 				"y":	false,
@@ -127,7 +127,7 @@
 		},
 		// Pressure gradient
 		"gradient": {
-			"type":			2,			// 0: Pj - Pmin; 1: Pj + Pi; 2: Pj + Pi - 2*Pmin; 3: ni*Pj/nj + nj*Pi/ni
+			"type":			0,			// 0: Pj - Pmin; 1: Pj + Pi; 2: Pj + Pi - 2*Pmin; 3: ni*Pj/nj + nj*Pi/ni
 			"correction":	true,		// Corrected pressure gradient (true or false)
 			// Relaxation factor (<= 1.0)
 			"relax_fact": 	1.0
@@ -158,7 +158,7 @@
 			}
 		},
 		"particle_shifting": {
-			"type": 		0,			// 0: OFF; 1: DW*Uij; 2: GradCi
+			"type": 		2,			// 0: OFF; 1: DW*Uij; 2: GradCi
 			"DRI": 			0.01,		// Type 1: Adjusted velocity paramater (DW*Uij) DRI <= 0.01
 			"coef_A":		2.0,		// Type 2: Dimensionless number 1-6 (GradCi) coef_A = 2.0 provide a good compromise
 			"mach_number":	0.1,		// Type 2: Mach number Ma~0.1 (GradCi)

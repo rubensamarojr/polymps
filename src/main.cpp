@@ -183,8 +183,8 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 	// Break if simulation reaches the final time
 	while(true) {
 
-		// Display simulation informations at each 10 iterations
-		part->displayInfo(10);
+		// Display simulation informations at each 100 iterations
+		part->displayInfo(100);
 		if(part->numOfIterations%part->iterOutput == 0) {
 			// Write output particle files
 			part->writeOutputFiles();
@@ -206,12 +206,11 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 		///////////////////////////
 		// Update particle ID's in buckets
 		part->updateBuckets();
-
+		// Non newtonian calculation
 		if(part->fluidType == viscType::NON_NEWTONIAN) {
 			part->calcVolumeFraction(); // Volume of fraction if phase II in the mixture
 			part->calcViscosityInteractionVal();// Viscosity interaction values for "real" fluid particles
 		}
-
 		// Calculation of acceleration due laplacian of viscosity and gravity
 		part->calcViscosityGravity();
 		// Add acceleration due pressure gradient (Prediction)
@@ -232,7 +231,6 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 		else {
 			part->checkDynamicParticleCollisions();
 		}
-
 		// Contributions due polygon wall
 		if(part->wallType == boundaryWallType::POLYGON) {
 			// Fluid particles: Calculation of PND due wall and number of neighboors
@@ -257,12 +255,10 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 			// NPCD PND due polygon wall
 			part->calcWallNPCD();
 		}
-
 		// Compute correction matrix
 		if(part->gradientCorrection == true) {
 			part->correctionMatrix();
 		}
-		
 		// PND, number of neighbors and NPCD calculation
 		part->calcPndnNeighNPCD();
 		// Diffusion term
@@ -289,10 +285,8 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 			}
 			part->meanPnd();
 		}
-
 		// Mean fluid neighbor PND
 		//part->meanNeighFluidPnd();
-
 		// Update type of particle
 		if(part->freeSurfType == calcBCType::PND_ARC) {
 			// Compute fluid particles normal vector
@@ -303,7 +297,6 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 			}
 		}
 		part->updateParticleBC();
-
 		// Pressure calculation
 		if(part->mpsType == calcPressType::EXPLICIT) {
 			part->calcPressEMPS();
@@ -326,9 +319,9 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 			}
 			part->solvePressurePoissonPndDivU();
 		}
-		
+		// Extrapolate pressure to wall and dummy particles
 		if(part->wallType == boundaryWallType::PARTICLE) {
-			part->extrapolatePressParticlesWallDummy(); // Extrapolate pressure to wall and dummy particles
+			part->extrapolatePressParticlesWallDummy();
 		}
 		if(part->wallType == boundaryWallType::POLYGON) {
 			// Pressure at inner particles near corners
@@ -345,7 +338,6 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 			// Add acceleration due pressure gradient on polygon wall
 			part->calcWallPressGradient();
 		}
-
 		// Add acceleration due laplacian of viscosity on wall
 		///////////////// Non-Newtonian flow /////////////////
 		if(part->fluidType == viscType::NON_NEWTONIAN) {
@@ -375,7 +367,6 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 			// Update forced mesh
 			mesh[meshType::FORCED].updateForcedPolygonMesh(nodeFRWX, nodeFRWY, nodeFRWZ, part->velVWall, part->timeStep, part->timeCurrent);
 		}
-		
 		// Update velocity and positions
 		part->updateVelocityPosition2nd();
 		// Verify if particle is out of the domain
@@ -411,7 +402,6 @@ void mainLoopOfSimulation(MpsParticle* part, PolygonMesh* mesh) {
 		// for(int i=0; i<part->numParticles; i++) {
 		// 	part->pressAverage[i] += part->press[i];
 		// }
-
 		// Verify if particle is out of the domain
 		part->checkParticleOutDomain();
 

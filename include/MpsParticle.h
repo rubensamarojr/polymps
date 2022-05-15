@@ -112,6 +112,10 @@ public:
 	void writeVtuAsciiFreeSurface();
 	// Write header for vtu files
 	void writePvd();
+	// Delete all files inside the simulation folder
+	void deleteDirectoryFiles();
+	// Write bucktes
+	void writeBuckets();
 	// Return the bucket coordinates for particle "i"
 	void bucketCoordinates(int &bx, int &by, int &bz, 
 		const double rxi, const double ryi, const double rzi);
@@ -326,7 +330,8 @@ public:
 
 	///////////// INPUTS /////////////
 	// Scalars
-	int numParticles;		// Number of particles
+	int numParticlesZero;	// Number of particles at the initial instant of simulation
+	int numParticles;		// Number of particles during simulation
 	int *particleType;		// Particle type
 	double *press;			// Particle pressure
 	double *pressAverage;	// Time averaged particle pressure
