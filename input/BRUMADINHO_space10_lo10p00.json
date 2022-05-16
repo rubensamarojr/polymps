@@ -174,7 +174,7 @@
 		"wall_repulsive_force": {
 			"type": 		2,			// 0: Harada, 1: Mitsume; 2: Lennard-Jones; 3: Monaghan-Kajtar
 			"re":			0.5,		// Influence radius (0.5)
-			"maxVel":		250.0,		// Expected maximum velocity (e.g., dam-break wave front = 2*sqrt(gravity*WaterHeight))
+			"maxVel":		200.0,		// Expected maximum velocity (e.g., dam-break wave front = 2*sqrt(gravity*WaterHeight))
 			"coefficient": {
 				"Mitsume":	40000000.0,
 				// Range for L-J and M-K ~ [1,10]
