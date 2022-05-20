@@ -985,7 +985,7 @@ void MpsParticle::calcDomainLimits()
 		limDom[0][0] -= 0.5*partDist;	limDom[0][1] += 0.5*partDist;
 		limDom[1][0] -= 0.5*partDist;	limDom[1][1] += 0.5*partDist;
 		if(dim==3) {
-			limDom[2][0] -= 0.5*partDist;	limDom[0][1] += 0.5*partDist;
+			limDom[2][0] -= 0.5*partDist;	limDom[2][1] += 0.5*partDist;
 		}
 		
 		for(int k=0; k<dim; k++) {
