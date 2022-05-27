@@ -1350,7 +1350,7 @@ void MpsParticle::checkParticleOutDomain() {
 			for (int j = 0; j < 3; j++){
 				//pos[iLastParticle*3+j]=0.0;
 				//Posk[iLastParticle*3+j]=0.0;
-				vel[iLastParticle*3  ] = 0.0;
+				vel[iLastParticle*3+j] = 0.0;
 			}
 			press[iLastParticle  ] = 0.0;
 			// Set maximum position to lastParticle
