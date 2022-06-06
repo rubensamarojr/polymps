@@ -1,6 +1,6 @@
 # PolyMPS
 
-A C++ code for numerical modelling of free-surface flow :ocean: using Explicit, Weakly Compressible or Incompressible Moving Particle Simulation/Semi-implicit (**MPS**) method. Boundary walls modeled by polygonal mesh (triangles) or particles (walls and dummies).
+A C++ code for numerical modelling of free-surface flow :ocean: using Explicit, Weakly Compressible or Incompressible Moving Particle Simulation/Semi-implicit [MPS](https://doi.org/10.13182/NSE96-A24205) method. Boundary walls can be modeled by polygonal mesh (triangles) or discrete layers of wall and dummy (ghost) particles.
 
 <img src='/output/dambreak01_movie.gif' width="96%">
 
@@ -13,7 +13,7 @@ Rubens Augusto Amaro Junior, Alfredo Gay Neto and Liang-Yee Cheng, "3D WC-MPS co
 
 On the [PolyMPS Discussions](https://github.com/rubensamarojr/polymps/discussions) page you can ask questions, discuss about simulation issues, share ideas, and interact with other members.
 
-## Requirements
+## Dependencies
 
 - [GCC (GNU Compiler Collection)](https://gcc.gnu.org)
 - [Eigen](http://eigen.tuxfamily.org)
@@ -34,14 +34,19 @@ Eigen, libigl and JSON for Modern C++ are third party [header-only](https://en.w
 
 ## MPS input files
 
-1. **SOLID DOMAIN**: 
-- Boundary walls using **triangular meshes**. It is necessary to create a file (extension **.stl**) with informations about the initial geometry.
-- Boundary walls using **particles**. Necessary to add one layer of wall particles (material ID = 2) and two layers of dummy particles (material ID = 3) in the **.grid** file.
+1. **SOLID DOMAIN** using ...
+    1. ... **triangular meshes**. It is necessary to create a file (extension **.stl**) with informations about the initial geometry.
+    2. ... **particles**. Necessary to add one layer of wall particles (material ID = 2) and two layers of dummy particles (material ID = 3) in the **.grid** file.
 
 2. **FLUID DOMAIN**<a id='fluid_input'></a>: it is necessary to create a file (extension **.grid**) with informations about the initial geometry and some numerical and physical parameters:
-- First line: **0**
-- Second line: **number of particles**
-- Next lines in the columns: **material ID** coordinates of particles **X** **Y** **Z** the initial fluid velocities (generally 0.0) **VX** **VY** **VZ** the initial particle pressure (generally 0.0) **P** and presure average (generally 0.0) **PAV**
+    - First line: **0**
+    - Second line: **number of particles**
+    - Next lines in the columns:
+        - material **ID**
+        - initial coordinates of particles **X** **Y** **Z** 
+        - initial fluid velocities **VX** **VY** **VZ** (generally 0.0 0.0 0.0)
+        - initial particle pressure **P** (generally 0.0)
+        - initial presure average **PAV** (generally 0.0)
 
 3. **FOLDERNAMES, FILENAMES, PHYSICAL and NUMERICAL parameters**: it is necessary to create a file (extension **.json**) and set all parameters.
 
@@ -84,14 +89,14 @@ make all
 
 This should create a binary `main` in folder **bin**
 
-## Run
-- LINUX
+## Run ...
+- ... on LINUX
 
 In the terminal, type
 ```bash
 ./bin/main
 ```
-- WINDOWS
+- ... on WINDOWS
 
 You can do this in two ways:
 
@@ -103,9 +108,14 @@ bin\main.exe
 
 ## Input
 Type the name of the json input file (located in input directory), e.g.
-
 ```bash
 MpsInputExample
+```
+
+You can specify a different case by changing numerical and physcial parameters in the input json file. Also, input grid and stl files can be updated according your problem. We recommend that you rename the json file, e.g. **case_02.json**, and set a new name to output folder.
+After that, you can run PolyMPS at any time, and type the name of the new json input file, e.g.
+```bash
+case_02
 ```
 
 ## Additional Note
@@ -113,7 +123,7 @@ MpsInputExample
 
 ## Output
 This code writes pvd (header file) and corresponding vtu files as output. Look in the **output** directory.
-You can visualize them by open the pvd file with [Paraview](https://www.paraview.org) :eyeglasses:.
+You can visualize them by open the pvd file with [Paraview](https://www.paraview.org) :eyes:.
 
 ## Directories
 
