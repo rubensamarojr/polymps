@@ -32,7 +32,11 @@ The following Packages should be selected during the Cygwin installation:
 
 Eigen, libigl and JSON for Modern C++ are third party [header-only](https://en.wikipedia.org/wiki/Header-only) libraries, i.e., they do not need to be separately compiled, packaged and installed to be used :heart_eyes:.
 
-## MPS input files
+## PolyMPS workflow
+
+<img src='/output/workflow.jpg' width="100%">
+
+## PolyMPS input files
 
 1. **SOLID DOMAIN** using ...
     1. ... **triangular meshes**. It is necessary to create a file (extension **.stl**) with informations about the initial geometry.
