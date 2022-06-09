@@ -4839,8 +4839,11 @@ void MpsParticle::calcViscosityInteractionVal() {
 	//Xmin = 0.0 - partDist*3.0; Xmax = 2.00 + partDist*3.0;
 	//Ymin = 0.0; Ymax = 0.00;
 	// S1 2D
-	Xmin = 0.0 - partDist*3.0; Xmax = 0.30 + partDist*3.0;
-	Ymin = 0.0; Ymax = 0.00;
+//	Xmin = 0.0 - partDist*3.0; Xmax = 0.30 + partDist*3.0;
+//	Ymin = 0.0; Ymax = 0.00;
+	// Subaquatic 0.016
+	Xmin = 0.0016 - partDist*3.0; Xmax = 0.9792 + partDist*3.0;
+	Ymin = 0.00; Ymax = 0.00;
 	// Changed !!!
 
 	// Search free-surface particles for each interval of aa = 2 particles in wall

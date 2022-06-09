@@ -57,6 +57,13 @@ int main( int argc, char** argv) {
 	particles = new MpsParticle();
 	particles->init();
 
+	if(particles->mpsType == calcPressType::IMPLICIT_PND || particles->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
+		if(particles->pndType == calcPNDType::DIFFUSIVE || particles->pndType == calcPNDType::MEAN_SUM_WIJ) {
+			printf("\nError: Please, set 'pnd-type to 0' in the json file for incompressible MPS\n");
+			throw std::exception();
+		}
+	}
+
 	printf("Particle class initialized.\n");
 
 	if(particles->wallType == boundaryWallType::POLYGON) {
