@@ -64,7 +64,6 @@ It is necessary to create a file (extension **.json**) and set all parameters.
 1. ... using **triangular meshes**. It is necessary to create a file (extension **.stl**) with informations about the initial geometry.
 2. ... using **particles**. Necessary to add one layer of wall particles (material ID = 2) and two layers of dummy particles (material ID = 3) in the **.grid** file.
 
-<a id='fluid_input'></a>
 ### Fluid domain
 It is necessary to create a file (extension **.grid**) with informations about the initial geometry and some numerical and physical parameters:
 - First line: **0**
@@ -137,14 +136,14 @@ Type the name of the json input file (located in input directory), e.g.
 MpsInputExample
 ```
 
-You can specify a different case by changing numerical and physical parameters in the input json file. Also, input grid and stl files can be updated according your problem. We recommend that you rename the json file, e.g. **case_02.json**, and set a new name to output folder.
-After that, you can run PolyMPS at any time, and type the name of the new json input file, e.g.
+You can specify a different case by changing numerical and physical parameters in the input json file. Also, input grid and stl files should be updated according your problem. We recommend that you rename the json file, e.g. **case_02.json**, and set a new name to output folder.
+After that, you can [run](#run) PolyMPS at any time, and type the name of the new json input file, e.g.
 ```bash
 case_02
 ```
 
 ## Additional Note
-:warning: If the terminal shows an error message at this step, the problem may be related to the input file **dam1610_3D_fluid_lo0p010_mps.grid**. Please, go to the directory **input/grid** and extract the compressed folder [**grid.zip**](https://github.com/rubensamarojr/polymps/blob/master/input/grid/grid.zip) in the grid directory itself. Check if **dam1610_3D_fluid_lo0p010_mps.grid** contains the data mentioned before in [FLUID DOMAIN](#fluid_input). After that, try to run the code again.
+:warning: If the terminal shows an error message at this step, the problem may be related to the input file **dam1610_3D_fluid_lo0p010_mps.grid**. Please, go to the directory **input/grid** and extract the compressed folder [**grid.zip**](https://github.com/rubensamarojr/polymps/blob/master/input/grid/grid.zip) in the grid directory itself. Check if **dam1610_3D_fluid_lo0p010_mps.grid** contains the data mentioned before in [Fluid domain](#fluid-domain). After that, try to run the code again.
 
 ## Output
 This code writes pvd (header file) and corresponding vtu files as output. Look in the **output** directory.
