@@ -137,7 +137,7 @@ Type the name of the json input file (located in input directory), e.g.
 MpsInputExample
 ```
 
-You can specify a different case by changing numerical and physcial parameters in the input json file. Also, input grid and stl files can be updated according your problem. We recommend that you rename the json file, e.g. **case_02.json**, and set a new name to output folder.
+You can specify a different case by changing numerical and physical parameters in the input json file. Also, input grid and stl files can be updated according your problem. We recommend that you rename the json file, e.g. **case_02.json**, and set a new name to output folder.
 After that, you can run PolyMPS at any time, and type the name of the new json input file, e.g.
 ```bash
 case_02
