@@ -16,7 +16,7 @@ On the [PolyMPS Discussions](https://github.com/rubensamarojr/polymps/discussion
 ## Contents
 - [Dependencies](#dependencies)
 - [PolyMPS workflow](#polymps-workflow)
-- [PolyMPS input files](#polymps-input-files)
+- [Input files](#input-files)
     - [Foldernames, Filenames, Physical and Numerical parameters](#foldernames-filenames-physical-and-numerical-parameters)
     - [Solid domain](#solid-domain)
     - [Fluid domain](#fluid-domain)
@@ -24,7 +24,7 @@ On the [PolyMPS Discussions](https://github.com/rubensamarojr/polymps/discussion
 - [Run](#run)
     - [on LINUX](#on-linux)
     - [on WINDOWS](#on-windows)
-- [Input](#input)
+- [Json input filename](#json-input-filename)
 - [Additional note](#additional-note)
 - [Output](#output)
 - [Directories](#directories)
@@ -53,7 +53,7 @@ Eigen, libigl and JSON for Modern C++ are third party [header-only](https://en.w
 
 <img src='/output/workflow.jpg' width="100%">
 
-## PolyMPS input files
+## Input files
 
 Please have a look at some examples in the folder [**input**](https://github.com/rubensamarojr/polymps/tree/master/input).
 
@@ -131,7 +131,7 @@ bin\main.exe
 ```
 2nd way - Move the *main.exe* from the folder **bin** to the root folder **polymps**. After that, double click on *main.exe*.
 
-## Input
+## Json input filename
 Type the name of the json input file (located in input directory), e.g.
 ```bash
 MpsInputExample
