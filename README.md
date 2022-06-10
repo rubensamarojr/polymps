@@ -57,6 +57,8 @@ Eigen, libigl and JSON for Modern C++ are third party [header-only](https://en.w
 
 Please have a look at some examples in the folder [**input**](https://github.com/rubensamarojr/polymps/tree/master/input).
 
+In order to run these examples, please, go to the directory **input/grid** and extract the compressed folder [**grid.zip**](https://github.com/rubensamarojr/polymps/blob/master/input/grid/grid.zip) in the grid directory itself.
+
 ### Foldernames, Filenames, Physical and Numerical parameters
 It is necessary to create a file (extension **.json**) and set all parameters.
 
