@@ -13,6 +13,23 @@ Rubens Augusto Amaro Junior, Alfredo Gay Neto and Liang-Yee Cheng, "3D WC-MPS co
 
 On the [PolyMPS Discussions](https://github.com/rubensamarojr/polymps/discussions) page you can ask questions, discuss about simulation issues, share ideas, and interact with other members.
 
+## Contents
+- [Dependencies](#dependencies)
+- [PolyMPS workflow](#polymps-workflow)
+- [PolyMPS input files](#polymps-input-files)
+    - [Foldernames, Filenames, Physical and Numerical parameters](#foldernames-filenames-physical-and-numerical-parameters)
+    - [Solid domain](#solid-domain)
+    - [Fluid domain](#fluid-domain)
+- [Compile](#compile)
+- [Run](#run)
+    - [on LINUX](#on-linux)
+    - [on WINDOWS](#on-windows)
+- [Input](#input)
+- [Additional note](#additional-note)
+- [Output](#output)
+- [Directories](#directories)
+- [License](#license)
+
 ## Dependencies
 
 - [GCC (GNU Compiler Collection)](https://gcc.gnu.org)
@@ -38,23 +55,26 @@ Eigen, libigl and JSON for Modern C++ are third party [header-only](https://en.w
 
 ## PolyMPS input files
 
-1. **SOLID DOMAIN** using ...
-    1. ... **triangular meshes**. It is necessary to create a file (extension **.stl**) with informations about the initial geometry.
-    2. ... **particles**. Necessary to add one layer of wall particles (material ID = 2) and two layers of dummy particles (material ID = 3) in the **.grid** file.
+Please have a look at some examples in the folder [**input**](https://github.com/rubensamarojr/polymps/tree/master/input).
 
-2. **FLUID DOMAIN**<a id='fluid_input'></a>: it is necessary to create a file (extension **.grid**) with informations about the initial geometry and some numerical and physical parameters:
-    - First line: **0**
-    - Second line: **number of particles**
-    - Next lines in the columns:
-        - material **ID**
-        - initial coordinates of particles **X** **Y** **Z** 
-        - initial fluid velocities **VX** **VY** **VZ** (generally 0.0 0.0 0.0)
-        - initial particle pressure **P** (generally 0.0)
-        - initial presure average **PAV** (generally 0.0)
+### Foldernames, Filenames, Physical and Numerical parameters
+It is necessary to create a file (extension **.json**) and set all parameters.
 
-3. **FOLDERNAMES, FILENAMES, PHYSICAL and NUMERICAL parameters**: it is necessary to create a file (extension **.json**) and set all parameters.
+### Solid domain
+1. ... using **triangular meshes**. It is necessary to create a file (extension **.stl**) with informations about the initial geometry.
+2. ... using **particles**. Necessary to add one layer of wall particles (material ID = 2) and two layers of dummy particles (material ID = 3) in the **.grid** file.
 
-There are some examples in the folder **input**.
+<a id='fluid_input'></a>
+### Fluid domain
+It is necessary to create a file (extension **.grid**) with informations about the initial geometry and some numerical and physical parameters:
+- First line: **0**
+- Second line: **number of particles**
+- Next lines in the columns:
+    - material **ID**
+    - initial coordinates of particles **X** **Y** **Z** 
+    - initial fluid velocities **VX** **VY** **VZ** (generally 0.0 0.0 0.0)
+    - initial particle pressure **P** (generally 0.0)
+    - initial presure average **PAV** (generally 0.0)
 
 ## Compile
 
@@ -93,14 +113,15 @@ make all
 
 This should create a binary `main` in folder **bin**
 
-## Run ...
-- ... on LINUX
+## Run
+
+### on LINUX
 
 In the terminal, type
 ```bash
 ./bin/main
 ```
-- ... on WINDOWS
+### on WINDOWS
 
 You can do this in two ways:
 
@@ -123,7 +144,7 @@ case_02
 ```
 
 ## Additional Note
-:warning: If the terminal shows an error message at this step, the problem may be related to the input file **dam1610_3D_fluid_lo0p010_mps.grid**. Please, go to the directory **input/grid** and extract the compressed folder **grid.zip** in the grid directory itself. Check if **dam1610_3D_fluid_lo0p010_mps.grid** contains the data mentioned before in [FLUID DOMAIN](#fluid_input). After that, try to run the code again.
+:warning: If the terminal shows an error message at this step, the problem may be related to the input file **dam1610_3D_fluid_lo0p010_mps.grid**. Please, go to the directory **input/grid** and extract the compressed folder [**grid.zip**](https://github.com/rubensamarojr/polymps/blob/master/input/grid/grid.zip) in the grid directory itself. Check if **dam1610_3D_fluid_lo0p010_mps.grid** contains the data mentioned before in [FLUID DOMAIN](#fluid_input). After that, try to run the code again.
 
 ## Output
 This code writes pvd (header file) and corresponding vtu files as output. Look in the **output** directory.
