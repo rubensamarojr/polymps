@@ -247,6 +247,17 @@ void MpsParticle::readInputFile() {
 	char json_file_char [1000];
 	char json_path_char [1000];
 	bool readOK = false;
+
+	printf("   ____       ___                    ____    ____       							\n");
+	printf("  /\\  _`\\    /\\_ \\           /'\\_/`\\/\\  _`\\ /\\  _`\\     				\n");
+	printf("  \\ \\ \\L\\ \\__\\//\\ \\   __  __/\\      \\ \\ \\L\\ \\ \\,\\L\\_\\   		\n");
+	printf("   \\ \\ ,__/ __`\\ \\ \\ /\\ \\/\\ \\ \\ \\__\\ \\ \\ ,__/\\/_\\__ \\   			\n");
+	printf("    \\ \\ \\/\\ \\L\\ \\_\\ \\\\ \\ \\_\\ \\ \\ \\_/\\ \\ \\ \\/   /\\ \\L\\ \\ 	\n");
+	printf("     \\ \\_\\ \\____/\\____\\/`____ \\ \\_\\\\ \\_\\ \\_\\   \\ `\\____\\ 		\n");
+	printf("      \\/_/\\/___/\\/____/`/___/> \\/_/ \\/_/\\/_/    \\/_____/					\n");
+	printf("                          /\\___/                        							\n");
+	printf("                          \\/__/                         							\n");
+
 	printf(" ____________________________________________________________ \n");
 	printf("|                                                            |\n");
 	printf("|                      E-MPS/WC-MPS/MPS                      |\n");
@@ -257,6 +268,7 @@ void MpsParticle::readInputFile() {
 	printf("|                                                            |\n");
 	printf("|  by Rubens Augusto Amaro Junior                            |\n");
 	printf("|____________________________________________________________|\n\n");
+
 	while (readOK == false)
 	{
 		printf("Enter the name of the MPS input file:\n");
