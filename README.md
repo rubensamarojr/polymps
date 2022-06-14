@@ -116,6 +116,8 @@ This should create a binary `main` in folder **bin**
 
 ## Run
 
+:warning:FIRST OF ALL, go to the directory **input/grid** and extract the compressed folder [**grid.zip**](https://github.com/rubensamarojr/polymps/blob/master/input/grid/grid.zip) in the grid directory itself. Check if **dam1610_3D_fluid_lo0p010_mps.grid** contains the data mentioned before in [Fluid domain](#fluid-domain).
+
 ### on LINUX
 
 In the terminal, type
@@ -143,9 +145,6 @@ After that, you can [run](#run) PolyMPS at any time, and type the name of the ne
 ```bash
 case_02
 ```
-
-## Additional Note
-:warning: If the terminal shows an error message at this step, the problem may be related to the input file **dam1610_3D_fluid_lo0p010_mps.grid**. Please, go to the directory **input/grid** and extract the compressed folder [**grid.zip**](https://github.com/rubensamarojr/polymps/blob/master/input/grid/grid.zip) in the grid directory itself. Check if **dam1610_3D_fluid_lo0p010_mps.grid** contains the data mentioned before in [Fluid domain](#fluid-domain). After that, try to run the code again.
 
 ## Output
 This code writes pvd (header file) and corresponding vtu files as output. Look in the **output** directory.
