@@ -7,7 +7,7 @@ A C++ code for numerical modelling of free-surface flow :ocean: using Explicit, 
 ## How to cite PolyMPS ?
 If you use PolyMPS, please cite the following reference:
 
-Rubens Augusto Amaro Junior, Alfredo Gay Neto and Liang-Yee Cheng, "3D WC-MPS coupled with geometrically nonlinear shell for hydro-elastic free-surface flows", International Journal for Numerical Methods in Fluids. https://doi.org/10.1002/fld.5083
+Amaro Jr, R. A. and Cheng, L.Y. "PolyMPS - An open source CFD solver based on Polygon walls in Moving Particle Semi-implicit (MPS) method", Software Impacts, 14. https://doi.org/10.1016/j.simpa.2022.100376
 
 ## Forum
 
