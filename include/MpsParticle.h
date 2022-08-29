@@ -8,6 +8,8 @@
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
 
+//#define SHOW_FUNCT_NAME_PART	///print the function name from any location inside a C++ function (useful for investigating programs)
+
 #pragma once
 
 enum boundaryWallType {
@@ -299,6 +301,7 @@ public:
 	int fluidType;		// Newtonian:0 , Non Newtonian:1 
 
 	// Numerical
+	const double epsilonZero = 10.0*std::numeric_limits<double>::epsilon();	// Very small number near to zero
 	double dim;				// Dimension
 	double partDist;		// Average particle distance (m)
 	double invPartDist;		// Inverse of average particle distance (m)

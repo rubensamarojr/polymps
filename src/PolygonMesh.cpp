@@ -205,6 +205,11 @@ void PolygonMesh::updateForcedPolygonMesh(double *nodeX, double *nodeY, double *
 		NNormals(ff,1) = NormalAux(ff,1);
 		NNormals(ff,2) = NormalAux(ff,2);
 	}
+
+#ifdef SHOW_FUNCT_NAME_POLY
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Creation of the wall weight (Zij) and number of neighboors functions (numNeighWall)
@@ -534,6 +539,11 @@ void PolygonMesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, 
 	  particlesNearMesh.insert(particlesNearMesh.end(), particlesNearMesh_private.begin(), particlesNearMesh_private.end());
   }
 */
+
+#ifdef SHOW_FUNCT_NAME_POLY
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Update vector with ID of particles near the mesh
@@ -609,4 +619,9 @@ void PolygonMesh::updateParticlesNearPolygonMesh(double reS2, double reL2, int n
 #pragma omp critical
 	particlesNearMesh.insert(particlesNearMesh.end(), particlesNearMesh_private.begin(), particlesNearMesh_private.end());
 	}
+
+#ifdef SHOW_FUNCT_NAME_POLY
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }

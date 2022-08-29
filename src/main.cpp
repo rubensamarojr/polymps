@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <limits>
 #include "PolygonMesh.h"
 #include "MpsParticle.h"
 
@@ -56,6 +57,11 @@ int main( int argc, char** argv) {
 	// Create MpsParticle class
 	particles = new MpsParticle();
 	particles->init();
+
+	if(particles->partDist*particles->partDist <= particles->epsilonZero) {
+			printf("\nError: Operations using squared particle distance is less than the machine double precision. Use a model with a higher particle distance.\n");
+			throw std::exception();
+	}
 
 	if(particles->mpsType == calcPressType::IMPLICIT_PND || particles->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
 		if(particles->pndType == calcPNDType::DIFFUSIVE || particles->pndType == calcPNDType::MEAN_SUM_WIJ) {

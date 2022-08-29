@@ -137,6 +137,11 @@ void MpsParticle::stepZero() {
 	deleteDirectoryFiles();
 	// Write VTK file of buckets
 	writeBuckets();
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Return the square distance between thwo particles "i" and "j"
@@ -174,9 +179,9 @@ void MpsParticle::getPeriodicLengths(const int jb, double &perlx, double &perly,
 // Return the bucket coordinates for particle "i"
 void MpsParticle::bucketCoordinates(int &bx, int &by, int &bz,
 	const double rxi, const double ryi, const double rzi) {
-	bx = (int)((rxi - domainMinX)*invBucketSide + 1.0e-8);
-	by = (int)((ryi - domainMinY)*invBucketSide + 1.0e-8);
-	bz = (int)((rzi - domainMinZ)*invBucketSide + 1.0e-8);
+	bx = (int)((rxi - domainMinX)*invBucketSide + epsilonZero);
+	by = (int)((ryi - domainMinY)*invBucketSide + epsilonZero);
+	bz = (int)((rzi - domainMinZ)*invBucketSide + epsilonZero);
 }
 
 // Weight function
@@ -818,7 +823,7 @@ void MpsParticle::setParameters() {
 		double z = partDist* (double)iz;
 		double dst2 = x*x+y*y+z*z;
 		if(dst2 <= reL2) {
-			if(dst2 <= 1.0e-8) continue; 							// equals to zero
+			if(dst2 <= epsilonZero) continue; 						// equals to zero
 			double dst = sqrt(dst2);
 			pndLargeZero += weight(dst, reL, weightType);			// Initial particle number density (large)
 			lambdaZero += dst2 * weight(dst, reL, weightType);
@@ -925,7 +930,7 @@ void MpsParticle::setInitialPndNumberOfNeigh() {
 		// Add Number of neighbors due wall polygon
 		numNeigh[i] += numNeighWallContribution[i];
 
-		if(wSum > 1.0e-8) {
+		if(wSum > epsilonZero) {
 			npcdDeviation[i*3  ] /= pndSmall[i];
 			npcdDeviation[i*3+1] /= pndSmall[i];
 			npcdDeviation[i*3+2] /= pndSmall[i];
@@ -1379,6 +1384,11 @@ void MpsParticle::checkParticleOutDomain() {
 		// Update number of particles
 		numParticles = newNumParticles;
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Copy data from periodic buckets to border buckets
@@ -1459,8 +1469,8 @@ void MpsParticle::updateBuckets() {
 		}
 		for(int i=0; i<numParticles; i++) {
 			if(particleType[i] == ghost) continue;
-			int ix = (int)((pos[i*3  ] - domainMinX)*invBucketSide + 1.0e-8);
-			int iy = (int)((pos[i*3+1] - domainMinY)*invBucketSide + 1.0e-8);
+			int ix = (int)((pos[i*3  ] - domainMinX)*invBucketSide + epsilonZero);
+			int iy = (int)((pos[i*3+1] - domainMinY)*invBucketSide + epsilonZero);
 			int ib = iy*numBucketsX + ix;
 			int j = lastParticleInBucket[ib];
 			lastParticleInBucket[ib] = i;
@@ -1496,6 +1506,10 @@ void MpsParticle::updateBuckets() {
 			copyDataBetweenBuckets(b);
 		}
 	}
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Acceleration due Laplacian of velocity and gravity
@@ -1534,7 +1548,7 @@ void MpsParticle::calcViscosityGravity() {
 						double dst = sqrt(dstij2);
 						double wL = weight(dst, reL, weightType);
 						double neu_ij;
-						if ((meu_i + MEU[j]) > 1.0e-8)
+						if ((meu_i + MEU[j]) > epsilonZero)
 							neu_ij = 2.0 * meu_i * MEU[j] / (meu_i + MEU[j]);
 						else
 							neu_ij = 0.0;
@@ -1573,6 +1587,10 @@ void MpsParticle::calcViscosityGravity() {
 		accStar[i*3+1] = acc[i*3+1];
 		accStar[i*3+2] = acc[i*3+2];
 	}
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Prediction of pressure gradient
@@ -1647,7 +1665,7 @@ void MpsParticle::predictionPressGradient() {
 							wS *= (press[j] + Pi - 2.0*pressMin)/dstij2;
 						else if(gradientType == 3) {
 							double nj = pndi[j];
-							if(ni > 1.0e-8 && nj > 1.0e-8)
+							if(ni > epsilonZero && nj > epsilonZero)
 								wS *= (ni*press[j]/nj + nj*Pi/ni)/dstij2;
 						}
 						accX += v0ij*wS;	accY += v1ij*wS;	accZ += v2ij*wS;
@@ -1667,6 +1685,11 @@ void MpsParticle::predictionPressGradient() {
 		acc[i*3+1]+=(1.0-relaxPress)*accY*coeffPressGrad/RHO[i];
 		acc[i*3+2]+=(1.0-relaxPress)*accZ*coeffPressGrad/RHO[i];
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Prediction of pressure gradient (Polygon wall)
@@ -1693,7 +1716,7 @@ void MpsParticle::predictionWallPressGradient() {
 		    // normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
 		    normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		    normaliwSqrt = sqrt(normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2]);
-		    if(normaliwSqrt > 1.0e-8) {
+		    if(normaliwSqrt > epsilonZero) {
 		    	normaliw[0] = normaliw[0]/normaliwSqrt;
 		    	normaliw[1] = normaliw[1]/normaliwSqrt;
 		    	normaliw[2] = normaliw[2]/normaliwSqrt;
@@ -1781,7 +1804,7 @@ void MpsParticle::predictionWallPressGradient() {
 								wS *= (Pj + Pi - 2.0*pressMin)/dstimj2;//(press[j] + Pi - 2.0*pressMin)/dstimj2;
 							else if(gradientType == 3) {
 								double nj = pndi[j];
-								if(ni > 1.0e-8 && nj > 1.0e-8)
+								if(ni > epsilonZero && nj > epsilonZero)
 									wS *= (ni*Pj/nj + nj*Pi/ni)/dstimj2;
 							}
 						accX += v0imj*wS;	accY += v1imj*wS;	accZ += v2imj*wS;
@@ -1812,7 +1835,7 @@ void MpsParticle::predictionWallPressGradient() {
 					wS *= (Pj + Pi - 2.0*pressMin)/dstimi2;//(Pi + Pi - 2.0*pressMin)/dstimi2
 				else if(gradientType == 3) {
 					double nj = pndi[i];
-					if(ni > 1.0e-8 && nj > 1.0e-8)
+					if(ni > epsilonZero && nj > epsilonZero)
 						wS *= (ni*Pj/nj + nj*Pi/ni)/dstimi2;
 				}
 				accX += v0imi*wS;	accY += v1imi*wS;	accZ += v2imi*wS;
@@ -1825,7 +1848,7 @@ void MpsParticle::predictionWallPressGradient() {
 			if(repulsiveForceType == repForceType::HARADA) {
 				// Parallel analysis system for free-surface flow using MPS method with explicitly represented polygon wall boundary model
 				// https://doi.org/10.1007/s40571-019-00269-6
-				if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > 1.0e-8) {
+				if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > epsilonZero) {
 					double wijRep = RHO[i]/(timeStep*timeStep)*(reRepulsiveForce-normaliwSqrt);
 					rpsForce[0] = - wijRep*normaliw[0];
 					rpsForce[1] = - wijRep*normaliw[1];
@@ -1840,7 +1863,7 @@ void MpsParticle::predictionWallPressGradient() {
 			else if(repulsiveForceType == repForceType::MITSUME) {
 				// Explicitly represented polygon wall boundary model for the explicit MPS method
 				// https://doi.org/10.1007/s40571-015-0037-8
-				if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > 1.0e-8) {
+				if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > epsilonZero) {
 					double wijRep = repForceCoefMitsume*weightGradient(normaliwSqrt, reRepulsiveForce, weightType);
 					rpsForce[0] = - wijRep*normaliw[0];
 					rpsForce[1] = - wijRep*normaliw[1];
@@ -1855,7 +1878,7 @@ void MpsParticle::predictionWallPressGradient() {
 			else if(repulsiveForceType == repForceType::LENNARD_JONES) {
 				// Simulating Free Surface Flows with SPH
 				// https://doi.org/10.1006/jcph.1994.1034
-				if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > 1.0e-8) {
+				if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > epsilonZero) {
 					double R1 = (reRepulsiveForce/normaliwSqrt)*(reRepulsiveForce/normaliwSqrt);
 					double R2 = R1*R1;
 					double wijRep = (repForceCoefLennardJones*velMax2/normaliwSqrt)*(R2-R1)*RHO[i];
@@ -1867,7 +1890,7 @@ void MpsParticle::predictionWallPressGradient() {
 		  	else {
 				// SPH particle boundary forces for arbitrary boundaries 
 				// https://doi.org/10.1016/j.cpc.2009.05.008
-				if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > 1.0e-8) {
+				if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > epsilonZero) {
 					double W1 = (1.0+3.0*0.5*normaliwSqrt/(reRepulsiveForce));
 					double W2 = (1.0-normaliwSqrt/(reRepulsiveForce))*(1.0-normaliwSqrt/(reRepulsiveForce))*(1.0-normaliwSqrt/(reRepulsiveForce));
 					double wijRep = (repForceCoefMonaghanKajtar*velMax2/(normaliwSqrt - 0.0*partDist))*(1.0/8.0)*(W1)*(W2)*RHO[i];
@@ -1891,6 +1914,11 @@ void MpsParticle::predictionWallPressGradient() {
 			//Fwall[i*3+2] =  (Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*invDns[partType::FLUID]*coeffPressGrad - rpsForce[2]*invDns[partType::FLUID];
 		}
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Update velocity and position
@@ -1919,6 +1947,11 @@ void MpsParticle::updateVelocityPosition1st() {
 			mirrorParticlePos[i*3  ] = 10e8*partDist; mirrorParticlePos[i*3+1] = 10e8*partDist; mirrorParticlePos[i*3+2] = 10e8*partDist;
 		}
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Check collisions between particles
@@ -2016,6 +2049,11 @@ void MpsParticle::checkParticleCollisions() {
 		}
 		dvelCollision[i*3  ]=0.0;	dvelCollision[i*3+1]=0.0;	dvelCollision[i*3+2]=0.0;
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Check collisions between particles (Dynamic Particle Collision)
@@ -2095,7 +2133,7 @@ void MpsParticle::checkDynamicParticleCollisions() {
 							
 							// inter-particle distance
 							double Wij = 0.0;
-							if(dst > 1.0e-8 && dst < partDist)
+							if(dst > epsilonZero && dst < partDist)
 							{
 								double w1 = 1.0 - dst*invPartDist;
 								double w2 = 4.0*dst*invPartDist + 1.0;
@@ -2171,7 +2209,7 @@ void MpsParticle::checkDynamicParticleCollisions() {
 			drNew[2] = dvelCollision[i*3+2]*timeStep;
 			drMod = (drNew[0]*drNew[0] + drNew[1]*drNew[1] + drNew[2]*drNew[2]);
 			drMin = min(0.1*partDist, drMod);
-			if(drMin > 1.0e-8)
+			if(drMin > epsilonZero)
 			{
 				pos[i*3  ]+=drMin*drNew[0]/drMod;
 				pos[i*3+1]+=drMin*drNew[1]/drMod;
@@ -2184,6 +2222,11 @@ void MpsParticle::checkDynamicParticleCollisions() {
 		}
 		dvelCollision[i*3  ]=0.0;	dvelCollision[i*3+1]=0.0;	dvelCollision[i*3+2]=0.0;
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Set force on wall to zero
@@ -2205,6 +2248,11 @@ void MpsParticle::setWallForceZero(const int nNodes, double *nodeforceX, double 
 			solid[ss].node[ns].forceY = 0.0;
 			solid[ss].node[ns].forceZ = 0.0;
 		}}*/
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Free-surface particles. NPCD (Polygon wall)
@@ -2226,7 +2274,7 @@ void MpsParticle::calcWallNPCD() {
 			normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 			normaliwSqrt = sqrt(normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2]);
 
-			if(normaliwSqrt > 1.0e-8) {
+			if(normaliwSqrt > epsilonZero) {
 				normaliw[0] = normaliw[0]/normaliwSqrt;
 				normaliw[1] = normaliw[1]/normaliwSqrt;
 				normaliw[2] = normaliw[2]/normaliwSqrt;
@@ -2293,6 +2341,11 @@ void MpsParticle::calcWallNPCD() {
 			npcdDeviation[i*3+2] += Rref_i[6]*npcdDeviationXi + Rref_i[7]*npcdDeviationYi + Rref_i[8]*npcdDeviationZi;
 		}
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Compute PND, number of neighbors and NPCD
@@ -2386,7 +2439,7 @@ void MpsParticle::calcPndnNeighNPCD() {
 		pndSmall[i] = ni + pndWallContribution[i];
 		// Prevent pndSmall[i] = 0
 //		if(numNeigh[i]>1) {
-		if(wSum > 1.0e-8) {
+		if(wSum > epsilonZero) {
 			npcdDeviation[i*3  ] /= pndSmall[i];
 			npcdDeviation[i*3+1] /= pndSmall[i];
 			npcdDeviation[i*3+2] /= pndSmall[i];
@@ -2423,6 +2476,11 @@ void MpsParticle::calcPndnNeighNPCD() {
 //		else
 //			particleBC[i] = inner;
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Diffusive term of density/PND (pndType = calcPNDType::DIFFUSIVE)
@@ -2445,7 +2503,7 @@ void MpsParticle::calcPndDiffusiveTerm() {
 		MC[6] = correcMatrixRow3[i*3];	MC[7] = correcMatrixRow3[i*3+1];	MC[8] = correcMatrixRow3[i*3+2];
 
 		double ni = pndi[i];
-		if(ni < 1.0e-8) continue;
+		if(ni < epsilonZero) continue;
 		double Pi = press[i];
 		
 		int ix, iy, iz;
@@ -2513,12 +2571,12 @@ void MpsParticle::calcPndDiffusiveTerm() {
 							double vijy = vel[j*3+1]-velYi;
 							double vijz = vel[j*3+2]-velZi;
 							double wS = weight(dst, reS, weightType);
-							//if(ni > 1.0e-8)
+							//if(ni > epsilonZero)
 							//{
 							//	DivV += (dim/pndSmallZero)*(nj/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
 							//}
 							if(gradientCorrection == false) {
-								if(ni > 1.0e-8) {
+								if(ni > epsilonZero) {
 									DivV += (dim/pndSmallZero)*(pndi[j]/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
 								}
 							}
@@ -2577,6 +2635,11 @@ void MpsParticle::calcPndDiffusiveTerm() {
 //		pndi[i] = acc[i*3];
 //		acc[i*3]=0.0;
 //	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Diffusive term of density/PND (Polygon wall) - Free-slip (pndType = calcPNDType::DIFFUSIVE)
@@ -2589,8 +2652,8 @@ void MpsParticle::calcWallSlipPndDiffusiveTerm() {
 	//int i = partNearMesh[im];
 	for(int i=0; i<numParticles; i++) {
 		double ni = pndi[i];
-		//if(particleType[i] == fluid && ni > 1.0e-8) {
-		if(particleType[i] == fluid && particleNearWall[i] == true && ni > 1.0e-8) {
+		//if(particleType[i] == fluid && ni > epsilonZero) {
+		if(particleType[i] == fluid && particleNearWall[i] == true && ni > epsilonZero) {
 	//	if(particleType[i] == fluid) {
 			double DivV = 0.0;
 			//double Pi = press[i];
@@ -2604,7 +2667,7 @@ void MpsParticle::calcWallSlipPndDiffusiveTerm() {
 			// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
 			normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 			normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
-			if(normalMod2 > 1.0e-8) {
+			if(normalMod2 > epsilonZero) {
 				double normalMod = sqrt(normalMod2);
 				normaliw[0] = normaliw[0]/normalMod;
 				normaliw[1] = normaliw[1]/normalMod;
@@ -2685,6 +2748,11 @@ void MpsParticle::calcWallSlipPndDiffusiveTerm() {
 //		pndi[i] += acc[i*3];
 //		acc[i*3]=0.0;
 //	}}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Diffusive term of density/PND (Polygon wall) - No-slip (pndType = calcPNDType::DIFFUSIVE)
@@ -2697,8 +2765,8 @@ void MpsParticle::calcWallNoSlipPndDiffusiveTerm() {
 	//int i = partNearMesh[im];
 	for(int i=0; i<numParticles; i++) {
 		double ni = pndi[i];
-		//if(particleType[i] == fluid && ni > 1.0e-8) {
-		if(particleType[i] == fluid && particleNearWall[i] == true && ni > 1.0e-8) {
+		//if(particleType[i] == fluid && ni > epsilonZero) {
+		if(particleType[i] == fluid && particleNearWall[i] == true && ni > epsilonZero) {
 	//	if(particleType[i] == fluid) {
 			double DivV = 0.0;
 			//double Pi = press[i];
@@ -2712,7 +2780,7 @@ void MpsParticle::calcWallNoSlipPndDiffusiveTerm() {
 		    // normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
 		    normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		    normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
-		    if(normalMod2 > 1.0e-8) {
+		    if(normalMod2 > epsilonZero) {
 		    	double normalMod = sqrt(normalMod2);
 		    	normaliw[0] = normaliw[0]/normalMod;
 		    	normaliw[1] = normaliw[1]/normalMod;
@@ -2822,6 +2890,11 @@ void MpsParticle::calcWallNoSlipPndDiffusiveTerm() {
 //		pndi[i] += acc[i*3];
 //		acc[i*3]=0.0;
 //	}}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Update PND (pndType = calcPNDType::DIFFUSIVE)
@@ -2847,6 +2920,11 @@ void MpsParticle::updatePnd() {
 //		}
 		acc[i*3]=0.0;
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Mean PND at wall and dummy particles (pndType = calcPNDType::DIFFUSIVE)
@@ -2907,7 +2985,7 @@ void MpsParticle::meanPndParticlesWallDummySurface() {
 //	if(particleBC[i] == surface) {
 		// Prevent PNDdo = 0
 //		if(numNeigh[i] < 1)
-			if(acc[i*3+1] < 1.0e-8)
+			if(acc[i*3+1] < epsilonZero)
 				pndi[i] = acc[i*3];
 			else
 				pndi[i] = acc[i*3]/(acc[i*3+1]);
@@ -2916,6 +2994,11 @@ void MpsParticle::meanPndParticlesWallDummySurface() {
 //	}
 		acc[i*3]=0.0;acc[i*3+1]=0.0;
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Mean PND (Polygon wall) (pndType = calcPNDType::MEAN_SUM_WIJ)
@@ -2982,6 +3065,11 @@ void MpsParticle::meanWallPnd() {
 			acc[i*3+1] = PNDdo;
 		}
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Mean PND (pndType = calcPNDType::MEAN_SUM_WIJ)
@@ -3042,6 +3130,11 @@ for(int i=0; i<numParticles; i++) {
 		}
 		acc[i*3]=0.0;acc[i*3+1]=0.0;
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Mean Fluid PND (pndType = calcPNDType::MEAN_SUM_WIJ) // CHANGED
@@ -3086,13 +3179,18 @@ void MpsParticle::meanNeighFluidPnd() {
 				if(j == -1) break;
 			}
 		}}}
-		if(PNDdo > 1.0e-8) {
+		if(PNDdo > epsilonZero) {
 			pndski[i] = PNDup/PNDdo;
 		}
 		else {
 			pndski[i] = PNDup;
 		}
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Update type of particle
@@ -3183,7 +3281,7 @@ void MpsParticle::updateParticleBC() {
 	pndSmall[i] = ni + pndWallContribution[i];
 	// Prevent pndSmall[i] = 0
 //		if(numNeigh[i] > 1) {
-	if(wSum > 1.0e-8) {
+	if(wSum > epsilonZero) {
 		//npcdDeviation[i*3  ] /= pndSmall[i];
 		//npcdDeviation[i*3+1] /= pndSmall[i];
 		//npcdDeviation[i*3+2] /= pndSmall[i];
@@ -3251,7 +3349,7 @@ void MpsParticle::updateParticleBC() {
 				double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
 				double posMirrorXi = mirrorParticlePos[i*3  ];	double posMirrorYi = mirrorParticlePos[i*3+1];	double posMirrorZi = mirrorParticlePos[i*3+2];
 				//double normalXi = normal[i*3  ];	double normalYi = normal[i*3+1];	double normalZi = normal[i*3+2];
-				if(norm2 > 1.0e-8) {
+				if(norm2 > epsilonZero) {
 					double norm = sqrt(norm2);
 					normalXi /= norm;	normalYi /= norm;	normalZi /= norm;
 				}
@@ -3263,7 +3361,7 @@ void MpsParticle::updateParticleBC() {
 				// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
 				normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 				normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
-				if(normalMod2 > 1.0e-8) {
+				if(normalMod2 > epsilonZero) {
 					double normalMod = sqrt(normalMod2);
 					normaliw[0] /= normalMod; normaliw[1] /= normalMod; normaliw[2] /= normalMod;
 				}
@@ -3281,7 +3379,7 @@ void MpsParticle::updateParticleBC() {
 				double normalMirrorYi = Rref_i[3]*normalXi + Rref_i[4]*normalYi + Rref_i[5]*normalZi;
 				double normalMirrorZi = Rref_i[6]*normalXi + Rref_i[7]*normalYi + Rref_i[8]*normalZi;
 				double normMirror2 = normalMirrorXi*normalMirrorXi + normalMirrorYi*normalMirrorYi + normalMirrorZi*normalMirrorZi;
-				if(normMirror2 > 1.0e-8) {
+				if(normMirror2 > epsilonZero) {
 					double normMirror = sqrt(normMirror2);
 					normalMirrorXi /= normMirror;	normalMirrorYi /= normMirror;	normalMirrorZi /= normMirror;
 				}
@@ -3425,6 +3523,11 @@ void MpsParticle::updateParticleBC() {
 			}
 		}
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Compute pressure EMPS (mpsType = calcPressType::EXPLICIT)
@@ -3469,6 +3572,11 @@ void MpsParticle::calcPressEMPS() {
 		}
 		press[i] = pressure;
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Compute pressure WCMPS (mpsType = calcPressType::WEAKLY)
@@ -3519,6 +3627,11 @@ void MpsParticle::calcPressWCMPS() {
 		}
 		press[i] = pressure;
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Solve linear system solver PPE (mpsType = calcPressType::IMPLICIT_PND)
@@ -3637,6 +3750,11 @@ void MpsParticle::solvePressurePoissonPnd() {
 		solveBiConjugateGradientStabilized(matA);
 	// Set zero to negative pressures
 	setZeroOnNegativePressure();
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Solve linear system solver PPE (mpsType = calcPressType::IMPLICIT_PND_DIVU)
@@ -3732,7 +3850,7 @@ void MpsParticle::solvePressurePoissonPndDivU() {
 		////double dtPhysical = partDist/20.0;
 		//double dtPhysical = timeStep;
 		//double a1 = fabs(ni - pndSmallZero)/pndSmallZero;
-		//if ((pndSmallZero-ni)*velDivergence[i] > 1e-6)
+		//if ((pndSmallZero-ni)*velDivergence[i] > epsilonZero)
 		//{
 		//	a1 += dtPhysical*fabs(velDivergence[i]);
 		//}
@@ -3767,6 +3885,11 @@ void MpsParticle::solvePressurePoissonPndDivU() {
 		solveBiConjugateGradientStabilized(matA);
 	// Set zero to negative pressures
 	setZeroOnNegativePressure();
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Solve linear system using Conjugate Gradient (solverType = solvPressType::CG)
@@ -3871,7 +3994,7 @@ void MpsParticle::calcVelDivergence() {
 							double wS = weight(dst, reS, weightType);
 							
 							if(gradientCorrection == false) {
-								if(ni > 1.0e-8) {
+								if(ni > epsilonZero) {
 									DivV += (dim/pndSmallZero)*(pndi[j]/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
 								}
 							}
@@ -3892,6 +4015,11 @@ void MpsParticle::calcVelDivergence() {
 		velDivergence[i] = DivV;
 	}
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Divergence of velocity (Polygon wall) - Free-slip
@@ -3905,7 +4033,7 @@ void MpsParticle::calcWallSlipVelDivergence() {
 	for(int i=0; i<numParticles; i++) {
 //	if(particleType[i] == fluid) {
 		double ni = pndi[i];
-		if(particleType[i] == fluid && particleNearWall[i] == true && ni > 1.0e-8) {
+		if(particleType[i] == fluid && particleNearWall[i] == true && ni > epsilonZero) {
 			double DivV = 0.0;
 			double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
 			double velXi = vel[i*3  ];	double velYi = vel[i*3+1];	double velZi = vel[i*3+2];
@@ -3916,7 +4044,7 @@ void MpsParticle::calcWallSlipVelDivergence() {
 			// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
 			normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 			normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
-			if(normalMod2 > 1.0e-8) {
+			if(normalMod2 > epsilonZero) {
 				double normalMod = sqrt(normalMod2);
 				normaliw[0] = normaliw[0]/normalMod;
 				normaliw[1] = normaliw[1]/normalMod;
@@ -3990,6 +4118,11 @@ void MpsParticle::calcWallSlipVelDivergence() {
 			velDivergence[i] += DivV;
 		}
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 
@@ -4003,8 +4136,8 @@ void MpsParticle::calcWallNoSlipVelDivergence() {
 	//int i = partNearMesh[im];
 	for(int i=0; i<numParticles; i++) {
 		double ni = pndi[i];
-		//if(particleType[i] == fluid && ni > 1.0e-8) {
-		if(particleType[i] == fluid && particleNearWall[i] == true && ni > 1.0e-8) {
+		//if(particleType[i] == fluid && ni > epsilonZero) {
+		if(particleType[i] == fluid && particleNearWall[i] == true && ni > epsilonZero) {
 	//	if(particleType[i] == fluid) {
 			double DivV = 0.0;
 			double posXi = pos[i*3  ];	double posYi = pos[i*3+1];	double posZi = pos[i*3+2];
@@ -4016,7 +4149,7 @@ void MpsParticle::calcWallNoSlipVelDivergence() {
 			// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
 			normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 			normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
-			if(normalMod2 > 1.0e-8) {
+			if(normalMod2 > epsilonZero) {
 				double normalMod = sqrt(normalMod2);
 				normaliw[0] = normaliw[0]/normalMod;
 				normaliw[1] = normaliw[1]/normalMod;
@@ -4119,6 +4252,11 @@ void MpsParticle::calcWallNoSlipVelDivergence() {
 			velDivergence[i] += DivV;
 		}
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 
@@ -4170,6 +4308,11 @@ void MpsParticle::extrapolatePressParticlesWallDummy() {
 				press[i] = pressure;
 		}
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Extrapolate pressure to inner particles near polygon walls
@@ -4237,7 +4380,7 @@ void MpsParticle::extrapolatePressParticlesNearPolygonWall() {
 
 	//		if(numNeighborsSurfaceParticles[i]<=0.5){
 			if(pressure > 0) {
-		  		if(sumWij > 1.0e-8)
+		  		if(sumWij > epsilonZero)
 					press[i] = pressure/sumWij;
 				else
 					press[i] = pressure;
@@ -4245,6 +4388,11 @@ void MpsParticle::extrapolatePressParticlesNearPolygonWall() {
 	//		}
 		}
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Determinant of matrix
@@ -4276,7 +4424,7 @@ int MpsParticle::inverseMatrix(int dim, double &M11, double &M12, double &M13, d
 	double detM = detMatrix(Maux[0][0], Maux[0][1], Maux[0][2],
 							Maux[1][0], Maux[1][1], Maux[1][2],
 							Maux[2][0], Maux[2][1], Maux[2][2]);
-	if(detM <= 1.0e-8) {
+	if(detM <= epsilonZero) {
 		M11 = 1.0;	M12 = 0.0;	M13 = 0.0;
 		M21 = 0.0;	M22 = 1.0;	M23 = 0.0;
 		M31 = 0.0;	M32 = 0.0;	M33 = 1.0;
@@ -4285,7 +4433,7 @@ int MpsParticle::inverseMatrix(int dim, double &M11, double &M12, double &M13, d
 
 	for(int k = 0; k < dim; k++) {
 
-		/*if(fabs(Maux[k][k]) <= 1.0e-8) {
+		/*if(fabs(Maux[k][k]) <= epsilonZero) {
 			M11 = 1.0;	M12 = 0.0;	M13 = 0.0;
 			M21 = 0.0;	M22 = 1.0;	M23 = 0.0;
 			M31 = 0.0;	M32 = 0.0;	M33 = 1.0;
@@ -4383,6 +4531,11 @@ void MpsParticle::correctionMatrix() {
 //			printf("\n Z %e %e %e \n", correcMatrixRow3[i*3  ], correcMatrixRow3[i*3+1], correcMatrixRow3[i*3+2]);
 //		}
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Acceleration due to pressure gradient
@@ -4461,7 +4614,7 @@ void MpsParticle::calcPressGradient() {
 						wS *= (press[j] + Pi - 2.0*pressMin)/dstij2;
 					else if(gradientType == 3) {
 						double nj = pndi[j];
-						if(ni > 1.0e-8 && nj > 1.0e-8)
+						if(ni > epsilonZero && nj > epsilonZero)
 							wS *= (ni*press[j]/nj + nj*Pi/ni)/dstij2;
 					}
 					if(gradientCorrection == false) {
@@ -4502,6 +4655,11 @@ void MpsParticle::calcPressGradient() {
 			acc[i*3+2]=(relaxPress*coeffPressGrad/RHO[i])*(accX*correcMatrixRow3[i*3] + accY*correcMatrixRow3[i*3+1] + accZ*correcMatrixRow3[i*3+2]);
 		}*/
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Acceleration due to pressure gradient (Polygon wall)
@@ -4534,7 +4692,7 @@ void MpsParticle::calcWallPressGradient() {
 		normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		normaliwSqrt = sqrt(normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2]);
 
-		if(normaliwSqrt > 1.0e-8) {
+		if(normaliwSqrt > epsilonZero) {
 			normaliw[0] = normaliw[0]/normaliwSqrt;
 			normaliw[1] = normaliw[1]/normaliwSqrt;
 			normaliw[2] = normaliw[2]/normaliwSqrt;
@@ -4637,7 +4795,7 @@ void MpsParticle::calcWallPressGradient() {
 						wS *= (Pj + Pi - 2.0*pressMin)/dstimj2;//(press[j] + press[i] - 2.0*pressMin)/dstimj2
 					else if(gradientType == 3) {
 						double nj = pndi[j];
-						if(ni > 1.0e-8 && nj > 1.0e-8)
+						if(ni > epsilonZero && nj > epsilonZero)
 							wS *= (ni*Pj/nj + nj*Pi/ni)/dstimj2;
 					}
 					accX += v0imj*wS;	accY += v1imj*wS;	accZ += v2imj*wS;
@@ -4670,7 +4828,7 @@ void MpsParticle::calcWallPressGradient() {
 				wS *= (Pj + Pi - 2.0*pressMin)/dstimi2;//(press[i] + press[i] - 2.0*pressMin)/dstimi2;
 			else if(gradientType == 3) {
 				double nj = pndi[i];
-				if(ni > 1.0e-8 && nj > 1.0e-8)
+				if(ni > epsilonZero && nj > epsilonZero)
 					wS *= (ni*Pj/nj + nj*Pi/ni)/dstimi2;
 			}
 			accX += v0imi*wS;	accY += v1imi*wS;	accZ += v2imi*wS;
@@ -4683,7 +4841,7 @@ void MpsParticle::calcWallPressGradient() {
 	  	if(repulsiveForceType == repForceType::HARADA) {
 			// Parallel analysis system for free-surface flow using MPS method with explicitly represented polygon wall boundary model
 			// https://doi.org/10.1007/s40571-019-00269-6
-			if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > 1.0e-8) {
+			if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > epsilonZero) {
 				double wijRep = RHO[i]/(timeStep*timeStep)*(reRepulsiveForce-normaliwSqrt);
 				rpsForce[0] = - wijRep*normaliw[0];
 				rpsForce[1] = - wijRep*normaliw[1];
@@ -4693,7 +4851,7 @@ void MpsParticle::calcWallPressGradient() {
 		else if(repulsiveForceType == repForceType::MITSUME) {
 			// Explicitly represented polygon wall boundary model for the explicit MPS method
 			// https://doi.org/10.1007/s40571-015-0037-8
-			if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > 1.0e-8) {
+			if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > epsilonZero) {
 				double wijRep = repForceCoefMitsume*weightGradient(normaliwSqrt, reRepulsiveForce, weightType);
 				rpsForce[0] = - wijRep*normaliw[0];
 				rpsForce[1] = - wijRep*normaliw[1];
@@ -4703,7 +4861,7 @@ void MpsParticle::calcWallPressGradient() {
 		else if(repulsiveForceType == repForceType::LENNARD_JONES) {
 			// Simulating Free Surface Flows with SPH
 			// https://doi.org/10.1006/jcph.1994.1034
-			if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > 1.0e-8) {
+			if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > epsilonZero) {
 				double R1 = (reRepulsiveForce/normaliwSqrt)*(reRepulsiveForce/normaliwSqrt);
 				double R2 = R1*R1;
 				double wijRep = (repForceCoefLennardJones*velMax2/normaliwSqrt)*(R2-R1)*RHO[i];
@@ -4715,7 +4873,7 @@ void MpsParticle::calcWallPressGradient() {
 		else {
 			// SPH particle boundary forces for arbitrary boundaries 
 			// https://doi.org/10.1016/j.cpc.2009.05.008
-			if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > 1.0e-8) {
+			if(normaliwSqrt < reRepulsiveForce && normaliwSqrt > epsilonZero) {
 				double W1 = (1.0+3.0*0.5*normaliwSqrt/(reRepulsiveForce));
 				double W2 = (1.0-normaliwSqrt/(reRepulsiveForce))*(1.0-normaliwSqrt/(reRepulsiveForce))*(1.0-normaliwSqrt/(reRepulsiveForce));
 				double wijRep = (repForceCoefMonaghanKajtar*velMax2/(normaliwSqrt - 0.0*partDist))*(1.0/8.0)*(W1)*(W2)*RHO[i];
@@ -4740,6 +4898,11 @@ void MpsParticle::calcWallPressGradient() {
 		forceWall[i*3+1] += - (relaxPress*(Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*coeffPressGrad - rpsForce[1])*VolumeForce;
 		forceWall[i*3+2] += - (relaxPress*(Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*coeffPressGrad - rpsForce[2])*VolumeForce;
 	}}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Calculation of the volume of fraction if phase II in the mixture
@@ -4778,7 +4941,7 @@ void MpsParticle::calcVolumeFraction()
 					if(j == -1) break;
 				}
 			}}}
-			if(sum1 < 1.0e-8)
+			if(sum1 < epsilonZero)
 				Cv[i] = 0.0;
 			else 
 				Cv[i] = sum2/sum1;
@@ -4819,12 +4982,16 @@ void MpsParticle::calcVolumeFraction()
 					if(j == -1) break;
 				}
 			}}}
-			if(sum1 < 1.0e-8)
+			if(sum1 < epsilonZero)
 				Cv[i] = 0.0;
 			else 
 				Cv[i] = sum2/sum1;
 		}}
 	}
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // 2018 - Meshfree particle numerical modelling of sub-aerial and submerged landslides
@@ -4905,7 +5072,6 @@ void MpsParticle::calcViscosityInteractionVal() {
 			}
 		}
 	}
-
 
 	if((int)dim == 2) {
 #pragma omp parallel for
@@ -5040,13 +5206,13 @@ void MpsParticle::calcViscosityInteractionVal() {
 			Uzx = Uaux[6];	Uzy = Uaux[7];	Uzz = Uaux[8];
 		}
 		*/
-		if(sumWs > 1.0e-8) {
+		if(sumWs > epsilonZero) {
 			p_smooth[i] = sum10/sumWs;
 		}
 		else {
 			p_smooth[i] = press[i];
 		}
-		if(p_smooth[i] < 1.0e-8) p_smooth[i] = 0.0;
+		if(p_smooth[i] < epsilonZero) p_smooth[i] = 0.0;
 
 		S11[i] = 0.5*(Uxx + Uxx);
 		S12[i] = 0.5*(Uxy + Uyx);
@@ -5061,7 +5227,7 @@ void MpsParticle::calcViscosityInteractionVal() {
 		II[i] = 0.5*(S11[i]*S11[i] + 2.0*S12[i]*S12[i] + 2.0*S13[i]*S13[i] + S22[i]*S22[i] + 2.0*S23[i]*S23[i] + S33[i]*S33[i]);
 //		II[i] = - (S11[i]*S22[i] + S22[i]*S33[i] + S11[i]*S33[i] - S12[i]*S12[i] - S13[i]*S13[i] - S23[i]*S23[i]);
 //		II[i] = sqrt(II[i]*II[i]);
-		if(II[i] < 1.0e-8 || II[i]*0 != 0) II[i] = 0.0;
+		if(II[i] < epsilonZero || II[i]*0 != 0) II[i] = 0.0;
 		//II=fabs(S11[i]*S22[i]-S12[i]*S12[i]);
 		//std::cout << " II: " << II[i] << std::endl;
 	}}
@@ -5113,7 +5279,7 @@ void MpsParticle::calcViscosityInteractionVal() {
 				// phi2: maximum friction angle
 				phi = (Cv[i] - 0.25)*PHI_1/(1.0 - 0.25);
 				phi2 = (Cv[i] - 0.25)*PHI_2/(1.0 - 0.25);
-				if(Cv[i] <= 0.25) { phi = 1.0e-8; phi2 = 1.0e-8; } // phi close to zero
+				if(Cv[i] <= 0.25) { phi = epsilonZero; phi2 = epsilonZero; } // phi close to zero
 				if(PTYPE[i] <= 0) phi = PHI_BED; // ghost
 
 				// normal stress calculation (mechanical pressure)
@@ -5150,7 +5316,7 @@ void MpsParticle::calcViscosityInteractionVal() {
 					//normal_stress = (BL[kx][ky] - posZi + partDist*0.5)*(DNS_FL2)*gravityMod;	// normal_stress= Gama.H
 					normal_stress = (BL[kx][ky] - posZi + partDist*0.5)*(DNS_FL2 - DNS_FL1)*gravityMod - vel2i*(DNS_FL2 - DNS_FL1)*0.5;	// normal_stress= Gama.H
 
-					if(p_smooth[i] - (WL[kx][ky] - posZi)*DNS_FL1*gravityMod < 1.0e-8) p_smooth[i] = (WL[kx][ky] - posZi)*DNS_FL1*gravityMod;
+					if(p_smooth[i] - (WL[kx][ky] - posZi)*DNS_FL1*gravityMod < epsilonZero) p_smooth[i] = (WL[kx][ky] - posZi)*DNS_FL1*gravityMod;
 					if(timeCurrent <= 1.0) normal_stress = (1.0 - timeCurrent)*(p_smooth[i] - (WL[kx][ky] - posZi)*DNS_FL1*gravityMod) + timeCurrent*normal_stress;
 
 //					normal_stress = p_smooth[i] - (WL[kx][ky] - posZi)*DNS_FL1*gravityMod;
@@ -5196,12 +5362,12 @@ void MpsParticle::calcViscosityInteractionVal() {
 
 				//yield_stress = normal_stress*tan(phi);
 
-				if(yield_stress < 1.0e-8) yield_stress = 0.0;
+				if(yield_stress < epsilonZero) yield_stress = 0.0;
 
 				double visc_max = (MEU0 + yield_stress*mm*0.5); // Below Eq. (5)
 
 				// Pre-failure portion
-				//if(modE > 1.0e-8) {
+				//if(modE > epsilonZero) {
 				//	MEU_Y[i] = yield_stress*(1.0 - exp(-mm*modE))/(2.0*modE); // Eq. (5)
 				//}
 				//else {
@@ -5209,26 +5375,26 @@ void MpsParticle::calcViscosityInteractionVal() {
 				//}
 
 
-				MEU_Y[i] = yield_stress/(2.0*sqrt(modE*modE + 1.0e-12));
+				MEU_Y[i] = yield_stress/(2.0*sqrt(modE*modE + epsilonZero));
 
 				// H-B rheology
 
 				//meu_0 = MEU0;
 
 //				phi = PHI_1; phi2 = PHI_2;
-//				if(Cv[i] <= 0.25) { phi = 1.0e-8; phi2 = 1.0e-8; } // phi close to zero
+//				if(Cv[i] <= 0.25) { phi = epsilonZero; phi2 = epsilonZero; } // phi close to zero
 
 				// Non-linear Meu(I) rheology
 				if(WL[kx][ky] < BL[kx][ky]) {
 //					meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*DG/(I0*sqrt(normal_stress/DNS_FL2) + modE*DG);			//free fall
-					meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*DG/(I0*sqrt(normal_stress/DNS_FL2) + modE*DG)*modE/(sqrt(modE*modE + 1.0e-12));
-					//meu_0 = (tan(phi) + (tan(phi2) - tan(phi))*modE*DG/(I0*sqrt(normal_stress/DNS_FL2) + modE*DG))*normal_stress/(sqrt(II[i] + 1.0e-12));
+					meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*DG/(I0*sqrt(normal_stress/DNS_FL2) + modE*DG)*modE/(sqrt(modE*modE + epsilonZero));
+					//meu_0 = (tan(phi) + (tan(phi2) - tan(phi))*modE*DG/(I0*sqrt(normal_stress/DNS_FL2) + modE*DG))*normal_stress/(sqrt(II[i] + epsilonZero));
 				}
 				else {
 //					meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*DG/(I0*sqrt(normal_stress/(DNS_FL1*Cd)) + modE*DG);	//grain inertia
-					meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*DG/(I0*sqrt(normal_stress/(DNS_FL1*Cd)) + modE*DG)*modE/(sqrt(modE*modE + 1.0e-12));
+					meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*DG/(I0*sqrt(normal_stress/(DNS_FL1*Cd)) + modE*DG)*modE/(sqrt(modE*modE + epsilonZero));
 
-					//meu_0 = (tan(phi) + (tan(phi2) - tan(phi))*modE*DG/(I0*sqrt(normal_stress/DNS_FL1*Cd) + modE*DG))*normal_stress/(sqrt(II[i] + 1.0e-12));
+					//meu_0 = (tan(phi) + (tan(phi2) - tan(phi))*modE*DG/(I0*sqrt(normal_stress/DNS_FL1*Cd) + modE*DG))*normal_stress/(sqrt(II[i] + epsilonZero));
 				}
 
 			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*normal_stress*(KNM_VS1*DNS_FL1)/(I0*normal_stress + modE*(KNM_VS1*DNS_FL1));	//viscous
@@ -5238,7 +5404,7 @@ void MpsParticle::calcViscosityInteractionVal() {
 			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*DG*sqrt(normal_stress*DNS_FL1*Cd)/I0;	//grain inertia
 			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*(KNM_VS1*DNS_FL1)/I0;					//viscous
 
-				if(modE <= 1.0e-8 || (meu_0*0) != 0) meu_0 = MEU0;
+				if(modE <= epsilonZero || (meu_0*0) != 0) meu_0 = MEU0;
 
 				visc_max = (meu_0 + yield_stress*mm*0.5); // Below Eq. (5)
 
@@ -5253,8 +5419,8 @@ void MpsParticle::calcViscosityInteractionVal() {
 				// MEU_Y rheological model
 				MEU[i] = MEU_Y[i] + meu_0;
 				
-				//if(II[i] <= 1.0e-8 || MEU[i] > visc_max) {
-				if(II[i] <= 1.0e-8) {
+				//if(II[i] <= epsilonZero || MEU[i] > visc_max) {
+				if(II[i] <= epsilonZero) {
 					//std::cout << " MEU>viscmax: " << yield_stress*mm*0.5 << " meu0: " << meu_0 << " II: " << II[i] << std::endl;
 					MEU[i] = visc_max;
 				}
@@ -5322,6 +5488,11 @@ void MpsParticle::calcViscosityInteractionVal() {
 
 	delete[]BL; delete[]WL; delete[]PS;
 	BL = NULL; WL = NULL; PS = NULL;
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Free-slip condition. Viscosity interaction values
@@ -5422,7 +5593,7 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 		normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
 
-		if(normalMod2 > 1.0e-8) {
+		if(normalMod2 > epsilonZero) {
 			double normalMod = sqrt(normalMod2);
 			normaliw[0] = normaliw[0]/normalMod;
 			normaliw[1] = normaliw[1]/normalMod;
@@ -5522,7 +5693,7 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 
 		// Addition of smoothed pressure for particles near mesh
 		p_smooth[i] += sum10/pndGradientZero;
-		if(p_smooth[i] < 1.0e-8) p_smooth[i] = 0.0;
+		if(p_smooth[i] < epsilonZero) p_smooth[i] = 0.0;
 
 		// 0.5*(gradU + gradUt)
 		S11[i] = 0.5*(Uxx + Uxx);
@@ -5539,7 +5710,7 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 		II[i] += 0.5*(S11[i]*S11[i] + 2.0*S12[i]*S12[i] + 2.0*S13[i]*S13[i] + S22[i]*S22[i] + 2.0*S23[i]*S23[i] + S33[i]*S33[i]);
 //		II[i] = 0.5*(S11[i]*S11[i] + S12[i]*S12[i] + S13[i]*S13[i] + S12[i]*S12[i] + S22[i]*S22[i] + S23[i]*S23[i] + S13[i]*S13[i] + S23[i]*S23[i] + S33[i]*S33[i]);
 		//II[i]= S11[i]*S22[i] +S22[i]*S33[i]+ S11[i]*S33[i] - S12[i]*S12[i] -S13[i]*S13[i]- S23[i]*S23[i] ;
-		if(II[i] < 1.0e-8 || II[i]*0 != 0) II[i] = 0.0;
+		if(II[i] < epsilonZero || II[i]*0 != 0) II[i] = 0.0;
 		//II=fabs(S11[i]*S22[i]-S12[i]*S12[i]);
 	}}
 	
@@ -5588,7 +5759,7 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 			else if(PTYPE[i] == 2) {
 				phi = (Cv[i] - 0.25)*PHI_1/(1.0 - 0.25);
 				phi2 = (Cv[i] - 0.25)*PHI_2/(1.0 - 0.25);
-				if(Cv[i] <= 0.25) { phi = 1.0e-8; phi2 = 1.0e-8; } // phi close to zero
+				if(Cv[i] <= 0.25) { phi = epsilonZero; phi2 = epsilonZero; } // phi close to zero
 				if(PTYPE[i] <= 0) phi = PHI_BED;
 
 				// normal stress calculation (mehcanical pressure)
@@ -5624,11 +5795,11 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 
 				double yield_stress = cohes * cos(phi) + normal_stress * sin(phi);
 
-				if(yield_stress < 1.0e-8) yield_stress = 0.0;
+				if(yield_stress < epsilonZero) yield_stress = 0.0;
 
 				double visc_max = (yield_stress*mm*0.5 + MEU0);
 
-				if(II[i] > 1.0e-8)
+				if(II[i] > epsilonZero)
 					MEU_Y[i] = yield_stress*(1.0 - exp(-mm*sqrt(II[i])))*0.5/sqrt(II[i]);
 				else
 					MEU_Y[i] = visc_max;
@@ -5647,7 +5818,7 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*DG*sqrt(normal_stress*DNS_FL1*Cd)/I0;	//grain inertia
 			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*(KNM_VS1*DNS_FL1)/I0;					//viscous
 
-				if(II[i] <= 1.0e-8 || (meu_0*0) != 0) meu_0 = MEU0;
+				if(II[i] <= epsilonZero || (meu_0*0) != 0) meu_0 = MEU0;
 
 				visc_max = (yield_stress*mm*0.5 + meu_0);
 
@@ -5717,6 +5888,11 @@ void MpsParticle::calcWallSlipViscosityInteractionVal() {
 
 	delete[]BL; delete[]WL; delete[]PS;
 	BL = NULL; WL = NULL; PS = NULL;
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // No-Slip condition. Viscosity interaction values
@@ -5816,7 +5992,7 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 	    normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 	    normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
 
-	    if(normalMod2 > 1.0e-8) {
+	    if(normalMod2 > epsilonZero) {
 	    	double normalMod = sqrt(normalMod2);
 	    	normaliw[0] = normaliw[0]/normalMod;
 	    	normaliw[1] = normaliw[1]/normalMod;
@@ -5924,7 +6100,7 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 
 		// Addition of smoothed pressure for particles near mesh
 		p_smooth[i] += sum10/pndGradientZero;
-		if(p_smooth[i] < 1.0e-8) p_smooth[i] = 0.0;
+		if(p_smooth[i] < epsilonZero) p_smooth[i] = 0.0;
 
 		// - (Rref_i * gradU) - (Rref_i * gradU)t
 		S11[i] = 0.5*(Uxx + Uxx);
@@ -5941,7 +6117,7 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 		II[i] += 0.5*(S11[i]*S11[i] + 2.0*S12[i]*S12[i] + 2.0*S13[i]*S13[i] + S22[i]*S22[i] + 2.0*S23[i]*S23[i] + S33[i]*S33[i]);
 //		II[i] = 0.5*(S11[i]*S11[i] + S12[i]*S12[i] + S13[i]*S13[i] + S12[i]*S12[i] + S22[i]*S22[i] + S23[i]*S23[i] + S13[i]*S13[i] + S23[i]*S23[i] + S33[i]*S33[i]);
 		//II[i]= S11[i]*S22[i] +S22[i]*S33[i]+ S11[i]*S33[i] - S12[i]*S12[i] -S13[i]*S13[i]- S23[i]*S23[i] ;
-		if(II[i] < 1.0e-8 || II[i]*0 != 0) II[i] = 0.0;
+		if(II[i] < epsilonZero || II[i]*0 != 0) II[i] = 0.0;
 		//II=fabs(S11[i]*S22[i]-S12[i]*S12[i]);
 	}}
 	
@@ -5989,7 +6165,7 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 			else if(PTYPE[i] == 2) {
 				phi = (Cv[i] - 0.25)*PHI_1/(1.0 - 0.25);
 				phi2 = (Cv[i] - 0.25)*PHI_2/(1.0 - 0.25);
-				if(Cv[i] <= 0.25) { phi = 1.0e-8; phi2 = 1.0e-8; } // phi close to zero
+				if(Cv[i] <= 0.25) { phi = epsilonZero; phi2 = epsilonZero; } // phi close to zero
 				if(PTYPE[i] <= 0) phi = PHI_BED;
 
 				// normal stress calculation (mechanical pressure)
@@ -6029,7 +6205,7 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 
 				double visc_max = (yield_stress*mm*0.5 + MEU0);
 
-				if(II[i] > 1.0e-8)
+				if(II[i] > epsilonZero)
 					MEU_Y[i] = yield_stress*(1.0 - exp(-mm*sqrt(II[i])))*0.5/sqrt(II[i]);
 				else
 					MEU_Y[i] = visc_max;
@@ -6048,7 +6224,7 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*DG*sqrt(normal_stress*DNS_FL1*Cd)/I0;	//grain inertia
 			   	//meu_0 = 0.5*(tan(phi2) - tan(phi))*(KNM_VS1*DNS_FL1)/I0;					//viscous
 
-				if(II[i] <= 1.0e-8 || (meu_0*0) != 0) meu_0 = MEU0;
+				if(II[i] <= epsilonZero || (meu_0*0) != 0) meu_0 = MEU0;
 
 				visc_max = (yield_stress*mm*0.5 + meu_0);
 
@@ -6118,6 +6294,11 @@ void MpsParticle::calcWallNoSlipViscosityInteractionVal() {
 	
 	delete[]BL; delete[]WL; delete[]PS;
 	BL = NULL; WL = NULL; PS = NULL;
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Free-Slip condition. Add acceleration due laplacian of viscosity on wall (Polygon wall)
@@ -6146,7 +6327,7 @@ void MpsParticle::calcWallSlipViscosity() {
 		normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
 
-		if(normalMod2 > 1.0e-8) {
+		if(normalMod2 > epsilonZero) {
 			double normalMod = sqrt(normalMod2);
 			normaliw[0] = normaliw[0]/normalMod;
 			normaliw[1] = normaliw[1]/normalMod;
@@ -6194,7 +6375,7 @@ void MpsParticle::calcWallSlipViscosity() {
 					double dst = sqrt(dstimj2);
 					double wL = weight(dst, reL, weightType);
 					double neu_ij;
-					if((meu_i + MEU[j]) > 1.0e-8)
+					if((meu_i + MEU[j]) > epsilonZero)
 						neu_ij = 2.0 * meu_i * MEU[j] / (meu_i + MEU[j]);
 					else
 						neu_ij = 0.0;
@@ -6232,7 +6413,7 @@ void MpsParticle::calcWallSlipViscosity() {
 			double dst = sqrt(dstimi2);
 			double wL = weight(dst, reL, weightType);
 			double neu_ij;
-			if(meu_i > 1.0e-8)
+			if(meu_i > epsilonZero)
 				neu_ij = 2.0 * meu_i * meu_i / (meu_i + meu_i);
 			else
 				neu_ij = 0.0;
@@ -6273,6 +6454,11 @@ void MpsParticle::calcWallSlipViscosity() {
 		forceWall[i*3+1] += - (Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*coeffViscMultiphase*VolumeForce*RHO[i];
 		forceWall[i*3+2] += - (Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*coeffViscMultiphase*VolumeForce*RHO[i];
 	}}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // No-Slip condition. Add acceleration due laplacian of viscosity on wall (Polygon wall)
@@ -6301,7 +6487,7 @@ void MpsParticle::calcWallNoSlipViscosity() {
 		normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
 
-		if(normalMod2 > 1.0e-8) {
+		if(normalMod2 > epsilonZero) {
 			double normalMod = sqrt(normalMod2);
 			normaliw[0] = normaliw[0]/normalMod;
 			normaliw[1] = normaliw[1]/normalMod;
@@ -6365,7 +6551,7 @@ void MpsParticle::calcWallNoSlipViscosity() {
 					double dst = sqrt(dstimj2);
 					double wL = weight(dst, reL, weightType);
 					double neu_ij;
-					if((meu_i + MEU[j]) > 1.0e-8)
+					if((meu_i + MEU[j]) > epsilonZero)
 						neu_ij = 2.0 * meu_i * MEU[j] / (meu_i + MEU[j]);
 					else
 						neu_ij = 0.0;
@@ -6414,7 +6600,7 @@ void MpsParticle::calcWallNoSlipViscosity() {
 			double dst = sqrt(dstimi2);
 			double wL = weight(dst, reL, weightType);
 			double neu_ij;
-			if(meu_i > 1.0e-8)
+			if(meu_i > epsilonZero)
 				neu_ij = 2.0 * meu_i * meu_i / (meu_i + meu_i);
 			else
 				neu_ij = 0.0;
@@ -6495,6 +6681,11 @@ void MpsParticle::calcWallNoSlipViscosity() {
 		forceWall[i*3+1] += - (Rinv_i[3]*accX + Rinv_i[4]*accY + Rinv_i[5]*accZ)*coeffViscMultiphase*VolumeForce*RHO[i];
 		forceWall[i*3+2] += - (Rinv_i[6]*accX + Rinv_i[7]*accY + Rinv_i[8]*accZ)*coeffViscMultiphase*VolumeForce*RHO[i];
 	}}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // 3D triangle to xy plane
@@ -6509,7 +6700,7 @@ void MpsParticle::transformMatrix(double *V1, double *V2, double *V3, double *RM
 	}
 	// Define the vector U pointing from A to B, and normalise it.
 	double normB = sqrt(B[0]*B[0]+B[1]*B[1]+B[2]*B[2]);
-	if(normB > 1.0e-8) {
+	if(normB > epsilonZero) {
 		for(unsigned int i = 0; i < 3; i++)
 			U[i] = B[i]/normB;
 	}
@@ -6523,7 +6714,7 @@ void MpsParticle::transformMatrix(double *V1, double *V2, double *V3, double *RM
 	W[2] = U[0] * C[1] - U[1] * C[0];
 	// Normalise it to give the unit vector
 	double normW = sqrt(W[0]*W[0]+W[1]*W[1]+W[2]*W[2]);
-	if(normW > 1.0e-8) {
+	if(normW > epsilonZero) {
 		for(unsigned int i = 0; i < 3; i++)
 			W[i] = W[i]/normW;
 	}
@@ -6619,7 +6810,7 @@ void MpsParticle::transform2Dto3D(double *P1, double *RM) {
 // 		//   	printf("\ni:%5d th timeCurrent: %lf / ri: %lf %lf %lf / rim: %lf %lf %lf / N: %lf", i, timeCurrent, posXi, posYi, posZi, posMirrorXi, posMirrorYi, posMirrorZi, normalMod2);
 
 // 		if(normalMod2 <= 0.26*partDist*partDist) {
-// 			if(normalMod2 > 1.0e-8) {
+// 			if(normalMod2 > epsilonZero) {
 // 				double normalMod = sqrt(normalMod2);
 // 				normaliw[0] = normaliw[0]/normalMod;
 // 				normaliw[1] = normaliw[1]/normalMod;
@@ -6827,6 +7018,11 @@ void MpsParticle::updateVelocityPosition2nd() {
 	}
 }
 	CFLcurrent = timeStep*velMax/partDist;
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Shifting technique
@@ -6905,6 +7101,11 @@ void MpsParticle::calcShifting() {
 		// 	vel[i*3+2] -= coeffShifting1*duAux[2];
 		// }
 	}}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // normal vector on the fluid
@@ -6974,6 +7175,10 @@ void MpsParticle::calcNormalParticles() {
 		}
 		*/
 	}
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // normal vector on the fluid (Polygon wall)
@@ -6996,7 +7201,7 @@ void MpsParticle::calcWallNormalParticles() {
 		normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		normaliwSqrt = sqrt(normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2]);
 
-		if(normaliwSqrt > 1.0e-8) {
+		if(normaliwSqrt > epsilonZero) {
 			normaliw[0] = normaliw[0]/normaliwSqrt;
 			normaliw[1] = normaliw[1]/normaliwSqrt;
 			normaliw[2] = normaliw[2]/normaliwSqrt;
@@ -7082,6 +7287,11 @@ void MpsParticle::calcWallNormalParticles() {
 		}
 */	
 	}}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 
@@ -7109,7 +7319,7 @@ void MpsParticle::calcWallShifting() {
 		normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
 
-		if(normalMod2 > 1.0e-8) {
+		if(normalMod2 > epsilonZero) {
 			double normalMod = sqrt(normalMod2);
 			normaliw[0] = normaliw[0]/normalMod;
 			normaliw[1] = normaliw[1]/normalMod;
@@ -7369,6 +7579,11 @@ void MpsParticle::calcConcAndConcGradient() {
 		// 	vel[i*3+2] -= coeffShifting1*duAux[2];
 		// }
 	}}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Concentration and Gradient of concentration (Polygon wall)
@@ -7398,7 +7613,7 @@ void MpsParticle::calcWallConcAndConcGradient() {
 		normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		normaliwSqrt = sqrt(normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2]);
 
-		if(normaliwSqrt > 1.0e-8) {
+		if(normaliwSqrt > epsilonZero) {
 			normaliw[0] = normaliw[0]/normaliwSqrt;
 			normaliw[1] = normaliw[1]/normaliwSqrt;
 			normaliw[2] = normaliw[2]/normaliwSqrt;
@@ -7482,6 +7697,11 @@ void MpsParticle::calcWallConcAndConcGradient() {
 			pos[i*3+2] -= coeffShifting2*gradCiWallZ;
 		}
 	}}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // normal vector on the fluid
@@ -7502,6 +7722,11 @@ void MpsParticle::calcNormalConcentration() {
 			normal[i*3+2] = 0.0;
 		}
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Update velocity at wall and dummy particles
@@ -7548,7 +7773,7 @@ void MpsParticle::updateVelocityParticlesWallDummy() {
 				if(j == -1) break;
 			}
 		}}}
-		if(ni > 1.0e-8) {
+		if(ni > epsilonZero) {
 			vel[i*3  ] = 2.0*velWallx - duXi/ni;
 			vel[i*3+1] = 2.0*velWally - duYi/ni;
 			vel[i*3+2] = 2.0*velWallz - duZi/ni;
@@ -7559,6 +7784,11 @@ void MpsParticle::updateVelocityParticlesWallDummy() {
 			vel[i*3+2] = 2.0*velWallz - duZi;
 		}
 	}}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Pressure sensors
@@ -7850,6 +8080,11 @@ void MpsParticle::writePressSensors() {
 	// Close press file
 	fclose(pressTxtFile);
 
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 void MpsParticle::writeHeaderTxtFiles() {

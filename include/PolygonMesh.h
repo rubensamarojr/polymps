@@ -23,6 +23,8 @@
 #include <igl/writePLY.h>
 #include <igl/writeSTL.h>
 
+//#define SHOW_FUNCT_NAME_POLY	///print the function name from any location inside a C++ function (useful for investigating programs)
+
 // Polygon walls class
 class PolygonMesh {
 public:
