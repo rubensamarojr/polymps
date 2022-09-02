@@ -1,38 +1,42 @@
 {
-	// Types of simulations and output
+	"description":{
+		"_comment": "Dam break 2D: Non-Newtonian simulation using particle-based wall and incompressible MPS",
+		"_comment": "Reference: Fraccarollo et al. 2002. Riemann wave description of erosional dam-break flows. "
+	},
 	"flags": {
-		"wall_type":		0, 		// Boundary wall type: Particle = 0, Polygon = 1
-		"fem_MESH": 		false, 	// Finite Element Solver (true or false) (NOT WORKING !!)
-		"forced_MESH": 		false, 	// Forced mesh motion (true or false) (NOT WORKING !!)
+		"_comment": "Types of simulations and output",
+		"wall_type":		0, 		"_comment": "Boundary wall type: Particle = 0, Polygon = 1",
+		"fem_MESH": 		false, 	"_comment": "Finite Element Solver (true or false) (NOT WORKING !!)",
+		"forced_MESH": 		false, 	"_comment": "Forced mesh motion (true or false) (NOT WORKING !!)",
 		"output_VTU": {
-			"type": 		0,		// VTU file: ASCII = 0, Binary = 1 (ONLY ASCII WORKING !!)
-			"freeSurfWall":	false,	// VTU files with only free-surface and wall particles (true or false)
-			// Additional outputs in .vtu files (true or false)
+			"type": 		0,		"_comment": "VTU file: ASCII = 0, Binary = 1 (ONLY ASCII WORKING !!)",
+			"freeSurfWall":	false,	"_comment": "VTU files with only free-surface and wall particles (true or false)",
+			"_comment": "Additional outputs in .vtu files (true or false)",
 			"pnd":				true,
 			"neigh":			false,
-			"deviation":		true,
+			"deviation":		false,
 			"concentration":	false,
 			"auxiliar":			true,
 			"non_newtonian":	true
 		},
 		"output_TXT": {
-			// (true or false) (NOT WORKING !!)
+			"_comment": "(true or false) (NOT WORKING !!)",
 			"press":			false,
 			"force":			false
 		}
 	},
-	// Paths of input and output files/folders
 	"pathNames": {
+		"_comment": "Paths of input and output files/folders",
 		"particle_grid_file":	"input/grid/2D_dam_fraccarollo_lo02p50e-03_mps.grid",
 		"mesh_rigid_file": 		"input/stl/dam1610.stl",
-		"mesh_deformable_file": "input/stl/elastic_beam_16.stl", // (NOT WORKING !!)
-		"mesh_forced_file": 	"input/stl/tank_liao_forced_gate.stl", // (NOT WORKING !!)
+		"mesh_deformable_file": "input/stl/elastic_beam_16.stl", 		"_comment": "NOT WORKING !!",
+		"mesh_forced_file": 	"input/stl/tank_liao_forced_gate.stl", 	"_comment": "NOT WORKING !!",
 		"vtu_output_folder":	"output/2D_dam_fraccarollo_lo02p50e-03_INC",
-		"forceTxt_file":		"output/dambreak01_force.txt", // (NOT WORKING !!)
-		"pressTxt_file":		"output/dambreak01_press.txt" // (NOT WORKING !!)
+		"forceTxt_file":		"output/dambreak01_force.txt", 			"_comment": "NOT WORKING !!",
+		"pressTxt_file":		"output/dambreak01_press.txt", 			"_comment": "NOT WORKING !!"
 	},
-	// Geometry dimension limits of the analysis domain (m)
 	"domain": {
+		"_comment": "Geometry dimension limits of the analysis domain (m)",
 		"min": {
 			"x":	-0.1,
 			"y":	-0.1,
@@ -43,10 +47,10 @@
 			"y":	0.2,
 			"z":	0.0
 		},
-		// type: periodic
 		"boundary": {
-			"type": 0,					// 0: None; 1: Periodic
-			"limit": 0,					// 0: Border particle positions; 1: Domain limits min and max
+			"_comment": "Periodic Boundary Condition",
+			"type":  0,			"_comment": "0: None; 1: Periodic",
+			"limit": 0,			"_comment": "0: Use border particle positions; 1: Use domain limits min and max",
 			"direction": {
 				"x":	false, 
 				"y":	false,
@@ -54,42 +58,41 @@
 			}
 		}
 	},
-	// Physical parameters
 	"physical": {
-		"fluid_density":	1000,		// Fluid particle density (kg/m3)
-		"wall_density": 	1000,		// Wall particle density (kg/m3)
-		"kinematic_visc": 	0.000001,	// Kinematic viscosity phase 1 (m2/s)
-		// Gravity acceleration (m/s2)
+		"_comment": "Physical parameters",
+		"fluid_density":	1000,		"_comment": "Fluid particle density (kg/m3)",
+		"wall_density": 	1000,		"_comment": "Wall particle density (kg/m3)",
+		"kinematic_visc": 	0.000001,	"_comment": "Kinematic viscosity phase 1 (m2/s)",
+		"fluid_type": 		1,			"_comment": "Newtonian:0 , Non-Newtonian:1",
 		"gravity": {
+			"_comment": "Gravity acceleration (m/s2)",
 			"x":			0.0,
 			"y":			-9.81,
 			"z":			0.0
 		},
-		// Rheological parameters (IMPLEMENTED BUT NOT VALIDATED !!)
 		"rheological": {
-			"kinematic_visc_phase_2": 	0.000001,	// Kinematic viscosity phase 2 (m2/s)
-			"fluid_density_phase_1":	1000.0,		// Fluid particle density phase 1 (kg/m3)
-			"fluid_density_phase_2":	1540.0,		// Bulk particle density phase 2 (kg/m3)
-			"sediment_density":			1540.0,		// Sediment density (kg/m3)
-			"fluid_type": 				1,			// Newtonian:0 , Non-Newtonian:1 
-			"power_law_index":			1.2,		// Flow behaviour (power law) index
-			"consistency_index":		0.03,		// Consistency index
-			// Friction angle (RAD)
+			"_comment": "Rheological parameters for Non-Newtonian (IMPLEMENTED BUT NOT VALIDATED !!)",
+			"kinematic_visc_phase_2": 	0.000001,	"_comment": "Kinematic viscosity phase 2 (m2/s)",
+			"fluid_density_phase_1":	1000.0,		"_comment": "Fluid particle density phase 1 (kg/m3)",
+			"fluid_density_phase_2":	1540.0,		"_comment": "Bulk particle density phase 2 (kg/m3)",
+			"sediment_density":			1540.0,		"_comment": "Sediment density (kg/m3)",
+			"power_law_index":			1.2,		"_comment": "Flow behaviour (power law) index",
+			"consistency_index":		0.03,		"_comment": "Consistency index",
 			"phi": {
-				"lower":	0.4,	// lower limit
-				"wall":		0.4,	// wall
-				"bed":		0.4,	// bed
-				// second friction angle. Values are based on Minatti & Paris (2015) upper limit
-				"second":	0.611
+				"_comment": "Friction angle (RAD)",
+				"lower":	0.4,	"_comment": "lower limit",
+				"wall":		0.4,	"_comment": "wall",
+				"bed":		0.4,	"_comment": "bed",
+				"second":	0.611,	"_comment": "second friction angle. Values are based on Minatti & Paris (2015) upper limit"
 			},
-			"cohes_coeff": 	0.0,	// cohesiveness coefficient
-			"fraction_method": 2,   // Method of calculation of volume of fraction: Linear dist across the interface = 1, smoothed value = 2
-			//"visc_max": 20,			// maximum viscosity used to avoid singularity
-			"grain_size": 0.0035,	// grain size
-			"I0": 			0.75,	// I0 value in Meu9I0 rheology. Values are based on Minatti & Paris (2015)
-			"mm": 			300.0,	// Regularization parameter. Control the viscosity grows
-			// Method 1: viscosity is directly used in momentum equation
-			// Method 2: first the stress tensor is calculated then it is used in momentum equation
+			"cohes_coeff": 	0.0,	"_comment": "cohesiveness coefficient",
+			"fraction_method": 2,   "_comment": "Method of calculation of volume of fraction: Linear dist across the interface = 1, smoothed value = 2",
+			"_visc_max": 20,		"_comment": "maximum viscosity used to avoid singularity",
+			"grain_size": 0.0035,	"_comment": "grain size",
+			"I0": 			0.75,	"_comment": "I0 value in Meu9I0 rheology. Values are based on Minatti & Paris (2015)",
+			"mm": 			300.0,	"_comment": "Regularization parameter. Control the viscosity grows",
+			"_comment": "Stress Method 1: viscosity is directly used in momentum equation",
+			"_comment": "Stress Method 2: first the stress tensor is calculated then it is used in momentum equation",
 			"stress_calc_method": 1,
 			"viscosity": {
 				"iter_num":	1,
@@ -103,102 +106,98 @@
 			}
 		}
 	},
-	// Numerical parameters
 	"numerical": {
-		"dimension": 		2,			// Dimension (2 or 3)
-		"particle_dist": 	0.0025,		// Average particle distance (m)
-		"time_step": 		0.0002,		// Time step (s)
-		"final_time": 		1.0,		// Time of simulation (s)
-		"iter_output": 		50,			// Number of iterations to determine the output interval
-		"CFL_number":	 	0.2,		// Courant (CFL) condition number (0.2 is recomendable)
-		// Weight function
-		// 0: wij = re/rij - 1
-		// 1: wij = re/rij + rij/re - 2
-		// 2: wij = re/rij - rij/re
-		// 3: wij = (1-rij/re)^3
-		// 4: wij = (1-rij/re)^2
+		"_comment": "Numerical parameters",
+		"dimension": 		2,			"_comment": "Dimension (2 or 3)",
+		"particle_dist": 	0.0025,		"_comment": "Average particle distance (m)",
+		"time_step": 		0.0002,		"_comment": "Time step (s)",
+		"final_time": 		1.0,		"_comment": "Time of simulation (s)",
+		"iter_output": 		50,			"_comment": "Number of iterations to determine the output interval",
+		"CFL_number":	 	0.2,		"_comment": "Courant (CFL) condition number (0.2 is recomendable)",
+		"_comment": "Weight function",
+		"_comment": "0: wij = re/rij - 1",
+		"_comment": "1: wij = re/rij + rij/re - 2",
+		"_comment": "2: wij = re/rij - rij/re",
+		"_comment": "3: wij = (1-rij/re)^3",
+		"_comment": "4: wij = (1-rij/re)^2",
 		"weight_type":		0,
-		"slip_condition":	0,			// No-slip = 0; Free-slip = 1 
-		// Influence radius
+		"slip_condition":	0,		"_comment": "No-slip = 0; Free-slip = 1",
 		"effective_radius": {
-			// 2D: small = 2.1; large = 3.1
-			// 3D: small = 2.1; large = 2.1
+			"_comment": "Influence radius",
+			"_comment": "2D: small = 2.1; large = 3.1",
+			"_comment": "3D: small = 2.1; large = 2.1",
 			"small":		2.1,
 			"large":		3.1
 		},
-		// Pressure gradient
 		"gradient": {
-			"type":			0,			// 0: Pj - Pmin; 1: Pj + Pi; 2: Pj + Pi - 2*Pmin; 3: ni*Pj/nj + nj*Pi/ni
-			"correction":	true,		// Corrected pressure gradient (true or false)
-			// Relaxation factor (<= 1.0)
-			"relax_fact": 	1.0
+			"_comment": "Pressure gradient",
+			"type":			0,		"_comment": "0: Pj - Pmin; 1: Pj + Pi; 2: Pj + Pi - 2*Pmin; 3: ni*Pj/nj + nj*Pi/ni",
+			"correction":	true,	"_comment": "Corrected pressure gradient (true or false)",
+			"relax_fact": 	1.0,	"_comment": "Relaxation factor (<= 1.0)"
 		},
-		// MPS type
-		// 0:Explicit
-		// 1:Weakly compressible
-		// 2:Incompressible PND (Change below pnd type to 0)
-		// 3:Incompressible PND + DivU (Change below pnd type to 0)
+		"_comment": "MPS type",
+		"_comment": "0:Explicit",
+		"_comment": "1:Weakly compressible",
+		"_comment": "2:Incompressible PND (Change below pnd type to 0)",
+		"_comment": "3:Incompressible PND + DivU (Change below pnd type to 0)",
 		"mps_type":			3,
-		// Explicit or Weakly compressible MPS
 		"explicit_mps": {
+			"_comment": "Explicit or Weakly compressible MPS",
 			"equation_state": {
-				// Recomendable values: Sound of speed ~10*sqrt(g*H) (m/s) and gamma = 7.0
-				"speed_sound":	15.00,
+				"_comment": "Recomendable values: Sound of speed ~10*sqrt(g*H) (m/s) and gamma = 7.0",
+				"speed_sound":	20.00,
 				"gamma":		7.0
 			}
 		},
-		// Incompressible MPS
 		"semi_implicit_mps": {
-			"solver_type": 0,			// 0: CG; 1:BICGSTAB
+			"_comment": "Incompressible MPS",
+			"solver_type": 0,			"_comment": "0: CG; 1:BICGSTAB",
 			"weak_compressibility": {
+				"_comment": "Increase diagonal of matrix to accelerate iteration convergence. However, increases compressiblity",
 				"alpha":		0.000001
 			},
 			"source_term": {
-				// Relax coeff < 1.0
-				"relax_pnd": 	0.01
+				"relax_pnd": 	0.01,	"_comment": "Relax coeff < 1.0. It allows some compressiblity"
 			}
 		},
 		"particle_shifting": {
-			"type": 		2,			// 0: OFF; 1: DW*Uij; 2: GradCi
-			"DRI": 			0.01,		// Type 1: Adjusted velocity paramater (DW*Uij) DRI <= 0.01
-			"coef_A":		2.0,		// Type 2: Dimensionless number 1-6 (GradCi) coef_A = 2.0 provides a good compromise
-			"mach_number":	0.1,		// Type 2: Mach number Ma~0.1 (GradCi)
-			// Type 3: a = 0.9 (NOT IMPLEMENTED !!!)
-			"adj_vel_A":	0.9
+			"type": 		0,			"_comment": "0: OFF; 1: DW*Uij; 2: GradCi",
+			"DRI": 			0.01,		"_comment": "Type 1: Adjusted velocity paramater (DW*Uij) DRI <= 0.01",
+			"coef_A":		2.0,		"_comment": "Type 2: Dimensionless number 1-6 (GradCi) coef_A = 2.0 provides a good compromise",
+			"mach_number":	0.1,		"_comment": "Type 2: Mach number Ma~0.1 (GradCi)",
+			"adj_vel_A":	0.9,		"_comment": "Type 3: a = 0.9 (NOT IMPLEMENTED !!!)"
 		},
-		// Particle number density
-		// IMPORTANT !!: Use 0 to incompressible MPS and 2 to Explicit or Weakly compressible MPS
 		"pnd": {
-			"type":			0,			// 0: ni = Soma(wij); 1: ni = soma(PNDj)*wij/soma(wij); 2: ni = Div(u)i + Diffusive term
+			"_comment": "Particle number density",
+			"_comment": "IMPORTANT !!: Use 0 to incompressible MPS and 2 to Explicit or Weakly compressible MPS",
+			"type":				0,		"_comment": "0: ni = Soma(wij); 1: ni = soma(PNDj)*wij/soma(wij); 2: ni = Div(u)i + Diffusive term",
 			"diffusive_coeff": 	0.35
 		},
 		"wall_repulsive_force": {
-			"type": 		2,			// 0: Harada, 1: Mitsume; 2: Lennard-Jones; 3: Monaghan-Kajtar
-			"re":			0.5,		// Influence radius (0.5 is recomendable)
-			"maxVel":		4.0,		// Expected maximum velocity (e.g., dam-break wave front = 2*sqrt(gravity*WaterHeight))
+			"type": 		2,			"_comment": "0: Harada, 1: Mitsume; 2: Lennard-Jones; 3: Monaghan-Kajtar",
+			"re":			0.5,		"_comment": "Influence radius (0.5 is recomendable)",
+			"maxVel":		4.0,		"_comment": "Expected maximum velocity (e.g., dam-break wave front = 2*sqrt(gravity*WaterHeight))",
 			"coefficient": {
-				"Mitsume":	40000000.0,
-				// Range for L-J and M-K ~ [1,10]
+				"Mitsume":			40000000.0,
+				"_comment": "Range for L-J and M-K ~ [1,10]",
 				"Lennard-Jones":	2.0,
 				"Monaghan-Kajtar":	1.0
 			},
 			"eps_re":		0.01
 		},
 		"free_surface_threshold": {
-			"type": 	0,		// 0: PND + Neigh, 1: PND + NPCD, 2: PND + Neigh + Normal + ARC
-			"pnd": 		0.97,	// 2D: 0.97; 3D: 0.98
-			"neigh":	0.85,	// 0.85
-			"NPCD": 	0.2,	// NPCD >= 0.2
-			"ARC":		45.0,	// ARC >= 30
-			// Normal >= 0.1
-			"normal":	0.2
+			"type": 	0,		"_comment": "0: PND + Neigh, 1: PND + NPCD, 2: PND + Neigh + Normal + ARC",
+			"pnd": 		0.97,	"_comment": "2D: 0.97; 3D: 0.98",
+			"neigh":	0.85,	"_comment": "0.85",
+			"NPCD": 	0.2,	"_comment": "NPCD >= 0.2",
+			"ARC":		45.0,	"_comment": "ARC >= 30",
+			"normal":	0.2,	"_comment": "Normal >= 0.1"
 		},
 		"particle_collision": {
-			"type": 			0,		// 0: PC, 1: DPC
-			"ratio": 			0.2,	// Collision ratio (0.2 is recomendable)
-			"dist_limit_ratio": 0.85,	// Coefficient of distance which does not allow any further access between particles (0.7-0.9)
-			// Non-dimensional coefficient used to adjust background pressure (0.1-0.2)
-			"lambda":			0.2
+			"type": 			0,		"_comment": "0: PC, 1: DPC",
+			"ratio": 			0.2,	"_comment": "Collision ratio (0.2 is recomendable)",
+			"dist_limit_ratio": 0.85,	"_comment": "Coefficient of distance which does not allow any further access between particles (0.7-0.9)",
+			"lambda":			0.2,	"_comment": "Non-dimensional coefficient used to adjust background pressure (0.1-0.2)"
 		},
 		"particle_type": {
 			"ghost": 			-1,

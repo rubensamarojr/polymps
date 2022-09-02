@@ -1,0 +1,20 @@
+OK
+dam1610_BC
+dam1610_h300_lo0p0050_INC
+dam1610_h300_lo0p0050_WC
+inputDamINC
+inputDamWall_INC
+inputDamWC
+MpsInputExample
+S1_2D_lo08p00e-04_INC
+subaerial_2D_lo08p00e-04_INC
+subaquatic_2D_lo08p00e-04_INC (RODOU BASTANTE. PAREI EM 0.76s. PARECE OK)
+subaquatic_2D_lo08p00e-04_WC (100% CPU. PARECE OK)
+
+NOT OK
+BRUMADINHO_space10_lo10p00
+2D_dam_fraccarollo_lo02p50e-03_INC (it 0)
+2D_dam_fraccarollo_lo02p50e-03_WC (it 0)
+damErosion3D_WC (it 0 - fatal error)
+
+
