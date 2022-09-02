@@ -356,6 +356,7 @@ void MpsParticle::readInputFile() {
 	densityFluid = je.at("physical").value("fluid_density", 1000.0);
 	densityWall = je.at("physical").value("wall_density", 1000.0);
 	KNM_VS1 = je.at("physical").value("kinematic_visc", 0.000001);
+	fluidType = je.at("physical").value("fluid_type", 0);
 	gravityX = je.at("physical").at("gravity").value("x", 0.0);
 	gravityY = je.at("physical").at("gravity").value("y", 0.0);
 	gravityZ = je.at("physical").at("gravity").value("z", -9.81);
@@ -364,7 +365,6 @@ void MpsParticle::readInputFile() {
 	DNS_FL1 = je.at("physical").at("rheological").value("fluid_density_phase_1", 1000.0);
 	DNS_FL2 = je.at("physical").at("rheological").value("fluid_density_phase_2", 1540.0);
 	DNS_SDT = je.at("physical").at("rheological").value("sediment_density", 1540.0);
-	fluidType = je.at("physical").at("rheological").value("fluid_type", 0);
 	N = je.at("physical").at("rheological").value("power_law_index", 1.2);
 	MEU0 = je.at("physical").at("rheological").value("consistency_index", 0.03);
 	PHI_1 = je.at("physical").at("rheological").at("phi").value("lower", 0.541);
@@ -8795,12 +8795,15 @@ void MpsParticle::writeVtuAscii()
 //		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)diffusiveTerm[i]);}
 //		fprintf(fp,"\n        </DataArray>\n");
 
-		fprintf(fp,"        <DataArray type='Int32' Name='nearMeshType' format='ascii'>\n");
-		for(int i=0; i<numParticles; i++)
+		if(wallType == boundaryWallType::POLYGON)
 		{
-			fprintf(fp,"%d ",nearMeshType[i]);
+			fprintf(fp,"        <DataArray type='Int32' Name='nearMeshType' format='ascii'>\n");
+			for(int i=0; i<numParticles; i++)
+			{
+				fprintf(fp,"%d ",nearMeshType[i]);
+			}
+			fprintf(fp,"\n        </DataArray>\n");
 		}
-		fprintf(fp,"\n        </DataArray>\n");
 
 		//fprintf(fp,"        <DataArray type='Float32' Name='numNeighborsSurfaceParticles' format='ascii'>\n");
 		//for(int i=0; i<numParticles; i++) {fprintf(fp,"%f ",(float)numNeighborsSurfaceParticles[i]);}
@@ -9077,13 +9080,16 @@ void MpsParticle::writeVtuAsciiFreeSurface()
 //		for(int i=0; i<numParticles; i++) {	fprintf(fp,"%f ",(float)diffusiveTerm[i]);}
 //		fprintf(fp,"\n        </DataArray>\n");
 
-		fprintf(fp,"        <DataArray type='Int32' Name='nearMeshType' format='ascii'>\n");
-		for(int i=0; i<numParticles; i++)
+		if(wallType == boundaryWallType::POLYGON)
 		{
-			if(particleBC[i] == surface || particleType[i] == wall)
-				fprintf(fp,"%d ",nearMeshType[i]);
+			fprintf(fp,"        <DataArray type='Int32' Name='nearMeshType' format='ascii'>\n");
+			for(int i=0; i<numParticles; i++)
+			{
+				if(particleBC[i] == surface || particleType[i] == wall)
+					fprintf(fp,"%d ",nearMeshType[i]);
+			}
+			fprintf(fp,"\n        </DataArray>\n");
 		}
-		fprintf(fp,"\n        </DataArray>\n");
 
 		//fprintf(fp,"        <DataArray type='Float32' Name='numNeighborsSurfaceParticles' format='ascii'>\n");
 		//for(int i=0; i<numParticles; i++) {fprintf(fp,"%f ",(float)numNeighborsSurfaceParticles[i]);}
