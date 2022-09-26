@@ -166,7 +166,7 @@ public:
 	double DNS_SDT;			///< Sediment density (kg/m3)
 	double N;				///< flow behaviour (power law) index
 	double MEU0;			///< consistency index
-	double PHI_1;				///< friction angle (RAD) lower limit
+	double PHI_1;			///< friction angle (RAD) lower limit
 	double PHI_WAL;			///< friction angle (RAD)
 	double PHI_BED;			///< friction angle (RAD)
 	double PHI_2;			///< second friction angle Values are based on  Minatti & Paris (2015) upper limit

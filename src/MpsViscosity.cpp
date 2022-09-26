@@ -201,22 +201,31 @@ void MpsViscosity::calcViscosityInteractionVal(MpsParticleSystem *PSystem, MpsPa
 	// Be carefull to assign all domain
 	double Xmin, Xmax, Ymin, Ymax, Zmin; // Minimum and maximum of searching grid
 	// dam1610
-//	Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 1.65 + PSystem->partDist*3.0;
-//	Ymin = 0.0 - PSystem->partDist*3.0; Ymax = 0.15 + PSystem->partDist*3.0;
-	Zmin = 0.0 - PSystem->partDist*3.0; //Zmax = 0.7 + PSystem->partDist*30.0;
+	// Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 1.65 + PSystem->partDist*3.0;
+	// Ymin = 0.0 - PSystem->partDist*3.0; Ymax = 0.15 + PSystem->partDist*3.0;
+	// Zmin = 0.0 - PSystem->partDist*3.0; //Zmax = 0.7 + PSystem->partDist*30.0;
 	// damErosion3D
-//	Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 2.00 + PSystem->partDist*3.0;
-//	Ymin = 0.0 - PSystem->partDist*3.0; Ymax = 0.10 + PSystem->partDist*3.0;
+	// Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 2.00 + PSystem->partDist*3.0;
+	// Ymin = 0.0 - PSystem->partDist*3.0; Ymax = 0.10 + PSystem->partDist*3.0;
 	// damErosion2D
-	//Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 2.00 + PSystem->partDist*3.0;
-	//Ymin = 0.0; Ymax = 0.00;
+	// Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 2.00 + PSystem->partDist*3.0;
+	// Ymin = 0.0; Ymax = 0.00;
 	// S1 2D
-//	Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 0.30 + PSystem->partDist*3.0;
-//	Ymin = 0.0; Ymax = 0.00;
+	// Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 0.30 + PSystem->partDist*3.0;
+	// Ymin = 0.0; Ymax = 0.00;
 	// Subaquatic 0.016
-	Xmin = 0.0016 - PSystem->partDist*3.0; Xmax = 0.9792 + PSystem->partDist*3.0;
-	Ymin = 0.00; Ymax = 0.00;
+	// Xmin = 0.0016 - PSystem->partDist*3.0; Xmax = 0.9792 + PSystem->partDist*3.0;
+	// Ymin = 0.00; Ymax = 0.00;
 	// Changed !!!
+
+	Xmin = PSystem->domainMinX;
+	Xmax = PSystem->domainMaxX;
+	Ymin = PSystem->domainMinY;
+	Ymax = Ymin;	Zmin = 0.0;
+	if ((int)PSystem->dim == 3) {
+		Ymax = PSystem->domainMaxY;
+		Zmin = PSystem->domainMinZ;
+	}
 
 	// Search free-surface particles for each interval of aa = 2 particles in wall
 	double aaL0 = 2.0*PSystem->partDist;
@@ -701,13 +710,22 @@ void MpsViscosity::calcWallSlipViscosityInteractionVal(MpsParticleSystem *PSyste
 	// Be carefull to assign all domain
 	double Xmin, Xmax, Ymin, Ymax, Zmin; // Minimum and maximum of searching grid
 	// dam1610
-//	Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 1.65 + PSystem->partDist*3.0;
-//	Ymin = 0.0 - PSystem->partDist*3.0; Ymax = 0.15 + PSystem->partDist*3.0;
-	Zmin = 0.0 - PSystem->partDist*3.0; //Zmax = 0.7 + PSystem->partDist*30.0;
+	// Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 1.65 + PSystem->partDist*3.0;
+	// Ymin = 0.0 - PSystem->partDist*3.0; Ymax = 0.15 + PSystem->partDist*3.0;
+	// Zmin = 0.0 - PSystem->partDist*3.0; //Zmax = 0.7 + PSystem->partDist*30.0;
 	// damErosion3D
-	Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 2.00 + PSystem->partDist*3.0;
-	Ymin = 0.0 - PSystem->partDist*3.0; Ymax = 0.10 + PSystem->partDist*3.0;
+	// Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 2.00 + PSystem->partDist*3.0;
+	// Ymin = 0.0 - PSystem->partDist*3.0; Ymax = 0.10 + PSystem->partDist*3.0;
 	// Changed !!!
+
+	Xmin = PSystem->domainMinX;
+	Xmax = PSystem->domainMaxX;
+	Ymin = PSystem->domainMinY;
+	Ymax = Ymin;	Zmin = 0.0;
+	if ((int)PSystem->dim == 3) {
+		Ymax = PSystem->domainMaxY;
+		Zmin = PSystem->domainMinZ;
+	}
 
 	// Search free-surface particles for each interval of aa = 2 particles in wall
 	double aaL0 = 2.0*PSystem->partDist;
@@ -1101,13 +1119,22 @@ void MpsViscosity::calcWallNoSlipViscosityInteractionVal(MpsParticleSystem *PSys
 	// Be carefull to assign all domain
 	double Xmin, Xmax, Ymin, Ymax, Zmin; // Minimum and maximum of searching grid
 	// dam1610
-//	Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 1.65 + PSystem->partDist*3.0;
-//	Ymin = 0.0 - PSystem->partDist*3.0; Ymax = 0.15 + PSystem->partDist*3.0;
-	Zmin = 0.0 - PSystem->partDist*3.0; //Zmax = 0.7 + PSystem->partDist*30.0;
+	// Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 1.65 + PSystem->partDist*3.0;
+	// Ymin = 0.0 - PSystem->partDist*3.0; Ymax = 0.15 + PSystem->partDist*3.0;
+	// Zmin = 0.0 - PSystem->partDist*3.0; //Zmax = 0.7 + PSystem->partDist*30.0;
 	// damErosion3D
-	Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 2.00 + PSystem->partDist*3.0;
-	Ymin = 0.0 - PSystem->partDist*3.0; Ymax = 0.10 + PSystem->partDist*3.0;
+	// Xmin = 0.0 - PSystem->partDist*3.0; Xmax = 2.00 + PSystem->partDist*3.0;
+	// Ymin = 0.0 - PSystem->partDist*3.0; Ymax = 0.10 + PSystem->partDist*3.0;
 	// Changed !!!
+
+	Xmin = PSystem->domainMinX;
+	Xmax = PSystem->domainMaxX;
+	Ymin = PSystem->domainMinY;
+	Ymax = Ymin;	Zmin = 0.0;
+	if ((int)PSystem->dim == 3) {
+		Ymax = PSystem->domainMaxY;
+		Zmin = PSystem->domainMinZ;
+	}
 
 	// Search free-surface particles for each interval of aa = 2 particles in wall
 	double aaL0 = 2.0*PSystem->partDist;
