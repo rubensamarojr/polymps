@@ -95,6 +95,8 @@ int main( int argc, char** argv) {
 	MpsVectorMatrix *vectorMatrix = nullptr;			///< MpsVectorMatrix engine
 	MpsParticleVelPos *particleVelPos = nullptr;		///< MpsParticleVelPos engine
 
+	MpsInflowOutflow *inflowOutflow = nullptr;			///< MpsInflowOutflow engine
+
 	// Creates MpsParticleSystem class
 	particleSystem = new MpsParticleSystem();
 	// Creates MpsParticle class
@@ -151,6 +153,15 @@ int main( int argc, char** argv) {
 	// Creates MpsParticleVelPos class
 	particleVelPos = new MpsParticleVelPos();
 
+	// Creates MpsInflowOutflow class
+	if(particleSystem->inOutflowOn == true && particleSystem->numInOutflowPlane > 0) {
+		inflowOutflow = new MpsInflowOutflow[particleSystem->numInOutflowPlane];
+		for (int ii = 0; ii < particleSystem->numInOutflowPlane; ii++) {
+			inflowOutflow[ii].setPlaneFromPointNormal(particleSystem, ii);
+		}
+	}
+	
+
 	printf("Initial Step... ");
 	// Updates variables at 0th step
 	
@@ -185,6 +196,10 @@ int main( int argc, char** argv) {
 	// Writes VTK file of buckets
 	inputOutput->writeBuckets(particleSystem, particles);
 
+	// Writes VTK file of initial Inflow/Outflow plans
+	if(particleSystem->inOutflowOn == true && particleSystem->numInOutflowPlane > 0)
+		inputOutput->writeInOutFlowPlan(particleSystem, particles, inflowOutflow);
+
 	printf("OK\n");
 
 	printf("\nStart Main Loop of Simulation\n\n");
@@ -210,6 +225,8 @@ int main( int argc, char** argv) {
 	delete boundaryConditions;
 	delete vectorMatrix;
 	delete particleVelPos;
+
+	delete[] inflowOutflow;
 
 	printf("End PolyMPS.\n");
 	return 0;

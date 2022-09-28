@@ -18,6 +18,7 @@
 #include "MpsParticleSystem.h"
 #include "MpsParticle.h"
 #include "MpsPressure.h"
+#include "MpsInflowOutflow.h"
 
 /**
  * @brief      This class manage input/output files.
@@ -128,7 +129,9 @@ public:
 	 */
 	void writeBuckets(MpsParticleSystem *PSystem, MpsParticle *Particles);
 
-	// Pressure sensors
+
+	void writeInOutFlowPlan(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsInflowOutflow *inOutFlow);
+
 
 	/**
 	 * @brief      Writes pressure at sensors in .txt file..
@@ -164,6 +167,12 @@ public:
 	 * @brief      Delete all files inside the output folder.
 	 */
 	void deleteDirectoryFiles();
+
+	/**
+	 * @brief      Allocation of memory for Inflow/Outflow planes (interfaces)
+	 * @param      PSystem    The particle system
+	 */
+	void allocateMemoryInOutflow(MpsParticleSystem *PSystem);
 	
 	std::string meshRigidFilename;
 	std::string meshDeformableFilename;

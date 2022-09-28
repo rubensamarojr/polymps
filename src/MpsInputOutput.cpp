@@ -5,6 +5,7 @@
  * @date       2022
  */
 
+#include <iostream>
 #include <fstream>		///<> std::ofstream std::ifstream
 #include <experimental/filesystem> 	///< numeric_limits
 #include <sys/stat.h>	///< mkdir for Linux
@@ -159,13 +160,56 @@ void MpsInputOutput::readInputFile(MpsParticleSystem *PSystem, MpsParticle *Part
 	PSystem->domainMaxX = je.at("domain").at("max").value("x", 0.0);
 	PSystem->domainMaxY = je.at("domain").at("max").value("y", 0.0);
 	PSystem->domainMaxZ = je.at("domain").at("max").value("z", 0.0);
-	// Domain Boundary Condition
+	// Domain Periodic boundary condition
 	PSystem->domainTypeBC = je.at("domain").at("boundary").value("type", 0);
 	PSystem->numBC = 1;
 	PSystem->limitTypeBC = je.at("domain").at("boundary").value("limit", 0);
 	PSystem->periodicDirectionX = je.at("domain").at("boundary").at("direction").value("x", false);
 	PSystem->periodicDirectionY = je.at("domain").at("boundary").at("direction").value("y", false);
 	PSystem->periodicDirectionZ = je.at("domain").at("boundary").at("direction").value("z", false);
+
+	// Inflow/Outflow boundary conditions
+	PSystem->inOutflowOn = je.at("domain").at("in_out_flow").value("set_on", false);
+	if (PSystem->inOutflowOn == true) {
+		PSystem->numInOutflowPlane = je.at("domain").at("in_out_flow").at("planes").size();
+		// std::cout << "\n Planes: " << je.at("domain").at("in_out_flow").at("planes").size() << '\n';
+		if (PSystem->numInOutflowPlane > 0) {
+			allocateMemoryInOutflow(PSystem);
+			int ii = 0;
+			for (auto& el : je.at("domain").at("in_out_flow").at("planes").items())
+			{
+				PSystem->inOutflowPlaneID[ii] = el.value()["id"];
+				PSystem->inOutflowTypeBC[ii] = el.value()["type_bc"];
+				PSystem->inOutflowPt[ii*3  ] = el.value()["seed_point"]["x"];
+				PSystem->inOutflowPt[ii*3+1] = el.value()["seed_point"]["y"];
+				PSystem->inOutflowPt[ii*3+2] = el.value()["seed_point"]["z"];
+				PSystem->inOutflowNormal[ii*3  ] = el.value()["normal"]["x"];
+				PSystem->inOutflowNormal[ii*3+1] = el.value()["normal"]["y"];
+				PSystem->inOutflowNormal[ii*3+2] = el.value()["normal"]["z"];
+				PSystem->inOutflowVel[ii*3  ] = el.value()["velocity"]["x"];
+				PSystem->inOutflowVel[ii*3+1] = el.value()["velocity"]["y"];
+				PSystem->inOutflowVel[ii*3+2] = el.value()["velocity"]["z"];
+				PSystem->inOutflowPress[ii] = el.value()["pressure"];
+				// std::cout << el.key() << " : " << el.value()["id"] << '\n';
+				// std::cout << el.key() << " : " << el.value()["type_bc"] << '\n';
+				// std::cout << el.key() << " : " << el.value()["seed_point"]["x"] << '\n';
+				// std::cout << el.key() << " : " << el.value()["seed_point"]["y"] << '\n';
+				// std::cout << el.key() << " : " << el.value()["seed_point"]["z"] << '\n';
+				// std::cout << el.key() << " : " << el.value()["normal"]["x"] << '\n';
+				// std::cout << el.key() << " : " << el.value()["normal"]["y"] << '\n';
+				// std::cout << el.key() << " : " << el.value()["normal"]["z"] << '\n';
+				// std::cout << el.key() << " : " << el.value()["velocity"]["x"] << '\n';
+				// std::cout << el.key() << " : " << el.value()["velocity"]["y"] << '\n';
+				// std::cout << el.key() << " : " << el.value()["velocity"]["z"] << '\n';
+				// std::cout << el.key() << " : " << el.value()["pressure"] << '\n';
+				ii++;
+			}
+		}
+	}
+	else {
+		PSystem->numInOutflowPlane = 0;
+	}
+
 	
 	// Physical parameters
 	PSystem->densityFluid = je.at("physical").value("fluid_density", 1000.0);
@@ -2030,6 +2074,112 @@ void MpsInputOutput::writeBuckets(MpsParticleSystem *PSystem, MpsParticle *Parti
 	fclose(fp);
 }
 
+// Write vtk file with initial Inflow/Outflow plans
+void MpsInputOutput::writeInOutFlowPlan(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsInflowOutflow *inOutFlow) {
+
+	char output_filename[256];
+	char *output_folder_char = new char[vtuOutputFoldername.length()+1];
+	strcpy (output_folder_char, vtuOutputFoldername.c_str());
+	// output_folder_char now contains a c-string copy of vtuOutputFoldername
+
+	sprintf(output_filename, "%s/inOutflowPlan.vtk",output_folder_char);
+
+	delete[] output_folder_char;
+	output_folder_char = NULL;
+
+	// ASCII FILE
+	fp = fopen(output_filename, "w");
+
+	int nPoints = PSystem->numInOutflowPlane*4;
+	int nCells = PSystem->numInOutflowPlane;
+	
+	fprintf(fp,"# vtk DataFile Version 3.0\n");
+	fprintf(fp,"Initial Inflow/Outflow plans\n");
+	fprintf(fp,"ASCII\n");
+	fprintf(fp,"DATASET UNSTRUCTURED_GRID\n");
+	fprintf(fp,"POINTS %d float\n", nPoints);
+	for (int i = 0; i < nCells; ++i)
+	{
+		double P0x, P0y, P0z;
+
+		// If the cross product comes out to be zero, then the given vectors are parallel
+		// Verify if the normal of the plane is parallel to Z axis
+		double checkNormalX = inOutFlow[i].Pio.b*inOutFlow[i].Pio.b + inOutFlow[i].Pio.c*inOutFlow[i].Pio.c;
+		double checkNormalY = inOutFlow[i].Pio.a*inOutFlow[i].Pio.a + inOutFlow[i].Pio.c*inOutFlow[i].Pio.c;
+		double checkNormalZ = inOutFlow[i].Pio.a*inOutFlow[i].Pio.a + inOutFlow[i].Pio.b*inOutFlow[i].Pio.b;
+		if (checkNormalX < PSystem->epsilonZero) {
+			// Normal is X
+			// Writes points in plane YZ
+			P0x = inOutFlow[i].Pio.d/inOutFlow[i].Pio.a;
+			P0y = -1.0;	P0z = -1.0;
+			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
+			P0y =  1.0;	P0z = -1.0;
+			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
+			P0y =  1.0;	P0z =  1.0;
+			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
+			P0y = -1.0;	P0z =  1.0;
+			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
+		}
+		else if (checkNormalY < PSystem->epsilonZero) {
+			// Normal is Y
+			// Writes points in plane XZ
+			P0y = inOutFlow[i].Pio.d/inOutFlow[i].Pio.b;
+			P0x = -1.0;	P0z = -1.0;
+			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
+			P0x =  1.0;	P0z = -1.0;
+			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
+			P0x =  1.0;	P0z =  1.0;
+			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
+			P0x = -1.0;	P0z =  1.0;
+			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
+		}
+		else {
+			// Normal is not X or Y
+			// Writes points considering the plane XY just for spatial reference
+			P0x = 0.0;	P0y = 0.0;
+			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
+			P0x = 0.0;	P0y = 1.0;
+			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
+			P0x = 1.0;	P0y = 1.0;
+			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
+			P0x = 1.0;	P0y = 0.0;
+			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
+		}
+	}
+
+	fprintf(fp,"CELLS %d %d\n", nCells, nCells*5);
+	for(int i=0; i<nCells; i++) {
+		fprintf(fp,"4 ");
+		fprintf(fp,"%d %d %d %d\n", 4*i, 4*i+1, 4*i+2, 4*i+3);
+	}
+
+	fprintf(fp,"CELL_TYPES %d\n", nCells);
+	for(int i=0; i<nCells; i++) {
+		fprintf(fp,"9 ");
+	}
+	fprintf(fp,"\n");
+
+	fprintf(fp,"CELL_DATA %d\n", nCells);
+	
+	fprintf(fp,"SCALARS InOutID float 1\n");
+	fprintf(fp,"LOOKUP_TABLE default\n");
+	for(int i=0; i<nCells; i++) {
+		fprintf(fp,"%d ", i);
+	}
+	fprintf(fp,"\n");
+
+	fprintf(fp,"VECTORS Normal float\n");
+	for(int i=0; i<nCells; i++) {
+		fprintf(fp,"%f %f %f\n", inOutFlow[i].Pio.normal[0], inOutFlow[i].Pio.normal[1], inOutFlow[i].Pio.normal[2]);
+	}
+
+	fclose(fp);
+}
+
 //
 void MpsInputOutput::stringToChar(char *out_char) {
 	out_char = new char[vtuOutputFoldername.length()+1];
@@ -2040,4 +2190,14 @@ void MpsInputOutput::stringToChar(char *out_char) {
 void MpsInputOutput::deleteDirectoryFiles() {
 	for (const auto& entry : std::experimental::filesystem::directory_iterator(vtuOutputFoldername)) 
 		std::experimental::filesystem::remove_all(entry.path());
+}
+
+// Allocation of memory for Inflow/Outflow planes (interfaces)
+void MpsInputOutput::allocateMemoryInOutflow(MpsParticleSystem *PSystem){
+	PSystem->inOutflowPlaneID = (int*)malloc(sizeof(int)*PSystem->numInOutflowPlane);
+	PSystem->inOutflowTypeBC = (int*)malloc(sizeof(int)*PSystem->numInOutflowPlane);
+	PSystem->inOutflowPt = (double*)malloc(sizeof(double)*PSystem->numInOutflowPlane*3);
+	PSystem->inOutflowNormal = (double*)malloc(sizeof(double)*PSystem->numInOutflowPlane*3);
+	PSystem->inOutflowVel = (double*)malloc(sizeof(double)*PSystem->numInOutflowPlane*3);
+	PSystem->inOutflowPress = (double*)malloc(sizeof(double)*PSystem->numInOutflowPlane);
 }

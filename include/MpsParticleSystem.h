@@ -142,13 +142,23 @@ public:
 	double domainMaxY;		///< Maximum value in the y direction of the analysis domain (m)
 	double domainMaxZ;		///< Maximum value in the z direction of the analysis domain (m)
 
-	// Domain Boundary Condition
+	// Domain Periodic boundary condition
 	int domainTypeBC;		///< Type of Domain Boundary Condition
 	int numBC;				///< Number of boundary conditions
 	int limitTypeBC;		///< Type of domain limit to be used in the Boundary Condition
 	bool periodicDirectionX;		///< Input periodic direction in domain X
 	bool periodicDirectionY;		///< Input periodic direction in domain Y
 	bool periodicDirectionZ;		///< Input periodic direction in domain Z
+
+	// Inflow/Outflow boundary conditions
+	bool inOutflowOn;		/// Inflow/Outflow Boundary Condition - Off:0, On:1
+	int numInOutflowPlane;	///< Number of Inflow/Outflow planes (interfaces)
+	int *inOutflowPlaneID;	///< ID of Inflow/Outflow plan (interface)
+	int *inOutflowTypeBC;		///< Type of Inflow/Outflow boundary condition
+	double *inOutflowPt;	///< Point vector on the Inflow/Outflow plane (interface)
+	double *inOutflowNormal;///< Normal vector of the Inflow/Outflow plane (interface)
+	double *inOutflowVel;	///< Velocity vector of the Inflow/Outflow plane (interface)
+	double *inOutflowPress;	///< Pressure of the Inflow/Outflow plane (interface)
 
 	// Physical parameters
 	double densityFluid;	///< Fluid particle density (kg/m3)
