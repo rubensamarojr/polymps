@@ -54,8 +54,8 @@ public:
 	 * @param[in]  M33   Element 33
 	 * @return     The value of the determinant of matrix
 	 */
-	double detMatrix(double M11, double M12, double M13, double M21, double M22, double M23, 
-		double M31, double M32, double M33);
+	double detMatrix(const double M11, const double M12, const double M13, const double M21, const double M22, const double M23, 
+		const double M31, const double M32, const double M33);
 	
 	/**
 	 * @brief      Computes the inverse of a matrix of dimension PSystem->dim x PSystem->dim
@@ -88,16 +88,16 @@ public:
 	/**
 	 * @brief      Transform 3D -> 2D
 	 * @param      P1    The point converted from 3D to 2D
-	 * @param      RM    The rotation matrix
+	 * @param[in]  RM    The rotation matrix
 	 */
-	void transform3Dto2D(double *P1, double *RM);
+	void transform3Dto2D(double *P1, const double *RM);
 
 	/**
 	 * @brief      Transform 2D -> 3D
 	 * @param      P1    The point converted from 2D to 3D
-	 * @param      RM    The rotation matrix
+	 * @param[in]  RM    The rotation matrix
 	 */
-	void transform2Dto3D(double *P1, double *RM);
+	void transform2Dto3D(double *P1, const double *RM);
 	
 	
 protected:

@@ -92,8 +92,8 @@ void MpsVectorMatrix::correctionMatrix(MpsParticleSystem *PSystem, MpsParticle *
 }
 
 // Determinant of matrix
-double MpsVectorMatrix::detMatrix(double M11, double M12, double M13, 
-	double M21, double M22, double M23, double M31, double M32, double M33) {
+double MpsVectorMatrix::detMatrix(const double M11, const double M12, const double M13, 
+	const double M21, const double M22, const double M23, const double M31, const double M32, const double M33) {
 	
 	return (M11*M22*M33 + M12*M23*M31 + M13*M21*M32)
 			- (M13*M22*M31 + M12*M21*M33 + M11*M23*M32);
@@ -227,7 +227,7 @@ void MpsVectorMatrix::transformMatrix(double *V1, double *V2, double *V3, double
 }
 
 // 3D -> 2D
-void MpsVectorMatrix::transform3Dto2D(double *P1, double *RM) {
+void MpsVectorMatrix::transform3Dto2D(double *P1, const double *RM) {
 	double A[3];
 	// Point represented in triangle coordinate system (U,V,W). The value in W is the same for all points (3D -> 2D).
 	// Trasnpose of RM
@@ -240,7 +240,7 @@ void MpsVectorMatrix::transform3Dto2D(double *P1, double *RM) {
 }
 
 // 2D -> 3D
-void MpsVectorMatrix::transform2Dto3D(double *P1, double *RM) {
+void MpsVectorMatrix::transform2Dto3D(double *P1, const double *RM) {
 	double A[3];
 	// Point represented in coordinate system (X,Y,Z) (2D -> 3D).
 	for(unsigned int i = 0; i < 3; i++) {
