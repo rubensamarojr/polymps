@@ -2102,52 +2102,56 @@ void MpsInputOutput::writeInOutFlowPlan(MpsParticleSystem *PSystem, MpsParticle 
 	{
 		double P0x, P0y, P0z;
 
-		// If the cross product comes out to be zero, then the given vectors are parallel
-		// Verify if the normal of the plane is parallel to Z axis
-		double checkNormalX = inOutFlow[i].Pio.b*inOutFlow[i].Pio.b + inOutFlow[i].Pio.c*inOutFlow[i].Pio.c;
-		double checkNormalY = inOutFlow[i].Pio.a*inOutFlow[i].Pio.a + inOutFlow[i].Pio.c*inOutFlow[i].Pio.c;
-		double checkNormalZ = inOutFlow[i].Pio.a*inOutFlow[i].Pio.a + inOutFlow[i].Pio.b*inOutFlow[i].Pio.b;
-		if (checkNormalX < PSystem->epsilonZero) {
-			// Normal is X
-			// Writes points in plane YZ
-			P0x = inOutFlow[i].Pio.d/inOutFlow[i].Pio.a;
-			P0y = -1.0;	P0z = -1.0;
-			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
-			P0y =  1.0;	P0z = -1.0;
-			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
-			P0y =  1.0;	P0z =  1.0;
-			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
-			P0y = -1.0;	P0z =  1.0;
-			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
+		// Writes the plan and avoids division by zero
+		double checkA = inOutFlow[i].Pio.a*inOutFlow[i].Pio.a;
+		double checkB = inOutFlow[i].Pio.b*inOutFlow[i].Pio.b;
+		double checkC = inOutFlow[i].Pio.c*inOutFlow[i].Pio.c;
+
+		if (checkA > PSystem->epsilonZero) {
+			P0y = PSystem->inOutflowPt[i*3+1] - 1.0;	P0z = PSystem->inOutflowPt[i*3+2] - 1.0;
+			P0x = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.b * P0y - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.a;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
+			P0y = PSystem->inOutflowPt[i*3+1] + 1.0;	P0z = PSystem->inOutflowPt[i*3+2] - 1.0;
+			P0x = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.b * P0y - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.a;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
+			P0y = PSystem->inOutflowPt[i*3+1] + 1.0;	P0z = PSystem->inOutflowPt[i*3+2] + 1.0;
+			P0x = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.b * P0y - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.a;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
+			P0y = PSystem->inOutflowPt[i*3+1] - 1.0;	P0z = PSystem->inOutflowPt[i*3+2] + 1.0;
+			P0x = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.b * P0y - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.a;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
 		}
-		else if (checkNormalY < PSystem->epsilonZero) {
-			// Normal is Y
-			// Writes points in plane XZ
-			P0y = inOutFlow[i].Pio.d/inOutFlow[i].Pio.b;
-			P0x = -1.0;	P0z = -1.0;
-			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
-			P0x =  1.0;	P0z = -1.0;
-			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
-			P0x =  1.0;	P0z =  1.0;
-			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
-			P0x = -1.0;	P0z =  1.0;
-			fprintf(fp,"%d %d %d\n", P0x, P0y, P0z);
+		else if (checkB > PSystem->epsilonZero) {
+			P0x = PSystem->inOutflowPt[i*3] - 1.0;	P0z = PSystem->inOutflowPt[i*3+2] - 1.0;
+			P0y = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.b;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
+			P0x = PSystem->inOutflowPt[i*3] + 1.0;	P0z = PSystem->inOutflowPt[i*3+2] - 1.0;
+			P0y = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.b;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
+			P0x = PSystem->inOutflowPt[i*3] + 1.0;	P0z = PSystem->inOutflowPt[i*3+2] + 1.0;
+			P0y = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.b;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
+			P0x = PSystem->inOutflowPt[i*3] - 1.0;	P0z = PSystem->inOutflowPt[i*3+2] + 1.0;
+			P0y = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.b;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
+		}
+		else if (checkC > PSystem->epsilonZero){
+			P0x = PSystem->inOutflowPt[i*3] - 1.0;	P0y = PSystem->inOutflowPt[i*3+1] - 1.0;
+			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
+			P0x = PSystem->inOutflowPt[i*3] + 1.0;	P0y = PSystem->inOutflowPt[i*3+1] - 1.0;
+			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
+			P0x = PSystem->inOutflowPt[i*3] + 1.0;	P0y = PSystem->inOutflowPt[i*3+1] + 1.0;
+			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
+			P0x = PSystem->inOutflowPt[i*3] - 1.0;	P0y = PSystem->inOutflowPt[i*3+1] + 1.0;
+			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
+			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
 		}
 		else {
-			// Normal is not X or Y
-			// Writes points considering the plane XY just for spatial reference
-			P0x = 0.0;	P0y = 0.0;
-			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
-			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
-			P0x = 0.0;	P0y = 1.0;
-			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
-			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
-			P0x = 1.0;	P0y = 1.0;
-			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
-			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
-			P0x = 1.0;	P0y = 0.0;
-			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
-			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
+			printf("\nError: Please, Normal vector of Inflow/Outflow plan id: %d cannot be zero\n", i);
+			throw std::exception();
 		}
 	}
 
