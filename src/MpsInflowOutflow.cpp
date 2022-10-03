@@ -101,15 +101,41 @@ void MpsInflowOutflow::checkInOutflowParticles(MpsParticleSystem *PSystem, MpsPa
 	Particles->numRealAndIOParticles = Particles->numParticles + Particles->numIOParticles;
 
 	// Auxiliar variables
-	int numIOParticlesAux = 0;
-	int iLastParticle = Particles->numParticles;
+	int numIOParticlesAux, iLastParticle;
 
-//#pragma omp parallel for schedule(dynamic,64)
+//#pragma omp parallel
+//{
+	// Auxiliar variables
+	numIOParticlesAux = 0;
+	iLastParticle = Particles->numParticles;
+
+	int sumAux = 0;
+
+//#pragma omp parallel for schedule(dynamic,64) shared (iLastParticle) reduction(+:numIOParticlesAux)
+//#pragma omp for nowait
+//#pragma omp parallel for shared (iLastParticle) reduction(+:numIOParticlesAux)
+//#pragma omp parallel for reduction(+:numIOParticlesAux)
+//#pragma omp parallel for schedule(dynamic,64) reduction(+:numIOParticlesAux)
+//#pragma omp parallel for reduction(+:sumAux)
+#pragma omp parallel for
 	for(int i=0; i<Particles->numParticles; i++) {
 	if(Particles->particleType[i] == PSystem->fluid) {
 		
 		Particles->signDist[i] = calcSignedDistance(Particles->pos[i*3], Particles->pos[i*3+1], Particles->pos[i*3+2]);
 
+// 		if(i%2==0||i%3==0)
+// 		{
+// #pragma omp critical
+// {
+// 			//int tid = omp_get_thread_num();
+// 			//printf("\nomp thread %d", tid);
+// //#pragma omp atomic
+// 			sumAux+=2;
+// }
+// 		}
+// To prevent race condition, the access to the shared variable "iLastParticle" must be synchronized.
+//#pragma omp critical (before_if)
+//{
 		// Verify if the signed distance of particle i from the IOplan is positive
 		if(Particles->signDist[i] > PSystem->epsilonZero) {
 			// Particle inside the fluid domain
@@ -118,6 +144,12 @@ void MpsInflowOutflow::checkInOutflowParticles(MpsParticleSystem *PSystem, MpsPa
 			if(Particles->signDist[i] < PSystem->partDist) {
 				// Particle near the IOplan and its position shorter than partDist
 
+				//int tid = omp_get_thread_num();
+				//printf("\nomp thread %d", tid);
+
+// Specifies that code is only executed on one thread at a time
+//#pragma omp critical (after_if)
+//{
 				// Create two IO particles along the line normal to the IOplan and passing from the i-th position
 				// IO particles are placed at distances partDist and 2*partdDist from i-th position
 				double posIO1x, posIO1y, posIO1z, posIO2x, posIO2y, posIO2z;
@@ -136,38 +168,52 @@ void MpsInflowOutflow::checkInOutflowParticles(MpsParticleSystem *PSystem, MpsPa
 				velIO2x = Particles->vel[i*3  ];
 				velIO2y = Particles->vel[i*3+1];
 				velIO2z = Particles->vel[i*3+2];
-				
-				Particles->pos[iLastParticle*3  ] = posIO1x;
-				Particles->pos[iLastParticle*3+1] = posIO1y;
-				Particles->pos[iLastParticle*3+2] = posIO1z;
-				Particles->vel[iLastParticle*3  ] = velIO1x;
-				Particles->vel[iLastParticle*3+1] = velIO1y;
-				Particles->vel[iLastParticle*3+2] = velIO1z;
 
-				// Set some variables
-				Particles->particleBC[iLastParticle] = PSystem->other;
-				Particles->particleType[iLastParticle] = PSystem->inOutflowPartID;
-				Particles->press[iLastParticle] = Pio.press;
+				// Local variable of two IO particles index
+				// Be aware that they are defined using the global variable iLastParticle
+				int idIO1, idIO2;
 
-				// Update lastParticle ID
-				iLastParticle++;
+// Specifies that code is only executed on one thread at a time
+#pragma omp critical (after_if)
+{
+				idIO1 = iLastParticle;
+				idIO2 = iLastParticle+1;
 
-				Particles->pos[iLastParticle*3  ] = posIO2x;
-				Particles->pos[iLastParticle*3+1] = posIO2y;
-				Particles->pos[iLastParticle*3+2] = posIO2z;
-				Particles->vel[iLastParticle*3  ] = velIO2x;
-				Particles->vel[iLastParticle*3+1] = velIO2y;
-				Particles->vel[iLastParticle*3+2] = velIO2z;
-
-				// Set some variables
-				Particles->particleBC[iLastParticle] = PSystem->other;
-				Particles->particleType[iLastParticle] = PSystem->inOutflowPartID;
-				Particles->press[iLastParticle] = Pio.press;
-				
-				// Update lastParticle ID
-				iLastParticle++;
-
+				// Update shared variables lastParticle ID and number of particles
+				iLastParticle += 2;
 				numIOParticlesAux += 2;
+} //pragma omp critical (after_if)
+
+				Particles->pos[idIO1*3  ] = posIO1x;
+				Particles->pos[idIO1*3+1] = posIO1y;
+				Particles->pos[idIO1*3+2] = posIO1z;
+				Particles->vel[idIO1*3  ] = velIO1x;
+				Particles->vel[idIO1*3+1] = velIO1y;
+				Particles->vel[idIO1*3+2] = velIO1z;
+
+				// Set some variables
+				Particles->particleBC[idIO1] = PSystem->other;
+				Particles->particleType[idIO1] = PSystem->inOutflowPartID;
+				Particles->press[idIO1] = Pio.press;
+
+				// Update lastParticle ID
+// The atomic construct allows multiple threads to safely update a shared variable
+//#pragma omp atomic
+				//iLastParticle++;
+
+				Particles->pos[idIO2*3  ] = posIO2x;
+				Particles->pos[idIO2*3+1] = posIO2y;
+				Particles->pos[idIO2*3+2] = posIO2z;
+				Particles->vel[idIO2*3  ] = velIO2x;
+				Particles->vel[idIO2*3+1] = velIO2y;
+				Particles->vel[idIO2*3+2] = velIO2z;
+
+				// Set some variables
+				Particles->particleBC[idIO2] = PSystem->other;
+				Particles->particleType[idIO2] = PSystem->inOutflowPartID;
+				Particles->press[idIO2] = Pio.press;
+
+//} //pragma omp critical (after_if)
 			}
 			// Verify if the signed distance of particle i from the IOplan is shorter than reS
 			else if(Particles->signDist[i] < PSystem->reS) {
@@ -198,11 +244,19 @@ void MpsInflowOutflow::checkInOutflowParticles(MpsParticleSystem *PSystem, MpsPa
 			// The signed distance is negative, then the Particle is outside the fluid domain
 			// Set particle as ghost
 		}
-		
+	
+//} // #pragma omp critical (before_if)
+
 	}
 	}
 
+//} // pragma omp parallel
 
+	if(numIOParticlesAux != 0 && numIOParticlesAux != 200)
+		printf("\n NumParticles: %d", numIOParticlesAux);
+
+	// printf("\n NumParticles: %d", sumAux);
+	
 	// Updates number of inOutflow (IO) particles
 	Particles->numIOParticles = numIOParticlesAux;
 	// Updates number of particles including IO particles
