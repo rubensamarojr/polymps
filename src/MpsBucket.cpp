@@ -62,7 +62,10 @@ void MpsBucket::allocateMemory(MpsParticleSystem *PSystem, MpsParticle *Particle
 
 	Particles->firstParticleInBucket = 	(int*)malloc(sizeof(int) * PSystem->numBucketsXYZ);	// First particle number stored in the bucket
 	Particles->lastParticleInBucket = 	(int*)malloc(sizeof(int) * PSystem->numBucketsXYZ);	// Last particle number stored in the bucket
-	Particles->nextParticleInSameBucket  = (int*)malloc(sizeof(int) * Particles->numParticles);	// Next particle number in the same bucket
+	
+	// Particles->nextParticleInSameBucket  = (int*)malloc(sizeof(int) * Particles->numParticles);	// Next particle number in the same bucket
+	Particles->nextParticleInSameBucket  = (int*)malloc(sizeof(int) * Particles->numParticlesMemory);	// Next particle number in the same bucket
+	
 	Particles->bucketPeriodicBC =	 	(int*)malloc(sizeof(int) * PSystem->numBucketsXYZ);	// Periodic Boundary Condition of the bucket
 }
 
@@ -307,7 +310,8 @@ void MpsBucket::updateParticlesID(MpsParticleSystem *PSystem, MpsParticle *Parti
 		for(int i=0; i<Particles->numParticlesZero; i++) {	
 			Particles->nextParticleInSameBucket[i] = -1;
 		}
-		for(int i=0; i<Particles->numParticles; i++) {
+		// for(int i=0; i<Particles->numParticles; i++) {
+		for(int i=0; i<Particles->numRealAndIOParticles; i++) {
 			if(Particles->particleType[i] == PSystem->ghost) continue;
 			int ix = (int)((Particles->pos[i*3  ] - PSystem->domainMinX)*PSystem->invBucketSide + PSystem->epsilonZero);
 			int iy = (int)((Particles->pos[i*3+1] - PSystem->domainMinY)*PSystem->invBucketSide + PSystem->epsilonZero);
@@ -328,7 +332,8 @@ void MpsBucket::updateParticlesID(MpsParticleSystem *PSystem, MpsParticle *Parti
 		for(int i=0; i<Particles->numParticlesZero; i++) {
 			Particles->nextParticleInSameBucket[i] = -1;
 		}
-		for(int i=0; i<Particles->numParticles; i++) {
+		// for(int i=0; i<Particles->numParticles; i++) {
+		for(int i=0; i<Particles->numRealAndIOParticles; i++) {
 			if(Particles->particleType[i] == PSystem->ghost) continue;
 			int ix = (int)((Particles->pos[i*3  ] - PSystem->domainMinX)*PSystem->invBucketSide);
 			int iy = (int)((Particles->pos[i*3+1] - PSystem->domainMinY)*PSystem->invBucketSide);

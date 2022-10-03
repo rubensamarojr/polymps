@@ -41,15 +41,43 @@ public:
 	public:
 		double a, b, c, d;	///< Normalized plane equation components ax + by + cz − d = 0
 		double normal[3];	///< Normalized normal vector
+		int ID;				///< Plane ID
+		double press;		///< Plane inOuflow cte press
+		double velocity[3];	///< Plane inOuflow cte velocity vector
 	};
 	/**
 	 * Plane of the iNFLOW/oUTFLOW plane (interface)
 	 */
 	Plane Pio;
 
+	/**
+	 * @brief      Constructs a plane given a point and normal
+	 * @details    Constructs a plane in 3D space specifying a single point on the plane and 
+	 * the surface normal pointing toward the fluid domain
+	 * @param      PSystem  The p system
+	 * @param[in]  ii       The new value
+	 */
 	void setPlaneFromPointNormal(MpsParticleSystem *PSystem, const int ii);
 
-	double calcSignedDistance(const double *P1);
+	/**
+	 * @brief      Calculates the euclidean signed distance between point P = (Px, Py, Pz) and the plane.
+	 * @param[in]  Px    X component of Point P
+	 * @param[in]  Py    Y component of Point P
+	 * @param[in]  Pz    Z component of Point P
+	 *
+	 * @return     The signed distance.
+	 */
+	double calcSignedDistance(const double Px, const double Py, const double Pz);
+
+
+	// Impose motion to particles
+	void imposeMotionParticles(MpsParticleSystem *PSystem, MpsParticle *Particles);
+
+	// Check particles in the Inflow/Outflow region
+	void checkInOutflowParticles(MpsParticleSystem *PSystem, MpsParticle *Particles);
+
+	// Clear variables only of the inOutflow (IO) particles
+	void clearVariablesInOutflowParticles(MpsParticleSystem *PSystem, MpsParticle *Particles);
 
 	/**
 	 * @brief      Computes the correction matrix

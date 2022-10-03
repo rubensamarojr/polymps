@@ -319,6 +319,10 @@ void MpsParticle::checkParticleOutDomain(MpsParticleSystem *PSystem) {
 				sourceTerm(i)=sourceTerm(iLastParticle);
 			}
 			
+			if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
+				signDist[i]=signDist[iLastParticle];
+			}
+
 			// Vectors
 			for (int j = 0; j < 3; j++)
 			{
@@ -356,7 +360,7 @@ void MpsParticle::checkParticleOutDomain(MpsParticleSystem *PSystem) {
 				//Posk[iLastParticle*3+j]=0.0;
 				vel[iLastParticle*3+j] = 0.0;
 			}
-			press[iLastParticle  ] = 0.0;
+			press[iLastParticle] = 0.0;
 			// Set maximum position to lastParticle
 			pos[iLastParticle*3  ] = PSystem->domainMaxX - PSystem->partDist;
 			pos[iLastParticle*3+1] = PSystem->domainMaxY - PSystem->partDist;

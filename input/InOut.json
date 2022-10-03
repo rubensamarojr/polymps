@@ -16,7 +16,7 @@
 			"neigh":			false,
 			"deviation":		false,
 			"concentration":	false,
-			"auxiliar":			false,
+			"auxiliar":			true,
 			"non_newtonian":	false
 		},
 		"output_TXT": {
@@ -27,8 +27,8 @@
 	},
 	"pathNames": {
 		"_comment": "Paths of input and output files/folders",
-		"particle_grid_file":	"input/grid/dam1610_3D_fluid_lo0p010_mps.grid",
-		"mesh_rigid_file": 		"input/stl/dam1610.stl",
+		"particle_grid_file":	"input/grid/3D_square_tube_mps.grid",
+		"mesh_rigid_file": 		"input/stl/square-tube-hollow.stl",
 		"mesh_deformable_file": "input/stl/elastic_beam_16.stl", 		"_comment": "NOT WORKING !!",
 		"mesh_forced_file": 	"input/stl/tank_liao_forced_gate.stl", 	"_comment": "NOT WORKING !!",
 		"vtu_output_folder":	"output/InOut",
@@ -38,14 +38,14 @@
 	"domain": {
 		"_comment": "Geometry dimension limits of the analysis domain (m)",
 		"min": {
-			"x":	0.0,
-			"y":	0.0,
+			"x":	-0.2,
+			"y":	-0.3,
 			"z":	0.0
 		},
 		"max": {
-			"x":	1.7, 
-			"y":	0.2,
-			"z":	0.8
+			"x":	1.0, 
+			"y":	0.3,
+			"z":	0.6
 		},
 		"boundary": {
 			"_comment": "Periodic Boundary Condition",
@@ -66,19 +66,19 @@
 					"type_bc":	 0,			"_comment": "0: Velocity; 1: Pressure",
 					"seed_point":{
 						"_comment": "Point p on the plane (interface)",
-						"x":	0.4,
-						"y":	3.0,
-						"z":	1.0
+						"x":	0.0,
+						"y":	0.0,
+						"z":	0.3
 					},
 					"normal": {
 						"_comment": "Normal vector of plane (interface)",
-						"x":	0.1,
-						"y":	-0.6,
-						"z":	0.7
+						"x":	1.0,
+						"y":	0.0,
+						"z":	0.0
 					},
 					"velocity": {
 						"_comment": "Uniform inlet velocity (m/s)",
-						"x":	5.2,
+						"x":	0.0,
 						"y":	0.0,
 						"z":	0.0
 					},
@@ -89,15 +89,15 @@
 					"type_bc":	 1,			"_comment": "0: Velocity; 1: Pressure",
 					"seed_point": {
 						"_comment": "Point p on the plane (interface)",
-						"x":	1.4,
-						"y":	3.0,
-						"z":	-1.0
+						"x":	1.0,
+						"y":	0.0,
+						"z":	0.3
 					},
 					"normal": {
 						"_comment": "Normal vector of plane (interface)",
-						"x":	-0.8,
-						"y":	-2.0,
-						"z":	-0.7
+						"x":	-1.0,
+						"y":	0.0,
+						"z":	0.0
 					},
 					"velocity": {
 						"_comment": "Uniform inlet velocity (m/s)",
@@ -105,7 +105,7 @@
 						"y":	0.0,
 						"z":	0.0
 					},
-					"pressure": 150.7,	"_comment": "Cte pressure (Pa)"
+					"pressure": 0.0,	"_comment": "Cte pressure (Pa)"
 				}
 			]
 		}
@@ -114,7 +114,7 @@
 		"_comment": "Physical parameters",
 		"fluid_density":	1000,		"_comment": "Fluid particle density (kg/m3)",
 		"wall_density": 	1000,		"_comment": "Wall particle density (kg/m3)",
-		"kinematic_visc": 	0.000001,	"_comment": "Kinematic viscosity phase 1 (m2/s)",
+		"kinematic_visc": 	0.0,	"_comment": "Kinematic viscosity phase 1 (m2/s)",
 		"fluid_type": 		0,			"_comment": "Newtonian:0 , Non-Newtonian:1",
 		"gravity": {
 			"_comment": "Gravity acceleration (m/s2)",
@@ -162,9 +162,9 @@
 		"_comment": "Numerical parameters",
 		"dimension": 		3,			"_comment": "Dimension (2 or 3)",
 		"particle_dist": 	0.01,		"_comment": "Average particle distance (m)",
-		"time_step": 		0.00025,	"_comment": "Time step (s)",
-		"final_time": 		0.1,		"_comment": "Time of simulation (s)",
-		"iter_output": 		100,		"_comment": "Number of iterations to determine the output interval",
+		"time_step": 		0.0025,	"_comment": "Time step (s)",
+		"final_time": 		1.0,		"_comment": "Time of simulation (s)",
+		"iter_output": 		1,		"_comment": "Number of iterations to determine the output interval",
 		"CFL_number":	 	0.2,		"_comment": "Courant (CFL) condition number (0.2 is recomendable)",
 		"_comment": "Weight function",
 		"_comment": "0: wij = re/rij - 1",
@@ -255,7 +255,8 @@
 			"ghost": 			-1,
 			"fluid": 			0,
 			"wall": 			2,
-			"dummyWall":		3
+			"dummyWall":		3,
+			"inOutflow":		4
 		},
 		"boundary_type": {
 			"free_surface": 	1,

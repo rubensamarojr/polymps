@@ -159,6 +159,7 @@ public:
 	double *inOutflowNormal;///< Normal vector of the Inflow/Outflow plane (interface)
 	double *inOutflowVel;	///< Velocity vector of the Inflow/Outflow plane (interface)
 	double *inOutflowPress;	///< Pressure of the Inflow/Outflow plane (interface)
+	int inOutflowPartID;	///< InOutflow particle ID
 
 	// Physical parameters
 	double densityFluid;	///< Fluid particle density (kg/m3)

@@ -52,7 +52,8 @@ void initMesh(MpsParticleSystem* partSyst, MpsParticle* part, PolygonMesh* mesh,
 	MpsPndNeigh* pndNeigh, MpsInputOutput* io, MpsBucket* buck);
 void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, PolygonMesh* mesh, MpsInputOutput* io, 
 	MpsBucket* buck, MpsPndNeigh* partPndNeig, MpsPressure* partPress, MpsShifting* partShift, MpsViscosity* partVisc,
-	MpsParticleCollision* partColl, MpsBoundaryCondition* boundCond, MpsVectorMatrix* vectMatr, MpsParticleVelPos* partVelPos);
+	MpsParticleCollision* partColl, MpsBoundaryCondition* boundCond, MpsVectorMatrix* vectMatr, MpsParticleVelPos* partVelPos,
+	MpsInflowOutflow* inOutflow);
 
 
 // Global variables
@@ -208,7 +209,8 @@ int main( int argc, char** argv) {
 	///////////////////////////
 	mainLoopOfSimulation(particleSystem, particles, solidMesh, inputOutput, 
 		buckets, particlePndNeigh, particlePress, particleShifting, particleViscosity, 
-		particleCollision, boundaryConditions, vectorMatrix, particleVelPos);
+		particleCollision, boundaryConditions, vectorMatrix, particleVelPos, 
+		inflowOutflow);
 	
 	// Deallocate memory block
 	free(nodeFRWX); free(nodeFRWY); free(nodeFRWZ);
@@ -237,7 +239,8 @@ int main( int argc, char** argv) {
 // Class PolygonMesh: Polygons from the point of view of particles (mps)
 void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, PolygonMesh* mesh, MpsInputOutput* io, 
 	MpsBucket* buck, MpsPndNeigh* partPndNeig, MpsPressure* partPress, MpsShifting* partShift, MpsViscosity* partVisc,
-	MpsParticleCollision* partColl, MpsBoundaryCondition* boundCond, MpsVectorMatrix* vectMatr, MpsParticleVelPos* partVelPos) {
+	MpsParticleCollision* partColl, MpsBoundaryCondition* boundCond, MpsVectorMatrix* vectMatr, MpsParticleVelPos* partVelPos,
+	MpsInflowOutflow* inOutflow) {
 
 	// string -> char
 	char *output_folder_char = nullptr;
@@ -415,6 +418,15 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 			// Update forced mesh
 			mesh[meshType::FORCED].updateForcedPolygonMesh(nodeFRWX, nodeFRWY, nodeFRWZ, partSyst->uniformVelWall, partSyst->timeStep, partSyst->timeCurrent);
 		}
+
+
+		
+		// Here only for InOutflow plan of id = 0
+		if(partSyst->inOutflowOn == true && partSyst->numInOutflowPlane > 0) {
+			// Impose motion to particles
+			inOutflow[0].imposeMotionParticles(partSyst, part);
+		}
+
 		
 		// Update velocity and positions
 		partVelPos->updateVelocityPosition2nd(partSyst, part);
@@ -453,7 +465,16 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 		// for(int i=0; i<part->numParticles; i++) {
 		// 	part->pressAverage[i] += part->press[i];
 		// }
+		 
 		
+		// Here only for InOutflow plan of id = 0
+		if(partSyst->inOutflowOn == true && partSyst->numInOutflowPlane > 0) {
+			// Check particles in the Inflow/Outflow region
+			inOutflow[0].checkInOutflowParticles(partSyst, part);
+		}
+		
+
+				
 		// Verify if particle is out of the domain
 		part->checkParticleOutDomain(partSyst);
 

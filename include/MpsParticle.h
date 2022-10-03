@@ -138,6 +138,12 @@ public:
 	// Scalars
 	int numParticlesZero;	///< Number of particles at the initial instant of simulation
 	int numParticles;		///< Number of particles during simulation
+
+	int numParticlesMemory;	///< Number of particles used to allocate memory (Important for inOutflow)
+	int numIOParticles;		///< Number of inOutflow (IO) particles
+	int numRealAndIOParticles;	///< Number of particles including inOutflow (IO) particles
+	double memoryFactor;	///< Value to multiply the initial number of particles. Used to increase the allocated memory
+
 	
 	///////////// INPUTS - ARRAYS /////////////
 	// Scalars
@@ -156,6 +162,8 @@ public:
 	double *correcMatrixRow3;	///< Correction matrix - Row 3
 	double *normal;				///< Particle normal
 	double *dvelCollision;		///< Variation of velocity due collision
+
+	double *signDist;			///< Signed distance between particle and inOutflow plane
 
 	// Polygons
 	// Scalars
