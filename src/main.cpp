@@ -104,7 +104,7 @@ int main( int argc, char** argv) {
 	particles = new MpsParticle();
 	// Creates MpsInputOutput class
 	inputOutput = new MpsInputOutput();
-	// Reads and allocates memory for particles data
+	// Reads, allocates memory and sets initial values for particles data
 	inputOutput->readInputFile(particleSystem, particles);
 	
 	// Write header of output txt files (force and pressure)
@@ -198,8 +198,9 @@ int main( int argc, char** argv) {
 	inputOutput->writeBuckets(particleSystem, particles);
 
 	// Writes VTK file of initial Inflow/Outflow plans
-	if(particleSystem->inOutflowOn == true && particleSystem->numInOutflowPlane > 0)
+	if(particleSystem->inOutflowOn == true && particleSystem->numInOutflowPlane > 0) {
 		inputOutput->writeInOutFlowPlan(particleSystem, particles, inflowOutflow);
+	}
 
 	printf("OK\n");
 
@@ -470,7 +471,9 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 		// Here only for InOutflow plan of id = 0
 		if(partSyst->inOutflowOn == true && partSyst->numInOutflowPlane > 0) {
 			// Check particles in the Inflow/Outflow region
-			inOutflow[0].checkInOutflowParticles(partSyst, part);
+			inOutflow[0].checkRealParticlesInOutflow(partSyst, part);
+			// inOutflow[0].checkIOParticlesInOutflow(partSyst, part);
+			inOutflow[0].swapIdRealAndIOParticlesInOutflow(partSyst, part);
 		}
 		
 

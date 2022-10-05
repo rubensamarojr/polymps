@@ -418,6 +418,8 @@ void PolygonMesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, 
 	int fem_id, int frw_id, double *Pos, double *wallPos, double *mirrorPos, double *riw2, int *elementID, int *meshID, double *NormalWall) {
 //  double *Pos, double *wallPos, double *mirrorPos, double *riw2, double *niw, int *numNeighw, int *elementID, std::vector<int>& particlesNearMesh) {
 
+	temporary_position.resize(nP,3);
+
 	// MPS -> libigl
 #pragma omp parallel for
 	for(int i=0;i<nP;i++) {

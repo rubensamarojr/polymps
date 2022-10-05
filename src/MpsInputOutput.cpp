@@ -434,6 +434,7 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 	// Particles->numParticlesZero = Particles->numParticles;
 
 	Particles->numIOParticles = 0;	// Number of inOutFlow (IO) Particles
+	Particles->numCreatedParticles = 0;	// Number of created Particles
 	Particles->numRealAndIOParticles = Particles->numParticles;		// Number of particles including inOutflow (IO) particles
 	Particles->memoryFactor = 2.0;
 	Particles->numParticlesMemory = (int)(Particles->numParticles * Particles->memoryFactor);	// Number of particles used to allocate memory (Important for inOutflow)
@@ -478,6 +479,7 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 	// Alocate memory only if inOutflow is used
 	if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
 		Particles->signDist = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	// Signed distance between particle and inOutflow plane
+		Particles->isInIORegion = (bool*)malloc(sizeof(bool)*Particles->numParticlesMemory);	// True if the particle is in the inOutflow region
 	}
 	
 
@@ -596,6 +598,13 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 			Particles->S12[i]=0.0;Particles->S13[i]=0.0;
 			Particles->S23[i]=0.0;Particles->S11[i]=0.0;
 			Particles->S22[i]=0.0;Particles->S33[i]=0.0;
+		}
+	}
+	// Set inOutflow scalars
+	if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
+		for(int i=0; i<Particles->numParticlesZero; i++) {
+			Particles->signDist[i] = 10e8*PSystem->partDist;
+			Particles->isInIORegion[i] = false;
 		}
 	}
 	// Assign type and density

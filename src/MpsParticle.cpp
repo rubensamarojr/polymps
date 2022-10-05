@@ -321,6 +321,7 @@ void MpsParticle::checkParticleOutDomain(MpsParticleSystem *PSystem) {
 			
 			if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
 				signDist[i]=signDist[iLastParticle];
+				isInIORegion[i]=isInIORegion[iLastParticle];
 			}
 
 			// Vectors

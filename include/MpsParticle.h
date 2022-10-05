@@ -141,6 +141,7 @@ public:
 
 	int numParticlesMemory;	///< Number of particles used to allocate memory (Important for inOutflow)
 	int numIOParticles;		///< Number of inOutflow (IO) particles
+	int numCreatedParticles;///< Number of created particles
 	int numRealAndIOParticles;	///< Number of particles including inOutflow (IO) particles
 	double memoryFactor;	///< Value to multiply the initial number of particles. Used to increase the allocated memory
 
@@ -164,6 +165,7 @@ public:
 	double *dvelCollision;		///< Variation of velocity due collision
 
 	double *signDist;			///< Signed distance between particle and inOutflow plane
+	bool *isInIORegion;			///< True if the particle is in the inOutflow region
 
 	// Polygons
 	// Scalars
