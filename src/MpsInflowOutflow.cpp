@@ -39,8 +39,7 @@ void MpsInflowOutflow::setPlaneFromPointNormal(MpsParticleSystem *PSystem, const
 	Pio.a = Pio.normal[0];
 	Pio.b = Pio.normal[1];
 	Pio.c = Pio.normal[2];
-	//Pio.d = - (Pt[0]*Pio.normal[0] + Pt[1]*Pio.normal[1] + Pt[2]*Pio.normal[2]);
-	Pio.d = (	PSystem->inOutflowPt[ii*3  ]*Pio.normal[0] + 
+	Pio.d = - (	PSystem->inOutflowPt[ii*3  ]*Pio.normal[0] + 
 				PSystem->inOutflowPt[ii*3+1]*Pio.normal[1] + 
 				PSystem->inOutflowPt[ii*3+2]*Pio.normal[2]);
 
@@ -95,21 +94,41 @@ void MpsInflowOutflow::imposeMotionParticles(MpsParticleSystem *PSystem, MpsPart
 	}
 }
 
-// Check real particles in the Inflow/Outflow region and create real and IO particles
-void MpsInflowOutflow::checkRealParticlesInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles) {
+// Set initial values to inOutflow variables
+void MpsInflowOutflow::setInOutflowVariables(MpsParticleSystem *PSystem, MpsParticle *Particles) {
+	// Set number of created and deleted particles to zero
+	Particles->numCreatedParticles = 0;
+	Particles->numDeletedParticles = 0;
+	// Set number of Real + IO particles to number of real particles, i.e.,
+	// the number of IO particles is zero
+	Particles->numRealAndIOParticles = Particles->numParticles;
 
+	// Set value of euclidean signed distance to infinity
+#pragma omp parallel for
+	for(int i=0; i<Particles->numParticles; i++) {
+	if(Particles->particleType[i] == PSystem->fluid) {
+		
+		Particles->signDist[i] = 10e8*PSystem->partDist;
+	}
+	}
+}
+
+// Check particles in the Inflow/Outflow region, create real and IO particles, or delete real particles
+void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles) {
+	
 	//double minDistIOcreation = 1.1*PSystem->partDist;
 	// Auxiliar variables
-	int numCreatedParticlesAux, idLastRealParticle, idLastRealandIOParticle;
+	int numCreatedParticlesAux, numDeletedParticlesAux, idLastRealParticle, idLastRealandIOParticle;
 //#pragma omp parallel
 //{
 	// Set auxiliar variables
 	numCreatedParticlesAux = 0;						///< Number of created particles
+	numDeletedParticlesAux = 0;						///< Number of deleted particles
 	idLastRealParticle = Particles->numParticles;	///< Array ID of the last real particle + 1
-	idLastRealandIOParticle = Particles->numParticles + numCreatedParticlesAux;	///< Array ID of the last real+created particle + 1
+	idLastRealandIOParticle = Particles->numRealAndIOParticles;	///< Array ID of the last real+created particle + 1
 
 	// Set number of created particles to zero
-	Particles->numCreatedParticles = 0;
+	// Particles->numCreatedParticles = 0;
 
 	int sumAux, sumAux1, sumAux2;
 	sumAux = sumAux1 = sumAux2 = 0;
@@ -162,21 +181,22 @@ void MpsInflowOutflow::checkRealParticlesInOutflow(MpsParticleSystem *PSystem, M
 //#pragma omp parallel for schedule(dynamic,64) reduction(+:numCreatedParticlesAux)
 //#pragma omp parallel for reduction(+:sumAux)
 //#pragma omp parallel for reduction(+:numCreatedParticlesAux, sumAux)
-#pragma omp parallel for reduction(+:numCreatedParticlesAux)
+#pragma omp parallel for reduction(+:numCreatedParticlesAux, numDeletedParticlesAux)
 	for(int i=0; i<Particles->numParticles; i++) {
 	if(Particles->particleType[i] == PSystem->fluid) {
 		
-		Particles->signDist[i] = calcSignedDistance(Particles->pos[i*3], Particles->pos[i*3+1], Particles->pos[i*3+2]);
+		// Computes euclidean signed distance between particle i and the current plane
+		double signDistAux = calcSignedDistance(Particles->pos[i*3], Particles->pos[i*3+1], Particles->pos[i*3+2]);
 
 // To prevent race condition, the access to the shared (global) variable "idLastRealandIOParticle" must be synchronized.
 //#pragma omp critical (before_if)
 //{
 		// Verify if the signed distance of particle i from the IOplan is positive
-		if(Particles->signDist[i] > PSystem->epsilonZero) {
+		if(signDistAux > PSystem->epsilonZero) {
 			// Particle inside the fluid domain
 			
 			// Verify if the signed distance of particle i from the IOplan is shorter than partDist
-			if(Particles->signDist[i] <= PSystem->partDist) {
+			if(signDistAux <= PSystem->partDist) {
 				// Particle near the IOplan and its position shorter than partDist
 
 				// Assign true to particle is in the IOregion
@@ -226,11 +246,13 @@ void MpsInflowOutflow::checkRealParticlesInOutflow(MpsParticleSystem *PSystem, M
 
 				// Set some variables
 				Particles->particleBC[idIO1] = PSystem->other;
-				Particles->particleType[idIO1] = PSystem->inOutflowPartID;
-				Particles->press[idIO1] = Pio.press;
 				Particles->particleBC[idIO2] = PSystem->other;
+				Particles->particleType[idIO1] = PSystem->inOutflowPartID;
 				Particles->particleType[idIO2] = PSystem->inOutflowPartID;
+				Particles->press[idIO1] = Pio.press;
 				Particles->press[idIO2] = Pio.press;
+				Particles->signDist[idIO1] = Particles->signDist[i] - PSystem->partDist;
+				Particles->signDist[idIO2] = Particles->signDist[i] - 2.0*PSystem->partDist;
 
 				// Update lastParticle ID
 // The atomic construct allows multiple threads to safely update a shared (global) variable
@@ -243,7 +265,7 @@ void MpsInflowOutflow::checkRealParticlesInOutflow(MpsParticleSystem *PSystem, M
 //} //end of omp critical (after_if)
 			}
 			// Verify if the signed distance of particle i from the IOplan is shorter than reS
-			else if(Particles->signDist[i] < PSystem->reS) {
+			else if(signDistAux < PSystem->reS) {
 				// Particle near the IOplan and its position ranges between partDist and reS
 
 				// Verify if the particle was in the IOregion in the previous step
@@ -304,8 +326,12 @@ void MpsInflowOutflow::checkRealParticlesInOutflow(MpsParticleSystem *PSystem, M
 					Particles->press[idIO2] = Pio.press;
 					
 					Particles->isInIORegion[idReal] = true;
-					Particles->isInIORegion[i] = false;
-					Particles->isInIORegion[i] = false;
+					Particles->isInIORegion[idIO1] = false;
+					Particles->isInIORegion[idIO2] = false;
+
+					Particles->signDist[idReal] = Particles->signDist[i];
+					Particles->signDist[idIO1] = Particles->signDist[idReal] - PSystem->partDist;
+					Particles->signDist[idIO2] = Particles->signDist[idReal] - 2.0*PSystem->partDist;
 
 					// Update lastParticle ID
 	// The atomic construct allows multiple threads to safely update a shared (global) variable
@@ -321,7 +347,7 @@ void MpsInflowOutflow::checkRealParticlesInOutflow(MpsParticleSystem *PSystem, M
 					double ui_n = Particles->vel[i*3] * Pio.normal[0] + Particles->vel[i*3+1] * Pio.normal[1] + Particles->vel[i*3+2] * Pio.normal[2];
 
 					// Verify the velocity component normal to the IOplan
-					if(ui_n > PSystem->epsilonZero) {
+					if (ui_n > PSystem->epsilonZero) {
 						// The velocity component normal to the IOplan is positive, then apply Inflow condition
 
 						// Check if the release of a new particle is required
@@ -331,7 +357,7 @@ void MpsInflowOutflow::checkRealParticlesInOutflow(MpsParticleSystem *PSystem, M
 
 						// Effective neighboring j-th particles are verified if is outside the scan region
 					}
-					else{
+					else {
 						// The velocity component normal to the IOplan is negative, then apply Outflow condition
 						// No new effective particle has to be generated
 
@@ -341,10 +367,53 @@ void MpsInflowOutflow::checkRealParticlesInOutflow(MpsParticleSystem *PSystem, M
 		}
 		else {
 			// The signed distance is negative, then the Particle is outside the fluid domain
-			// Set particle as ghost
+			// Assign particle as ghost
+			// printf("\nSAINDO Ioid: %d - PartID: %d", Pio.ID, i);
+			// ID of "Last Real" and "Last Real+IO" particles
+			int idReal, idRealIO;
+
+// Specifies that code is only executed on one thread at a time
+#pragma omp critical (after_else)
+{
+				idLastRealParticle -= 1;
+				idReal = idLastRealParticle;
+				idLastRealandIOParticle -= 1;
+				idRealIO = idLastRealandIOParticle;
+} //end of omp critical (after_else)
+			
+// idReal atomically captures the updated value of idLastRealandIOParticle.
+// #pragma omp atomic capture
+// 			{
+// 				idLastRealParticle -= 1;
+// 				idReal = idLastRealParticle;
+// 			}
+
+			// Move the data from "Last Real Particle" to i-th ghost particle and 
+			// update some data of "Last Real Particle" as ghost
+			Particles->moveDataLastRealPartToGhostPart(i, idReal, PSystem);
+
+// idRealIO atomically captures the updated value of idLastRealandIOParticle.
+// #pragma omp atomic capture
+// 			{
+// 				idLastRealandIOParticle -= 1;
+// 				idRealIO = idLastRealandIOParticle;
+// 			}
+
+			// Move the data from "Last Real+IO Particle" to "Last Real Particle" and 
+			// update some data of "Last Real+IO Particle" as ghost
+			Particles->moveDataLastRealIOPartToLastRealPart(idReal, idRealIO, PSystem);
+
+// } //end of omp critical (after_else)
+			
+			// Update shared (global) variable number of deleted particles
+			numDeletedParticlesAux++;
 		}
 	
 //} //end of omp critical (before_if)
+
+		// Gets minimum absolute value
+		if(signDistAux*signDistAux < Particles->signDist[i]*Particles->signDist[i])
+			Particles->signDist[i] = signDistAux;
 
 	} // end of if(Particles->particleType[i]...
 	} // end of for(int i=0;...
@@ -353,22 +422,30 @@ void MpsInflowOutflow::checkRealParticlesInOutflow(MpsParticleSystem *PSystem, M
 
 	// if(numCreatedParticlesAux != 0 && numCreatedParticlesAux != 200)
 		// printf("\n NumParticles: %d", numCreatedParticlesAux);
-
-	// printf("\n NumParticles: %d", sumAux);
 	
+	
+	// Updates number of created particles
+	Particles->numCreatedParticles += numCreatedParticlesAux;
+	// Updates number of deleted particles
+	Particles->numDeletedParticles += numDeletedParticlesAux;
 	// Updates number of Real particles
-	// Particles->numParticles = numRealParticlesAux;
-	// Updates number of inOutflow (IO) particles
-	Particles->numCreatedParticles = numCreatedParticlesAux;
-	// Updates number of particles including IO particles
-	Particles->numRealAndIOParticles = Particles->numParticles + Particles->numCreatedParticles;
+	Particles->numParticles -= numDeletedParticlesAux;
+	// Updates number of particles including created particles
+	Particles->numRealAndIOParticles += numCreatedParticlesAux - numDeletedParticlesAux;
 
 	// stop timer.
 	gettimeofday(&time_end, NULL);
 	// Calculating total time taken by the program.
 	time_taken = (time_end.tv_sec - time_now.tv_sec) * 1e6;
 	time_taken = (time_taken + (time_end.tv_usec - time_now.tv_usec)) * 1e-6;
-	printf("\n Time: %.5e sec - NumPart: %d - numCreatedPart: %d - numRealAndIOPart: %d - idLastRealandIOParticle: %d", time_taken, Particles->numParticles, Particles->numCreatedParticles, Particles->numRealAndIOParticles, idLastRealandIOParticle);
+	// printf("\n Ioid: %2d - Time: %.5e sec - NumPart: %4d - numCrPart: %3d - numDePart: %3d - numRealIOPart: %4d - idLaReIOPar: %4d", 
+	// 	Pio.ID, time_taken, Particles->numParticles, numCreatedParticlesAux, 
+	// 	numDeletedParticlesAux, Particles->numRealAndIOParticles, idLastRealandIOParticle);
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 
@@ -393,9 +470,9 @@ void MpsInflowOutflow::swapIdRealAndIOParticlesInOutflow(MpsParticleSystem *PSys
 // Be aware with "race condition" in OpenMP
 // Loop only for the created particles
 // #pragma omp parallel for reduction(+:numCreatedRealParticlesAux)
-	for(int i=0; i<Particles->numCreatedParticles; i++) {
-
-		int idIO = i + Particles->numParticles;
+	// for(int i=0; i<Particles->numCreatedParticles; i++) {
+	// 	int idIO = i + Particles->numParticles;
+	for(int idIO=Particles->numParticles; idIO<Particles->numRealAndIOParticles; idIO++) {
 		// Verify if the created particle is real
 		if(Particles->particleBC[idIO] == PSystem->inner) {
 		
@@ -439,8 +516,12 @@ void MpsInflowOutflow::swapIdRealAndIOParticlesInOutflow(MpsParticleSystem *PSys
 	// Calculating total time taken by the program.
 	time_taken = (time_end.tv_sec - time_now.tv_sec) * 1e6;
 	time_taken = (time_taken + (time_end.tv_usec - time_now.tv_usec)) * 1e-6;
-	printf("\n Time: %.5e sec - NumPart: %d - NumIOPart: %d - NumRealIoPart: %d - idLastRealParticle: %d", time_taken, Particles->numParticles, Particles->numIOParticles, Particles->numRealAndIOParticles, idLastRealParticle);
+	// printf("\n IOid: %d - Time: %.5e sec - NumPart: %d - NumIOPart: %d - NumRealIoPart: %d - idLastRealParticle: %d", Pio.ID, time_taken, Particles->numParticles, Particles->numIOParticles, Particles->numRealAndIOParticles, idLastRealParticle);
 
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 
@@ -454,11 +535,12 @@ void MpsInflowOutflow::checkIOParticlesInOutflow(MpsParticleSystem *PSystem, Mps
 	//Particles->numRealAndIOParticles = Particles->numParticles + Particles->numIOParticles;
 
 	// Auxiliar variables
-	int numRealParticlesAux, numIOParticlesAux, idLastRealParticle, idLastRealandIOParticle;
+	// int numRealParticlesAux, numIOParticlesAux, idLastRealParticle, idLastRealandIOParticle;
+	int numRealParticlesAux, idLastRealParticle, idLastRealandIOParticle;
 
 	// Set auxiliar variables
-	numRealParticlesAux = Particles->numParticles;	///< Number of Real particles
-	numIOParticlesAux = Particles->numIOParticles;	///< Number of inOutflow (IO) particles
+	numRealParticlesAux = 0;						///< Number of Real particles
+	// numIOParticlesAux = Particles->numIOParticles;	///< Number of inOutflow (IO) particles
 	idLastRealParticle = Particles->numParticles;	///< Array ID of the last real particle + 1
 	idLastRealandIOParticle = Particles->numRealAndIOParticles;	///< Array ID of the last real+IO particle + 1
 
@@ -474,6 +556,7 @@ void MpsInflowOutflow::checkIOParticlesInOutflow(MpsParticleSystem *PSystem, Mps
 	for(int idIO=Particles->numParticles; idIO<Particles->numRealAndIOParticles; idIO++) {
 	// if(Particles->particleType[idIO] == PSystem->fluid) {
 		
+		// Computes euclidean signed distance between particle i and the current plane
 		Particles->signDist[idIO] = calcSignedDistance(Particles->pos[idIO*3], Particles->pos[idIO*3+1], Particles->pos[idIO*3+2]);
 
 // To prevent race condition, the access to the shared (global) variable "idLastRealParticle" must be synchronized.
@@ -545,20 +628,21 @@ void MpsInflowOutflow::checkIOParticlesInOutflow(MpsParticleSystem *PSystem, Mps
 	} // end for(int i=0;...
 
 //} //end of omp parallel
-	
+
+	// Updates number of Real particles
+	Particles->numParticles += numRealParticlesAux;
+	// Updates number of inOutflow (IO) particles
+	// Particles->numIOParticles = numIOParticlesAux;
+	// Updates number of particles including IO particles
+	Particles->numRealAndIOParticles = Particles->numParticles + Particles->numIOParticles;
+
 	// stop timer.
 	gettimeofday(&time_end, NULL);
 	// Calculating total time taken by the program.
 	time_taken = (time_end.tv_sec - time_now.tv_sec) * 1e6;
 	time_taken = (time_taken + (time_end.tv_usec - time_now.tv_usec)) * 1e-6;
-	printf("\n Time: %.5e sec - NumParticles: %d - idLastRealParticle: %d", time_taken, numIOParticlesAux, idLastRealParticle);
-
-	// Updates number of Real particles
-	Particles->numParticles = numRealParticlesAux;
-	// Updates number of inOutflow (IO) particles
-	Particles->numIOParticles = numIOParticlesAux;
-	// Updates number of particles including IO particles
-	Particles->numRealAndIOParticles = Particles->numParticles + Particles->numIOParticles;
+	// printf("\n Time: %.5e sec - NumParticles: %d - idLastRealParticle: %d", time_taken, numIOParticlesAux, idLastRealParticle);
+	printf("\n Time: %.5e sec - NumPart: %d - numRealAndIOPart: %d - idLastRealParticle: %d", time_taken, Particles->numParticles, Particles->numRealAndIOParticles, idLastRealParticle);
 }
 
 

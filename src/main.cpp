@@ -231,7 +231,7 @@ int main( int argc, char** argv) {
 
 	delete[] inflowOutflow;
 
-	printf("End PolyMPS.\n");
+	printf("\nEnd PolyMPS.\n");
 	return 0;
 }
 
@@ -468,12 +468,25 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 		// }
 		 
 		
-		// Here only for InOutflow plan of id = 0
+		// InOutflow bondary conditions
 		if(partSyst->inOutflowOn == true && partSyst->numInOutflowPlane > 0) {
-			// Check particles in the Inflow/Outflow region
-			inOutflow[0].checkRealParticlesInOutflow(partSyst, part);
-			// inOutflow[0].checkIOParticlesInOutflow(partSyst, part);
-			inOutflow[0].swapIdRealAndIOParticlesInOutflow(partSyst, part);
+			// Set initial values to inOutflow variables
+			inOutflow[0].setInOutflowVariables(partSyst, part);
+
+			// Check particles in the Inflow/Outflow region, create real+IO particles, or delete real particles
+			for(int ioID = 0; ioID < partSyst->numInOutflowPlane; ioID++) {
+				
+				inOutflow[ioID].checkCreateDeleteParticlesInOutflow(partSyst, part);
+				// inOutflow[0].checkIOParticlesInOutflow(partSyst, part);
+				inOutflow[ioID].swapIdRealAndIOParticlesInOutflow(partSyst, part);
+			}
+
+			// for(int ioID = 0; ioID < partSyst->numInOutflowPlane; ioID++) {
+			// 	// Check particles in the Inflow/Outflow region
+			// 	// inOutflow[ioID].checkRealParticlesInOutflow(partSyst, part);
+			// 	// inOutflow[0].checkIOParticlesInOutflow(partSyst, part);
+			// 	inOutflow[ioID].swapIdRealAndIOParticlesInOutflow(partSyst, part);
+			// }
 		}
 		
 

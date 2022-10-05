@@ -435,6 +435,7 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 
 	Particles->numIOParticles = 0;	// Number of inOutFlow (IO) Particles
 	Particles->numCreatedParticles = 0;	// Number of created Particles
+	Particles->numDeletedParticles = 0;	// Number of deleted Particles
 	Particles->numRealAndIOParticles = Particles->numParticles;		// Number of particles including inOutflow (IO) particles
 	Particles->memoryFactor = 2.0;
 	Particles->numParticlesMemory = (int)(Particles->numParticles * Particles->memoryFactor);	// Number of particles used to allocate memory (Important for inOutflow)

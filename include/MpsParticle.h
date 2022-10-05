@@ -106,6 +106,24 @@ public:
 	 * @param      PSystem    The physical system
 	 */
 	void checkParticleOutDomain(MpsParticleSystem *PSystem);
+
+	/**
+	 * @brief      Move the data from "Last Real Particle" to i-th ghost particle and 
+	 * update some data of "Last Particle" as ghost
+	 * @param[in]  i          ID of the i-th particle that will be converted to ghost
+	 * @param[in]  iLastReal  ID of the Last Real particle
+	 * @param      PSystem    The physical system
+	 */
+	void moveDataLastRealPartToGhostPart(const int i, const int iLastReal, MpsParticleSystem *PSystem);
+
+	/**
+	 * @brief      Move the data from "Last Real+IO Particle" to "Last Real Particle" 
+	 * and update some data of "Last Real+IO Particle" as ghost
+	 * @param[in]  iLastReal    ID of the Last Real Particle that will be converted to ghost
+	 * @param[in]  iLastRealIO  The last Real+IO Particle
+	 * @param      PSystem      The p system
+	 */
+	void moveDataLastRealIOPartToLastRealPart(const int iLastReal, const int iLastRealIO, MpsParticleSystem *PSystem);
 	
 	/**
 	 * @brief      Sets the parameters.
@@ -142,6 +160,7 @@ public:
 	int numParticlesMemory;	///< Number of particles used to allocate memory (Important for inOutflow)
 	int numIOParticles;		///< Number of inOutflow (IO) particles
 	int numCreatedParticles;///< Number of created particles
+	int numDeletedParticles;///< Number of deleted particles
 	int numRealAndIOParticles;	///< Number of particles including inOutflow (IO) particles
 	double memoryFactor;	///< Value to multiply the initial number of particles. Used to increase the allocated memory
 

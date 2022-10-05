@@ -245,7 +245,10 @@ void MpsParticle::checkParticleOutDomain(MpsParticleSystem *PSystem) {
 		}
 	}
 
-	int newNumParticles = numParticles;
+	// Auxliar variables
+	int newNumRealParticles = numParticles;
+	int newNumRealIOParticles = numRealAndIOParticles;
+
 	double limMinX = PSystem->domainMinX;
 	double limMaxX = PSystem->domainMaxX;
 	double limMinY = PSystem->domainMinY;
@@ -261,126 +264,266 @@ void MpsParticle::checkParticleOutDomain(MpsParticleSystem *PSystem) {
 		limMinZ += PSystem->bucketSide; limMaxZ -= PSystem->bucketSide;
 	////}
 	for(int i=0; i<numParticles; i++) {
-		if(	particleType[i] == PSystem->fluid && i < newNumParticles &&
+		if(	particleType[i] == PSystem->fluid && i < newNumRealParticles &&
 			(pos[i*3  ]>limMaxX || pos[i*3  ]<limMinX ||
 			pos[i*3+1]>limMaxY || pos[i*3+1]<limMinY ||
 			(PSystem->dim == 3 && (pos[i*3+2]>limMaxZ || pos[i*3+2]<limMinZ)))) {
 			
-			// ID of last particle
-			int iLastParticle = newNumParticles - 1;
-			// Move the data from "Last Particle" to i-th ghost particle
-
-			// Scalars
-			particleType[i]=particleType[iLastParticle];
-			particleBC[i]=particleBC[iLastParticle];
-			numNeigh[i]=numNeigh[iLastParticle];
-			press[i]=press[iLastParticle];
-			pressAverage[i]=pressAverage[iLastParticle];
-			pndi[i]=pndi[iLastParticle];
-			pndki[i]=pndki[iLastParticle];
-			pndski[i]=pndski[iLastParticle];
-			pndSmall[i]=pndSmall[iLastParticle];
-			npcdDeviation2[i]=npcdDeviation2[iLastParticle];
-			concentration[i]=concentration[iLastParticle];
-			velDivergence[i]=velDivergence[iLastParticle];
-			diffusiveTerm[i]=diffusiveTerm[iLastParticle];
-			nearMeshType[i]=nearMeshType[iLastParticle];
-			particleNearWall[i]=particleNearWall[iLastParticle];
-			numNeighWallContribution[i]=numNeighWallContribution[iLastParticle];
-			pndWallContribution[i]=pndWallContribution[iLastParticle];
-			deviationDotPolygonNormal[i]=deviationDotPolygonNormal[iLastParticle];
-			numNeighborsSurfaceParticles[i]=numNeighborsSurfaceParticles[iLastParticle];
-			distParticleWall2[i]=distParticleWall2[iLastParticle];
-			PTYPE[i]=PTYPE[iLastParticle];
-			RHO[i]=RHO[iLastParticle];
-			MEU[i]=MEU[iLastParticle];
-			elementID[i]=elementID[iLastParticle];
-
-			if(PSystem->fluidType == viscType::NON_NEWTONIAN) {
-				Cv[i]=Cv[iLastParticle];
-				II[i]=II[iLastParticle];
-				MEU_Y[i]=MEU_Y[iLastParticle];
-				Inertia[i]=Inertia[iLastParticle];
-				pnew[i]=pnew[iLastParticle];
-				p_rheo_new[i]=p_rheo_new[iLastParticle];
-				p_smooth[i]=p_smooth[iLastParticle];
-				VF[i]=VF[iLastParticle];
-				S12[i]=S12[iLastParticle];
-				S13[i]=S13[iLastParticle];
-				S23[i]=S23[iLastParticle];
-				S11[i]=S11[iLastParticle];
-				S22[i]=S22[iLastParticle];
-				S33[i]=S33[iLastParticle];
-			}
-
-			if(PSystem->mpsType == calcPressType::IMPLICIT_PND || 
-				PSystem->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
-				pressurePPE(i)=pressurePPE(iLastParticle);
-				sourceTerm(i)=sourceTerm(iLastParticle);
-			}
+			// ID of last Real particle
+			int iLastRealParticle = newNumRealParticles - 1;
 			
+			// Move the data from "Last Real Particle" to i-th ghost particle and 
+			// update some data of "Last Real Particle" as ghost
+			moveDataLastRealPartToGhostPart(i, iLastRealParticle, PSystem);
+
+			// Decrease number of Real particles
+			newNumRealParticles--;
+
+			// Verify if the simulation has InOutflow bondary conditions
 			if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
-				signDist[i]=signDist[iLastParticle];
-				isInIORegion[i]=isInIORegion[iLastParticle];
-			}
+				
+				// ID of last Real+IO particle
+				int iLastRealIOParticle = newNumRealIOParticles - 1;
 
-			// Vectors
-			for (int j = 0; j < 3; j++)
-			{
-				acc[i*3+j]=acc[iLastParticle*3+j];
-				accStar[i*3+j]=accStar[iLastParticle*3+j];
-				pos[i*3+j]=pos[iLastParticle*3+j];
-				vel[i*3+j]=vel[iLastParticle*3+j];
-				npcdDeviation[i*3+j]=npcdDeviation[iLastParticle*3+j];
-				gradConcentration[i*3+j]=gradConcentration[iLastParticle*3+j];
-				correcMatrixRow1[i*3+j]=correcMatrixRow1[iLastParticle*3+j];
-				correcMatrixRow2[i*3+j]=correcMatrixRow2[iLastParticle*3+j];
-				correcMatrixRow3[i*3+j]=correcMatrixRow3[iLastParticle*3+j];
-				normal[i*3+j]=normal[iLastParticle*3+j];
-				dvelCollision[i*3+j]=dvelCollision[iLastParticle*3+j];
-				particleAtWallPos[i*3+j]=particleAtWallPos[iLastParticle*3+j];
-				mirrorParticlePos[i*3+j]=mirrorParticlePos[iLastParticle*3+j];
-				wallParticleForce1[i*3+j]=wallParticleForce1[iLastParticle*3+j];
-				wallParticleForce2[i*3+j]=wallParticleForce2[iLastParticle*3+j];
-				polygonNormal[i*3+j]=polygonNormal[iLastParticle*3+j];
-				forceWall[i*3+j]=forceWall[iLastParticle*3+j];
-				//Posk[i*3+j]=Posk[iLastParticle*3+j];
-				//Velk[i*3+j]=Velk[iLastParticle*3+j];
-				//Acv[i*3+j]=Acv[iLastParticle*3+j];
+				// Move the data from "Last Real+IO Particle" to "Last Real Particle" and 
+				// update some data of "Last Real+IO Particle" as ghost
+				moveDataLastRealIOPartToLastRealPart(iLastRealParticle, iLastRealIOParticle, PSystem);
+				
+				// Decrease number of Real+IO particles
+				newNumRealIOParticles--;
 			}
-
-			// Update some data of "Last Particle"
-			particleType[iLastParticle]=PSystem->ghost;
-			particleBC[iLastParticle]=PSystem->other;
-			particleNearWall[iLastParticle]=false;
-			nearMeshType[iLastParticle]=meshType::FIXED;
-			distParticleWall2[iLastParticle]=10e8*PSystem->partDist;
-			// Set zero to velocity and press of lastParticle
-			for (int j = 0; j < 3; j++){
-				//pos[iLastParticle*3+j]=0.0;
-				//Posk[iLastParticle*3+j]=0.0;
-				vel[iLastParticle*3+j] = 0.0;
-			}
-			press[iLastParticle] = 0.0;
-			// Set maximum position to lastParticle
-			pos[iLastParticle*3  ] = PSystem->domainMaxX - PSystem->partDist;
-			pos[iLastParticle*3+1] = PSystem->domainMaxY - PSystem->partDist;
-			if (PSystem->dim == 2)
-				pos[iLastParticle*3+2] = 0.0;
-			else
-				pos[iLastParticle*3+2] = PSystem->domainMaxZ - PSystem->partDist;
 			
-			// Decrease number of particles
-			newNumParticles--;
 		}
-		// Update number of particles
-		numParticles = newNumParticles;
+		
+		// Update number of Real and Real+IO particles
+		numParticles = newNumRealParticles;
+		numRealAndIOParticles = newNumRealIOParticles;
 	}
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
 	std::cout << __PRETTY_FUNCTION__ << std::endl;
 #endif
+}
+
+// Moves the data from "Last Real Particle" to i-th ghost particle and updates some data of "Last Particle" as ghost
+void MpsParticle::moveDataLastRealPartToGhostPart(const int i, const int iLastReal, MpsParticleSystem *PSystem) {
+	// Scalars
+	particleType[i]=particleType[iLastReal];
+	particleBC[i]=particleBC[iLastReal];
+	numNeigh[i]=numNeigh[iLastReal];
+	press[i]=press[iLastReal];
+	pressAverage[i]=pressAverage[iLastReal];
+	pndi[i]=pndi[iLastReal];
+	pndki[i]=pndki[iLastReal];
+	pndski[i]=pndski[iLastReal];
+	pndSmall[i]=pndSmall[iLastReal];
+	npcdDeviation2[i]=npcdDeviation2[iLastReal];
+	concentration[i]=concentration[iLastReal];
+	velDivergence[i]=velDivergence[iLastReal];
+	diffusiveTerm[i]=diffusiveTerm[iLastReal];
+	nearMeshType[i]=nearMeshType[iLastReal];
+	particleNearWall[i]=particleNearWall[iLastReal];
+	numNeighWallContribution[i]=numNeighWallContribution[iLastReal];
+	pndWallContribution[i]=pndWallContribution[iLastReal];
+	deviationDotPolygonNormal[i]=deviationDotPolygonNormal[iLastReal];
+	numNeighborsSurfaceParticles[i]=numNeighborsSurfaceParticles[iLastReal];
+	distParticleWall2[i]=distParticleWall2[iLastReal];
+	PTYPE[i]=PTYPE[iLastReal];
+	RHO[i]=RHO[iLastReal];
+	MEU[i]=MEU[iLastReal];
+	elementID[i]=elementID[iLastReal];
+
+	if(PSystem->fluidType == viscType::NON_NEWTONIAN) {
+		Cv[i]=Cv[iLastReal];
+		II[i]=II[iLastReal];
+		MEU_Y[i]=MEU_Y[iLastReal];
+		Inertia[i]=Inertia[iLastReal];
+		pnew[i]=pnew[iLastReal];
+		p_rheo_new[i]=p_rheo_new[iLastReal];
+		p_smooth[i]=p_smooth[iLastReal];
+		VF[i]=VF[iLastReal];
+		S12[i]=S12[iLastReal];
+		S13[i]=S13[iLastReal];
+		S23[i]=S23[iLastReal];
+		S11[i]=S11[iLastReal];
+		S22[i]=S22[iLastReal];
+		S33[i]=S33[iLastReal];
+	}
+
+	if(PSystem->mpsType == calcPressType::IMPLICIT_PND || 
+		PSystem->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
+		pressurePPE(i)=pressurePPE(iLastReal);
+		sourceTerm(i)=sourceTerm(iLastReal);
+	}
+	
+	if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
+		signDist[i]=signDist[iLastReal];
+		isInIORegion[i]=isInIORegion[iLastReal];
+	}
+
+	// Vectors
+	for (int j = 0; j < 3; j++)
+	{
+		acc[i*3+j]=acc[iLastReal*3+j];
+		accStar[i*3+j]=accStar[iLastReal*3+j];
+		pos[i*3+j]=pos[iLastReal*3+j];
+		vel[i*3+j]=vel[iLastReal*3+j];
+		npcdDeviation[i*3+j]=npcdDeviation[iLastReal*3+j];
+		gradConcentration[i*3+j]=gradConcentration[iLastReal*3+j];
+		correcMatrixRow1[i*3+j]=correcMatrixRow1[iLastReal*3+j];
+		correcMatrixRow2[i*3+j]=correcMatrixRow2[iLastReal*3+j];
+		correcMatrixRow3[i*3+j]=correcMatrixRow3[iLastReal*3+j];
+		normal[i*3+j]=normal[iLastReal*3+j];
+		dvelCollision[i*3+j]=dvelCollision[iLastReal*3+j];
+		particleAtWallPos[i*3+j]=particleAtWallPos[iLastReal*3+j];
+		mirrorParticlePos[i*3+j]=mirrorParticlePos[iLastReal*3+j];
+		wallParticleForce1[i*3+j]=wallParticleForce1[iLastReal*3+j];
+		wallParticleForce2[i*3+j]=wallParticleForce2[iLastReal*3+j];
+		polygonNormal[i*3+j]=polygonNormal[iLastReal*3+j];
+		forceWall[i*3+j]=forceWall[iLastReal*3+j];
+		//Posk[i*3+j]=Posk[iLastReal*3+j];
+		//Velk[i*3+j]=Velk[iLastReal*3+j];
+		//Acv[i*3+j]=Acv[iLastReal*3+j];
+	}
+
+	// Update some data of "Last Particle" that now represents the ghost
+	particleType[iLastReal]=PSystem->ghost;
+	particleBC[iLastReal]=PSystem->other;
+	particleNearWall[iLastReal]=false;
+	nearMeshType[iLastReal]=meshType::FIXED;
+	distParticleWall2[iLastReal]=10e8*PSystem->partDist;
+	// Set zero to velocity and press of lastParticle
+	for (int j = 0; j < 3; j++) {
+		//pos[iLastReal*3+j]=0.0;
+		//Posk[iLastReal*3+j]=0.0;
+		vel[iLastReal*3+j] = 0.0;
+	}
+	press[iLastReal] = 0.0;
+	// Set maximum position to lastParticle
+	pos[iLastReal*3  ] = PSystem->domainMaxX - PSystem->partDist;
+	pos[iLastReal*3+1] = PSystem->domainMaxY - PSystem->partDist;
+	if (PSystem->dim == 2) {
+		pos[iLastReal*3+2] = 0.0;
+	}
+	else {
+		pos[iLastReal*3+2] = PSystem->domainMaxZ - PSystem->partDist;
+	}
+
+	if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
+		signDist[iLastReal]=10e8*PSystem->partDist;
+		isInIORegion[iLastReal]=false;
+	}
+}
+
+// Move the data from "Last Real+IO Particle" to "Last Real Particle" and update some data of "Last Real+IO Particle" as ghost
+void MpsParticle::moveDataLastRealIOPartToLastRealPart(const int iLastReal, const int iLastRealIO, MpsParticleSystem *PSystem) {
+	// Scalars
+	particleType[iLastReal]=particleType[iLastRealIO];
+	particleBC[iLastReal]=particleBC[iLastRealIO];
+	numNeigh[iLastReal]=numNeigh[iLastRealIO];
+	press[iLastReal]=press[iLastRealIO];
+	pressAverage[iLastReal]=pressAverage[iLastRealIO];
+	pndi[iLastReal]=pndi[iLastRealIO];
+	pndki[iLastReal]=pndki[iLastRealIO];
+	pndski[iLastReal]=pndski[iLastRealIO];
+	pndSmall[iLastReal]=pndSmall[iLastRealIO];
+	npcdDeviation2[iLastReal]=npcdDeviation2[iLastRealIO];
+	concentration[iLastReal]=concentration[iLastRealIO];
+	velDivergence[iLastReal]=velDivergence[iLastRealIO];
+	diffusiveTerm[iLastReal]=diffusiveTerm[iLastRealIO];
+	nearMeshType[iLastReal]=nearMeshType[iLastRealIO];
+	particleNearWall[iLastReal]=particleNearWall[iLastRealIO];
+	numNeighWallContribution[iLastReal]=numNeighWallContribution[iLastRealIO];
+	pndWallContribution[iLastReal]=pndWallContribution[iLastRealIO];
+	deviationDotPolygonNormal[iLastReal]=deviationDotPolygonNormal[iLastRealIO];
+	numNeighborsSurfaceParticles[iLastReal]=numNeighborsSurfaceParticles[iLastRealIO];
+	distParticleWall2[iLastReal]=distParticleWall2[iLastRealIO];
+	PTYPE[iLastReal]=PTYPE[iLastRealIO];
+	RHO[iLastReal]=RHO[iLastRealIO];
+	MEU[iLastReal]=MEU[iLastRealIO];
+	elementID[iLastReal]=elementID[iLastRealIO];
+
+	if(PSystem->fluidType == viscType::NON_NEWTONIAN) {
+		Cv[iLastReal]=Cv[iLastRealIO];
+		II[iLastReal]=II[iLastRealIO];
+		MEU_Y[iLastReal]=MEU_Y[iLastRealIO];
+		Inertia[iLastReal]=Inertia[iLastRealIO];
+		pnew[iLastReal]=pnew[iLastRealIO];
+		p_rheo_new[iLastReal]=p_rheo_new[iLastRealIO];
+		p_smooth[iLastReal]=p_smooth[iLastRealIO];
+		VF[iLastReal]=VF[iLastRealIO];
+		S12[iLastReal]=S12[iLastRealIO];
+		S13[iLastReal]=S13[iLastRealIO];
+		S23[iLastReal]=S23[iLastRealIO];
+		S11[iLastReal]=S11[iLastRealIO];
+		S22[iLastReal]=S22[iLastRealIO];
+		S33[iLastReal]=S33[iLastRealIO];
+	}
+
+	// if(PSystem->mpsType == calcPressType::IMPLICIT_PND || 
+	// 	PSystem->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
+	// 	pressurePPE(iLastReal)=pressurePPE(iLastRealIO);
+	// 	sourceTerm(iLastReal)=sourceTerm(iLastRealIO);
+	// }
+	
+	if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
+		signDist[iLastReal]=signDist[iLastRealIO];
+		isInIORegion[iLastReal]=isInIORegion[iLastRealIO];
+	}
+
+	// Vectors
+	for (int j = 0; j < 3; j++)
+	{
+		acc[iLastReal*3+j]=acc[iLastRealIO*3+j];
+		accStar[iLastReal*3+j]=accStar[iLastRealIO*3+j];
+		pos[iLastReal*3+j]=pos[iLastRealIO*3+j];
+		vel[iLastReal*3+j]=vel[iLastRealIO*3+j];
+		npcdDeviation[iLastReal*3+j]=npcdDeviation[iLastRealIO*3+j];
+		gradConcentration[iLastReal*3+j]=gradConcentration[iLastRealIO*3+j];
+		correcMatrixRow1[iLastReal*3+j]=correcMatrixRow1[iLastRealIO*3+j];
+		correcMatrixRow2[iLastReal*3+j]=correcMatrixRow2[iLastRealIO*3+j];
+		correcMatrixRow3[iLastReal*3+j]=correcMatrixRow3[iLastRealIO*3+j];
+		normal[iLastReal*3+j]=normal[iLastRealIO*3+j];
+		dvelCollision[iLastReal*3+j]=dvelCollision[iLastRealIO*3+j];
+		particleAtWallPos[iLastReal*3+j]=particleAtWallPos[iLastRealIO*3+j];
+		mirrorParticlePos[iLastReal*3+j]=mirrorParticlePos[iLastRealIO*3+j];
+		wallParticleForce1[iLastReal*3+j]=wallParticleForce1[iLastRealIO*3+j];
+		wallParticleForce2[iLastReal*3+j]=wallParticleForce2[iLastRealIO*3+j];
+		polygonNormal[iLastReal*3+j]=polygonNormal[iLastRealIO*3+j];
+		forceWall[iLastReal*3+j]=forceWall[iLastRealIO*3+j];
+		//Posk[iLastReal*3+j]=Posk[iLastRealIO*3+j];
+		//Velk[iLastReal*3+j]=Velk[iLastRealIO*3+j];
+		//Acv[iLastReal*3+j]=Acv[iLastRealIO*3+j];
+	}
+
+	// Update some data of "Last Particle" that now represents the ghost
+	particleType[iLastRealIO]=PSystem->ghost;
+	particleBC[iLastRealIO]=PSystem->other;
+	particleNearWall[iLastRealIO]=false;
+	nearMeshType[iLastRealIO]=meshType::FIXED;
+	distParticleWall2[iLastRealIO]=10e8*PSystem->partDist;
+	// Set zero to velocity and press of lastParticle
+	for (int j = 0; j < 3; j++) {
+		//pos[iLastRealIO*3+j]=0.0;
+		//Posk[iLastRealIO*3+j]=0.0;
+		vel[iLastRealIO*3+j] = 0.0;
+	}
+	press[iLastRealIO] = 0.0;
+	// Set maximum position to lastParticle
+	pos[iLastRealIO*3  ] = PSystem->domainMaxX - PSystem->partDist;
+	pos[iLastRealIO*3+1] = PSystem->domainMaxY - PSystem->partDist;
+	if (PSystem->dim == 2) {
+		pos[iLastRealIO*3+2] = 0.0;
+	}
+	else {
+		pos[iLastRealIO*3+2] = PSystem->domainMaxZ - PSystem->partDist;
+	}
+
+	if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
+		signDist[iLastRealIO]=10e8*PSystem->partDist;
+		isInIORegion[iLastRealIO]=false;
+	}
 }
 
 // Set force on wall to zero

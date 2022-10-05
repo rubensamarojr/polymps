@@ -73,8 +73,11 @@ public:
 	// Impose motion to particles
 	void imposeMotionParticles(MpsParticleSystem *PSystem, MpsParticle *Particles);
 
-	// Check real particles in the Inflow/Outflow region
-	void checkRealParticlesInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles);
+	// Set initial values to inOutflow variables
+	void setInOutflowVariables(MpsParticleSystem *PSystem, MpsParticle *Particles);
+
+	// Check particles in the Inflow/Outflow region, create real and IO particles, or delete real particles
+	void checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles);
 
 	// Swap ID of real particles in the array Particles->numRealAndIOParticles to the array Particles->numParticles
 	void swapIdRealAndIOParticlesInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles);
