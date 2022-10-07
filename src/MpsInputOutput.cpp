@@ -2153,44 +2153,44 @@ void MpsInputOutput::writeInOutFlowPlan(MpsParticleSystem *PSystem, MpsParticle 
 
 		if (checkA > PSystem->epsilonZero) {
 			P0y = PSystem->inOutflowPt[i*3+1] - 1.0;	P0z = PSystem->inOutflowPt[i*3+2] - 1.0;
-			P0x = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.b * P0y - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.a;
+			P0x = (- inOutFlow[i].Pio.d - inOutFlow[i].Pio.b * P0y - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.a;
 			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
 			P0y = PSystem->inOutflowPt[i*3+1] + 1.0;	P0z = PSystem->inOutflowPt[i*3+2] - 1.0;
-			P0x = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.b * P0y - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.a;
+			P0x = (- inOutFlow[i].Pio.d - inOutFlow[i].Pio.b * P0y - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.a;
 			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
 			P0y = PSystem->inOutflowPt[i*3+1] + 1.0;	P0z = PSystem->inOutflowPt[i*3+2] + 1.0;
-			P0x = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.b * P0y - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.a;
+			P0x = (- inOutFlow[i].Pio.d - inOutFlow[i].Pio.b * P0y - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.a;
 			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
 			P0y = PSystem->inOutflowPt[i*3+1] - 1.0;	P0z = PSystem->inOutflowPt[i*3+2] + 1.0;
-			P0x = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.b * P0y - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.a;
+			P0x = (- inOutFlow[i].Pio.d - inOutFlow[i].Pio.b * P0y - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.a;
 			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
 		}
 		else if (checkB > PSystem->epsilonZero) {
 			P0x = PSystem->inOutflowPt[i*3] - 1.0;	P0z = PSystem->inOutflowPt[i*3+2] - 1.0;
-			P0y = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.b;
+			P0y = (- inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.b;
 			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
 			P0x = PSystem->inOutflowPt[i*3] + 1.0;	P0z = PSystem->inOutflowPt[i*3+2] - 1.0;
-			P0y = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.b;
+			P0y = (- inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.b;
 			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
 			P0x = PSystem->inOutflowPt[i*3] + 1.0;	P0z = PSystem->inOutflowPt[i*3+2] + 1.0;
-			P0y = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.b;
+			P0y = (- inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.b;
 			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
 			P0x = PSystem->inOutflowPt[i*3] - 1.0;	P0z = PSystem->inOutflowPt[i*3+2] + 1.0;
-			P0y = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.b;
+			P0y = (- inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.c * P0z)/inOutFlow[i].Pio.b;
 			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
 		}
 		else if (checkC > PSystem->epsilonZero){
 			P0x = PSystem->inOutflowPt[i*3] - 1.0;	P0y = PSystem->inOutflowPt[i*3+1] - 1.0;
-			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
+			P0z = (- inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
 			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
 			P0x = PSystem->inOutflowPt[i*3] + 1.0;	P0y = PSystem->inOutflowPt[i*3+1] - 1.0;
-			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
+			P0z = (- inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
 			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
 			P0x = PSystem->inOutflowPt[i*3] + 1.0;	P0y = PSystem->inOutflowPt[i*3+1] + 1.0;
-			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
+			P0z = (- inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
 			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
 			P0x = PSystem->inOutflowPt[i*3] - 1.0;	P0y = PSystem->inOutflowPt[i*3+1] + 1.0;
-			P0z = (inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
+			P0z = (- inOutFlow[i].Pio.d - inOutFlow[i].Pio.a * P0x - inOutFlow[i].Pio.b * P0y)/inOutFlow[i].Pio.c;
 			fprintf(fp,"%f %f %f\n", P0x, P0y, P0z);
 		}
 		else {

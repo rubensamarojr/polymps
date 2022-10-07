@@ -79,14 +79,14 @@ public:
 	// Check particles in the Inflow/Outflow region, create real and IO particles, or delete real particles
 	void checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles);
 
-	// Swap ID of real particles in the array Particles->numRealAndIOParticles to the array Particles->numParticles
+	// Swap the data between Real particles in the array Particles->numRealAndIOParticles and the array Particles->numParticles
 	void swapIdRealAndIOParticlesInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles);
 
 	// Check IO particles in the Inflow/Outflow region
-	void checkIOParticlesInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles);
+	// void checkIOParticlesInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles);
 
 	// Clear variables only of the inOutflow (IO) particles
-	void clearVariablesInOutflowParticles(MpsParticleSystem *PSystem, MpsParticle *Particles);
+	// void clearVariablesInOutflowParticles(MpsParticleSystem *PSystem, MpsParticle *Particles);
 
 	/**
 	 * @brief      Computes the correction matrix

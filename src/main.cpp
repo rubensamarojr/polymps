@@ -475,10 +475,20 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 
 			// Check particles in the Inflow/Outflow region, create real+IO particles, or delete real particles
 			for(int ioID = 0; ioID < partSyst->numInOutflowPlane; ioID++) {
-				
+				// Check particles in the Inflow/Outflow region, create real and IO particles, 
+				// or delete real particles
 				inOutflow[ioID].checkCreateDeleteParticlesInOutflow(partSyst, part);
+
 				// inOutflow[0].checkIOParticlesInOutflow(partSyst, part);
+				
+				// Swap the data between Real particles in the array part->numRealAndIOParticles 
+				// and the array part->numParticles
 				inOutflow[ioID].swapIdRealAndIOParticlesInOutflow(partSyst, part);
+			}
+
+			// Move ghost particles to the last positions of the array
+			if(part->numDeletedParticles > 0) {
+				part->moveGhostToLastPosArray(partSyst);
 			}
 
 			// for(int ioID = 0; ioID < partSyst->numInOutflowPlane; ioID++) {

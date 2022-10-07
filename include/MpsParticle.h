@@ -106,24 +106,37 @@ public:
 	 * @param      PSystem    The physical system
 	 */
 	void checkParticleOutDomain(MpsParticleSystem *PSystem);
+	
+	/**
+	 * @brief      Sets the particle data to ghost.
+	 * @param[in]  i        The ghost particle
+	 * @param      PSystem  The physical system
+	 */
+	void setParticleDataToGhost(const int i, MpsParticleSystem *PSystem);
+	
+	/**
+	 * @brief      Move ghost particles to the last positions of the array
+	 *
+	 * @param      PSystem  The physical system
+	 */
+	void moveGhostToLastPosArray(MpsParticleSystem *PSystem);
 
 	/**
-	 * @brief      Move the data from "Last Real Particle" to i-th ghost particle and 
-	 * update some data of "Last Particle" as ghost
-	 * @param[in]  i          ID of the i-th particle that will be converted to ghost
+	 * @brief      Swap the data between "Last Real Particle" and i-th Ghost particle
+	 * @param[in]  i          ID of the i-th Ghost particle
 	 * @param[in]  iLastReal  ID of the Last Real particle
 	 * @param      PSystem    The physical system
 	 */
-	void moveDataLastRealPartToGhostPart(const int i, const int iLastReal, MpsParticleSystem *PSystem);
+	void swapDataLastRealPartAndGhostPart(const int i, const int iLastReal, MpsParticleSystem *PSystem);
 
 	/**
-	 * @brief      Move the data from "Last Real+IO Particle" to "Last Real Particle" 
-	 * and update some data of "Last Real+IO Particle" as ghost
-	 * @param[in]  iLastReal    ID of the Last Real Particle that will be converted to ghost
+	 * @brief      Swap the data between "Last Real+IO Particle" and "Last Real Particle"
+	 * @details    Used only in the simulations with Inflow/Ouftlow Boundary Condition
+	 * @param[in]  iLastReal    ID of the Last Real Particle previously assigned as ghost
 	 * @param[in]  iLastRealIO  The last Real+IO Particle
 	 * @param      PSystem      The p system
 	 */
-	void moveDataLastRealIOPartToLastRealPart(const int iLastReal, const int iLastRealIO, MpsParticleSystem *PSystem);
+	void swapDataLastRealIOPartAndLastRealPart(const int iLastReal, const int iLastRealIO, MpsParticleSystem *PSystem);
 	
 	/**
 	 * @brief      Sets the parameters.
