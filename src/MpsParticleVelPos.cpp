@@ -1,6 +1,7 @@
 // Copyright (c) 2022 Rubens AMARO
 // Distributed under the MIT License.
 
+#include <iostream>		///< cout
 #include <experimental/filesystem> 	///< numeric_limits
 #include "MpsParticleVelPos.h"
 
@@ -18,8 +19,10 @@ MpsParticleVelPos::~MpsParticleVelPos()
 // Prediction of particle velocity and position
 void MpsParticleVelPos::updateVelocityPosition1st(MpsParticleSystem *PSystem, MpsParticle *Particles) {
 #pragma omp parallel for
-	for(int i=0; i<Particles->numParticles; i++) {
-		if(Particles->particleType[i] == PSystem->fluid) {
+	// for(int i=0; i<Particles->numParticles; i++) {
+		// if(Particles->particleType[i] == PSystem->fluid) {
+	for(int i=0; i<Particles->numRealAndIOParticles; i++) {
+		if(Particles->particleType[i] == PSystem->fluid || Particles->particleType[i] == PSystem->inOutflowParticle) {
 			Particles->vel[i*3  ] += Particles->acc[i*3  ]*PSystem->timeStep;	Particles->vel[i*3+1] += Particles->acc[i*3+1]*PSystem->timeStep;	Particles->vel[i*3+2] += Particles->acc[i*3+2]*PSystem->timeStep;
 			//if(Particles->particleType[i] == PSystem->fluid) {
 			Particles->pos[i*3  ] += Particles->vel[i*3  ]*PSystem->timeStep;	Particles->pos[i*3+1] += Particles->vel[i*3+1]*PSystem->timeStep;	Particles->pos[i*3+2] += Particles->vel[i*3+2]*PSystem->timeStep;
@@ -33,18 +36,18 @@ void MpsParticleVelPos::updateVelocityPosition1st(MpsParticleSystem *PSystem, Mp
 		Particles->numNeighWallContribution[i]=0;
 		Particles->particleNearWall[i]=false;
 		// Set squared distance of particle to triangle mesh to ~infinite
-		Particles->distParticleWall2[i] = 10e8*PSystem->partDist;
+		Particles->distParticleWall2[i] = PSystem->nearInfinity;
 		Particles->numNeighborsSurfaceParticles[i]=0.0;
 
 		if(PSystem->wallType == boundaryWallType::POLYGON) {
 			// Set mirrored particle to ~infinite if wall particles are used
-			Particles->mirrorParticlePos[i*3  ] = 10e8*PSystem->partDist; Particles->mirrorParticlePos[i*3+1] = 10e8*PSystem->partDist; Particles->mirrorParticlePos[i*3+2] = 10e8*PSystem->partDist;
+			Particles->mirrorParticlePos[i*3  ] = PSystem->nearInfinity; Particles->mirrorParticlePos[i*3+1] = PSystem->nearInfinity; Particles->mirrorParticlePos[i*3+2] = PSystem->nearInfinity;
 		}
 	}
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -58,8 +61,10 @@ void MpsParticleVelPos::updateVelocityPosition2nd(MpsParticleSystem *PSystem, Mp
 {
 	double local_vMax = 0.0;
 #pragma omp for
-	for(int i=0; i<Particles->numParticles; i++) {
-		if(Particles->particleType[i] == PSystem->fluid) {
+	// for(int i=0; i<Particles->numParticles; i++) {
+	// 	if(Particles->particleType[i] == PSystem->fluid) {
+	for(int i=0; i<Particles->numRealAndIOParticles; i++) {
+		if(Particles->particleType[i] == PSystem->fluid || Particles->particleType[i] == PSystem->inOutflowParticle) {
 			Particles->vel[i*3  ]+=Particles->acc[i*3  ]*PSystem->timeStep;	Particles->vel[i*3+1]+=Particles->acc[i*3+1]*PSystem->timeStep;	Particles->vel[i*3+2]+=Particles->acc[i*3+2]*PSystem->timeStep;
 			//if(Particles->particleType[i] == PSystem->fluid) {
 			Particles->pos[i*3  ]+=Particles->acc[i*3  ]*PSystem->timeStep*PSystem->timeStep;	Particles->pos[i*3+1]+=Particles->acc[i*3+1]*PSystem->timeStep*PSystem->timeStep;	Particles->pos[i*3+2]+=Particles->acc[i*3+2]*PSystem->timeStep*PSystem->timeStep;
@@ -91,7 +96,7 @@ void MpsParticleVelPos::updateVelocityPosition2nd(MpsParticleSystem *PSystem, Mp
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -153,6 +158,6 @@ void MpsParticleVelPos::updateVelocityParticlesWallDummy(MpsParticleSystem *PSys
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }

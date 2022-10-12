@@ -1,6 +1,7 @@
 // Copyright (c) 2022 Rubens AMARO
 // Distributed under the MIT License.
 
+#include <iostream>		///< cout
 #include <experimental/filesystem> 	///< numeric_limits
 #include "MpsBoundaryCondition.h"
 
@@ -394,6 +395,6 @@ void MpsBoundaryCondition::updateParticleBC(MpsParticleSystem *PSystem, MpsParti
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }

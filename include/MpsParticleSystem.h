@@ -10,7 +10,7 @@
 #ifndef MPS_INCLUDE_PARTICLESYSTEM_H_
 #define MPS_INCLUDE_PARTICLESYSTEM_H_
 
-//#define SHOW_FUNCT_NAME_PART	///print the function name from any location inside a C++ function (useful for investigating programs)
+// #define SHOW_FUNCT_NAME_PART	///print the function name from any location inside a C++ function (useful for investigating programs)
 
 #pragma once
 
@@ -159,7 +159,7 @@ public:
 	double *inOutflowNormal;///< Normal vector of the Inflow/Outflow plane (interface)
 	double *inOutflowVel;	///< Velocity vector of the Inflow/Outflow plane (interface)
 	double *inOutflowPress;	///< Pressure of the Inflow/Outflow plane (interface)
-	int inOutflowPartID;	///< InOutflow particle ID
+	int inOutflowParticle;	///< InOutflow particle type ID
 
 	// Physical parameters
 	double densityFluid;	///< Fluid particle density (kg/m3)
@@ -238,10 +238,10 @@ public:
 	double collisionRatio;	///< Collision ratio
 	double distLimitRatio;	///< Coefficient of distance which does not allow any further access between particles (0.9)
 	double lambdaCollision;		///< Non-dimensional coefficient used to adjust background pressure
-	int ghost;				///< Ghost particle ID
-	int fluid;				///< Fluid particle ID
-	int wall;				///< Wall particle ID
-	int dummyWall;			///< Dummy wall particle ID
+	int ghost;				///< Ghost particle type ID
+	int fluid;				///< Fluid particle type ID
+	int wall;				///< Wall particle type ID
+	int dummyWall;			///< Dummy wall particle type ID
 	int surface;			///< Free-surface particle BC
 	int inner;				///< Inner particle BC
 	int other;				///< Other particle BC
@@ -250,6 +250,7 @@ public:
 	///////////// PARTICLE SYSTEM VARIABLES /////////////
 
 	const double epsilonZero = 10.0*std::numeric_limits<double>::epsilon();	///< Very small number near to zero
+	const double nearInfinity = std::numeric_limits<double>::max(); /// Largest finite value of the double type
 
 	int numOfRigidMesh;		///< Number of fixed rigid meshs
 	int numOfDeformableMesh;// Number of deformable meshs

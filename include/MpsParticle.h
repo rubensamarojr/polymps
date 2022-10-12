@@ -106,7 +106,7 @@ public:
 	 * @param      PSystem    The physical system
 	 */
 	void checkParticleOutDomain(MpsParticleSystem *PSystem);
-	
+
 	/**
 	 * @brief      Sets the particle data to ghost.
 	 * @param[in]  i        The ghost particle
@@ -116,7 +116,6 @@ public:
 	
 	/**
 	 * @brief      Move ghost particles to the last positions of the array
-	 *
 	 * @param      PSystem  The physical system
 	 */
 	void moveGhostToLastPosArray(MpsParticleSystem *PSystem);
@@ -168,13 +167,14 @@ public:
 	///////////// INPUTS /////////////
 	// Scalars
 	int numParticlesZero;	///< Number of particles at the initial instant of simulation
-	int numParticles;		///< Number of particles during simulation
+	int numParticles;		///< Number of real (effective) particles during simulation
 
 	int numParticlesMemory;	///< Number of particles used to allocate memory (Important for inOutflow)
 	int numIOParticles;		///< Number of inOutflow (IO) particles
-	int numCreatedParticles;///< Number of created particles
-	int numDeletedParticles;///< Number of deleted particles
+	int numCreatedParticles;///< Number of created particles in the current step
+	int numDeletedParticles;///< Number of deleted particles in the current step
 	int numRealAndIOParticles;	///< Number of particles including inOutflow (IO) particles
+	int numGhostParticles;	///< Number of ghost particles (out of domain) in the current step
 	double memoryFactor;	///< Value to multiply the initial number of particles. Used to increase the allocated memory
 
 	
@@ -198,6 +198,7 @@ public:
 
 	double *signDist;			///< Signed distance between particle and inOutflow plane
 	bool *isInIORegion;			///< True if the particle is in the inOutflow region
+	bool realParticleCreated;	///< Flag that indicates that at least one real particle was created
 
 	// Polygons
 	// Scalars

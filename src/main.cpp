@@ -122,7 +122,9 @@ int main( int argc, char** argv) {
 	boundaryConditions->setBucketBC(particleSystem, particles, buckets);
 	// Update particle ID's in buckets
 	buckets->updateParticlesID(particleSystem, particles);
-	// Verify if particle is out of domain
+	// Set number of ghost particles to zero (in the current step)
+	particles->numGhostParticles = 0;
+	// Verify if particle is out of the domain, assign as Ghost and updates the current number of ghost particles
 	particles->checkParticleOutDomain(particleSystem);
 
 	printf("Particle class initialized.\n");
@@ -250,8 +252,54 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 	// Break if simulation reaches the final time
 	while(true) {
 
+
+		// // Display simulation informations at each 100 iterations
+		// io->displayInfo(partSyst, part, partPress, 100);
+
+		// // Write output vtk and stl files
+		// if(partSyst->numOfIterations%partSyst->iterOutput == 0) {
+		// 	// Write output particle files
+		// 	io->writeOutputFiles(partSyst, part); ///< Write output particle files
+		// 	if(partSyst->wallType == boundaryWallType::POLYGON) {
+		// 		// Write output mesh files
+		// 		if(partSyst->femOn == true) {
+		// 			// Write deformable mesh (STL files)
+		// 			mesh[meshType::DEFORMABLE].writePolygonMeshFile(meshType::DEFORMABLE, output_folder_char, partSyst->fileNumber);
+		// 		}
+		// 		if(partSyst->forcedOn == true) {
+		// 			// Write forced rigid mesh (STL files)
+		// 			mesh[meshType::FORCED].writePolygonMeshFile(meshType::FORCED, output_folder_char, partSyst->fileNumber);
+		// 		}
+		// 	}
+		// 	partSyst->fileNumber++; // Integer number
+		// }
+		
+		
+		///////////////////////////
+		/// Numerical simulation //
+		///////////////////////////
+		// Update particle ID's in buckets
+		buck->updateParticlesID(partSyst, part);
+
+
+
+		// Set number of ghost particles to zero (in the current step)
+		part->numGhostParticles = 0;
+		
+		// Verify overlaped IO-IO or IO-Real particles, assign overlaped IO particles as Ghost 
+		// and updates the current number of ghost particles
+		if (partSyst->inOutflowOn == true && partSyst->numInOutflowPlane > 0) {
+			if(part->numIOParticles > 0) {
+				// Here only call once, (InOutflow plan of id = 0)
+				inOutflow[0].checkOverlapedIOParticles(partSyst, part, buck);
+			}
+		}
+		
+
 		// Display simulation informations at each 100 iterations
 		io->displayInfo(partSyst, part, partPress, 100);
+
+		// Write output vtk and stl files
 		if(partSyst->numOfIterations%partSyst->iterOutput == 0) {
 			// Write output particle files
 			io->writeOutputFiles(partSyst, part); ///< Write output particle files
@@ -268,11 +316,7 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 			}
 			partSyst->fileNumber++; // Integer number
 		}
-		///////////////////////////
-		/// Numerical simulation //
-		///////////////////////////
-		// Update particle ID's in buckets
-		buck->updateParticlesID(partSyst, part);
+
 
 		// Non newtonian calculation
 		if(partSyst->fluidType == viscType::NON_NEWTONIAN) {
@@ -289,11 +333,11 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 				partPress->predictionWallPressGradient(partSyst, part, buck); ///< Pressure gradient due to the polygon wall
 			}
 		}
-		
+
 		// Update velocity and positions. Set some variables to zero or inf
 		partVelPos->updateVelocityPosition1st(partSyst, part);
-		
-		// Verify if particle is out of the domain
+
+		// Verify if particle is out of the domain, assign as Ghost and updates the current number of ghost particles
 		part->checkParticleOutDomain(partSyst);
 		
 		// Check collision between particles
@@ -421,18 +465,19 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 		}
 
 
-		
+
 		// Here only for InOutflow plan of id = 0
 		if(partSyst->inOutflowOn == true && partSyst->numInOutflowPlane > 0) {
 			// Impose motion to particles
 			inOutflow[0].imposeMotionParticles(partSyst, part);
 		}
 
-		
+
+
 		// Update velocity and positions
 		partVelPos->updateVelocityPosition2nd(partSyst, part);
 		
-		// Verify if particle is out of the domain
+		// Verify if particle is out of the domain, assign as Ghost and updates the current number of ghost particles
 		part->checkParticleOutDomain(partSyst);
 		
 		// Shifting techniques
@@ -466,8 +511,9 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 		// for(int i=0; i<part->numParticles; i++) {
 		// 	part->pressAverage[i] += part->press[i];
 		// }
-		 
 		
+
+
 		// InOutflow bondary conditions
 		if(partSyst->inOutflowOn == true && partSyst->numInOutflowPlane > 0) {
 			// Set initial values to inOutflow variables
@@ -481,15 +527,21 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 
 				// inOutflow[0].checkIOParticlesInOutflow(partSyst, part);
 				
-				// Swap the data between Real particles in the array part->numRealAndIOParticles 
-				// and the array part->numParticles
-				inOutflow[ioID].swapIdRealAndIOParticlesInOutflow(partSyst, part);
+				// Verify if real particles were created
+				if(part->realParticleCreated == true) {
+					// Swap the data between Real particles in the array part->numRealAndIOParticles 
+					// and the array part->numParticles
+					inOutflow[ioID].swapIdRealAndIOParticlesInOutflow(partSyst, part);
+				}
 			}
 
-			// Move ghost particles to the last positions of the array
-			if(part->numDeletedParticles > 0) {
-				part->moveGhostToLastPosArray(partSyst);
-			}
+			// // Move ghost particles to the last positions of the array
+			// if(part->numDeletedParticles > 0) {
+			// 	part->moveGhostToLastPosArray(partSyst);
+			// }
+
+			// Updates the number of ghost particles in the current step
+			part->numGhostParticles += part->numDeletedParticles;
 
 			// for(int ioID = 0; ioID < partSyst->numInOutflowPlane; ioID++) {
 			// 	// Check particles in the Inflow/Outflow region
@@ -498,11 +550,17 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 			// 	inOutflow[ioID].swapIdRealAndIOParticlesInOutflow(partSyst, part);
 			// }
 		}
-		
+
 
 				
-		// Verify if particle is out of the domain
+		// Verify if particle is out of the domain, assign as Ghost and updates the current number of ghost particles
 		part->checkParticleOutDomain(partSyst);
+
+		// If the number of ghost particles is positive (in the current step), 
+		// then move (swaps) ghost particles to the last positions of the array
+		if(part->numGhostParticles > 0) {
+			part->moveGhostToLastPosArray(partSyst);
+		}
 
 		// Update iteration and time
 		partSyst->numOfIterations++;

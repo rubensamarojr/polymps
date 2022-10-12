@@ -353,7 +353,7 @@ void MpsBucket::updateParticlesID(MpsParticleSystem *PSystem, MpsParticle *Parti
 	}
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 

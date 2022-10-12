@@ -12,7 +12,7 @@
 
 #include "MpsParticleSystem.h"
 #include "MpsParticle.h"
-//#include "MpsBucket.h"
+#include "MpsBucket.h"
 
 /**
  * @brief      This class describes the Inflow/Outflow engine.
@@ -81,6 +81,23 @@ public:
 
 	// Swap the data between Real particles in the array Particles->numRealAndIOParticles and the array Particles->numParticles
 	void swapIdRealAndIOParticlesInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles);
+
+	/**
+	 * @brief      Verify overlaped IO-IO or IO-Real particles, assign overlaped 
+	 * IO particles as Ghost and updates the current number of ghost particles
+	 * @details    Used only in the simulations with Inflow/Ouftlow Boundary Condition
+	 * @param      PSystem  The p system
+	 */
+	
+	/**
+	 * @brief      Verify overlaped IO-IO or IO-Real particles, assign overlaped 
+	 * IO particles as Ghost and updates the current number of ghost particles
+	 * @details    Used only in the simulations with Inflow/Ouftlow Boundary Condition
+	 * @param      PSystem    The physical system
+	 * @param      Particles  The particles data
+	 * @param      Buckets    The buckets data
+	 */
+	void checkOverlapedIOParticles(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
 
 	// Check IO particles in the Inflow/Outflow region
 	// void checkIOParticlesInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles);

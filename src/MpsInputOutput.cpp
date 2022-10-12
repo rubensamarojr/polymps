@@ -42,8 +42,9 @@ void MpsInputOutput::displayInfo(MpsParticleSystem *PSystem, MpsParticle *Partic
 		//seconds = int(timer_end - timer_sta);
 		minutes = seconds / 60;
 		hours = minutes / 60;
-		printf("Iteration: %5dth Time: %lfsec Num. Particles: %d Max Velocity: %lfm/s Courant: %lf", 
-			PSystem->numOfIterations, PSystem->timeCurrent, Particles->numParticles, PSystem->velMax, PSystem->CFLcurrent);
+		printf("Iteration: %5dth Time: %lfsec Num. Particles: %d IO: %d Ghost %d Max Velocity: %lfm/s Courant: %lf", 
+			PSystem->numOfIterations, PSystem->timeCurrent, Particles->numParticles, Particles->numIOParticles, 
+			Particles->numGhostParticles,	PSystem->velMax, PSystem->CFLcurrent);
 		if(PSystem->fluidType == viscType::NON_NEWTONIAN) {
 			printf(" CFLvisc: %lf", PSystem->CFLvisc);
 		}
@@ -294,7 +295,7 @@ void MpsInputOutput::readInputFile(MpsParticleSystem *PSystem, MpsParticle *Part
 	PSystem->dummyWall = je.at("numerical").at("particle_type").value("dummyWall", 3);
 
 	if (PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
-		PSystem->inOutflowPartID = je.at("numerical").at("particle_type").value("inOutflow", 4);
+		PSystem->inOutflowParticle = je.at("numerical").at("particle_type").value("inOutflow", 4);
 	}
 	
 	PSystem->surface = je.at("numerical").at("boundary_type").value("free_surface", 1);
@@ -434,9 +435,10 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 	// Particles->numParticlesZero = Particles->numParticles;
 
 	Particles->numIOParticles = 0;	// Number of inOutFlow (IO) Particles
-	Particles->numCreatedParticles = 0;	// Number of created Particles
-	Particles->numDeletedParticles = 0;	// Number of deleted Particles
+	Particles->numCreatedParticles = 0;	// Number of created Particles in the current step
+	Particles->numDeletedParticles = 0;	// Number of deleted Particles in the current step
 	Particles->numRealAndIOParticles = Particles->numParticles;		// Number of particles including inOutflow (IO) particles
+	Particles->numGhostParticles = 0;	// Number of ghost particles (out of domain) in the current step
 	Particles->memoryFactor = 2.0;
 	Particles->numParticlesMemory = (int)(Particles->numParticles * Particles->memoryFactor);	// Number of particles used to allocate memory (Important for inOutflow)
 	Particles->numParticlesZero = Particles->numParticlesMemory;	// Number of particles at the initial instant of simulation
@@ -586,7 +588,7 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 		Particles->diffusiveTerm[i]=0.0;Particles->pndWallContribution[i]=0.0;Particles->deviationDotPolygonNormal[i]=0.0;
 		Particles->numNeighborsSurfaceParticles[i]=0.0;
 
-		Particles->distParticleWall2[i]=10e8*PSystem->partDist;
+		Particles->distParticleWall2[i]=PSystem->nearInfinity;
 	}
 	// Set Non-Newtonian scalars to zero
 	if(PSystem->fluidType == viscType::NON_NEWTONIAN) {
@@ -604,7 +606,7 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 	// Set inOutflow scalars
 	if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
 		for(int i=0; i<Particles->numParticlesZero; i++) {
-			Particles->signDist[i] = 10e8*PSystem->partDist;
+			Particles->signDist[i] = PSystem->nearInfinity;
 			Particles->isInIORegion[i] = false;
 		}
 	}
@@ -674,6 +676,11 @@ void MpsInputOutput::writeOutputFiles(MpsParticleSystem *PSystem, MpsParticle *P
 			writeVtuBinary(PSystem, Particles);
 		}
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	cout << __PRETTY_FUNCTION__ << endl;
+#endif
 }
 
 // Write data. Format .prof
@@ -1346,6 +1353,20 @@ void MpsInputOutput::writeVtuAscii(MpsParticleSystem *PSystem, MpsParticle *Part
 				fprintf(fp,"%f ",(float)Particles->signDist[i]);
 			}
 			fprintf(fp,"\n        </DataArray>\n");
+
+
+			// if(PSystem->mpsType == calcPressType::IMPLICIT_PND || PSystem->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
+			// 	fprintf(fp,"        <DataArray type='Float32' Name='Source' NumberOfComponents='1' format='ascii'>\n");
+			// 	for(int i=0; i<Particles->numRealAndIOParticles; i++)
+			// 	{
+			// 		if(Particles->particleType[i] == PSystem->fluid)
+			// 			fprintf(fp,"%f ",(float)Particles->sourceTerm(i));
+			// 		else
+			// 			fprintf(fp,"%f ",0.0);
+			// 	}
+			// 	fprintf(fp,"\n        </DataArray>\n");
+			// }
+			
 		}
 	}
 
@@ -2028,7 +2049,7 @@ void MpsInputOutput::writePressSensors(MpsParticleSystem *PSystem, MpsParticle *
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 

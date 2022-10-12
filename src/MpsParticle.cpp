@@ -1,6 +1,7 @@
 // Copyright (c) 2021 Rubens AMARO
 // Distributed under the MIT License.
 
+#include <iostream>		///< cout
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
 #include <Eigen/IterativeLinearSolvers>
@@ -269,17 +270,20 @@ void MpsParticle::checkParticleOutDomain(MpsParticleSystem *PSystem) {
 			pos[i*3+1]>limMaxY || pos[i*3+1]<limMinY ||
 			(PSystem->dim == 3 && (pos[i*3+2]>limMaxZ || pos[i*3+2]<limMinZ)))) {
 
-			// Set particle data to Ghost
+			// Set particle data as Ghost data
 			setParticleDataToGhost(i, PSystem);
 
 			numGhostParticlesAux++;
 		}
 	}
 
-	// Move ghost particles to the last positions of the array
-	if(numGhostParticlesAux > 0) {
-		moveGhostToLastPosArray(PSystem);
-	}
+	// Updates the number of ghost particles in the current step
+	numGhostParticles += numGhostParticlesAux;
+
+	// // Move ghost particles to the last positions of the array
+	// if(numGhostParticlesAux > 0) {
+	// 	moveGhostToLastPosArray(PSystem);
+	// }
 	
 	// for(int i=0; i<numParticles; i++) {
 	// 	if((pos[i*3  ]>limMaxX || pos[i*3  ]<limMinX ||
@@ -319,18 +323,18 @@ void MpsParticle::checkParticleOutDomain(MpsParticleSystem *PSystem) {
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
-// Set particle data to Ghost
+// Set particle data as Ghost data
 void MpsParticle::setParticleDataToGhost(const int i, MpsParticleSystem *PSystem) {
 	
 	particleType[i] = PSystem->ghost;
 	particleBC[i] = PSystem->other;
-	particleNearWall[i]=false;
-	nearMeshType[i]=meshType::FIXED;
-	distParticleWall2[i]=10e8*PSystem->partDist;
+	particleNearWall[i] = false;
+	nearMeshType[i] = meshType::FIXED;
+	distParticleWall2[i] = PSystem->nearInfinity;
 	// Set zero to velocity and press
 	for (int j = 0; j < 3; j++) {
 		//pos[i*3+j]=0.0;
@@ -338,18 +342,16 @@ void MpsParticle::setParticleDataToGhost(const int i, MpsParticleSystem *PSystem
 		vel[i*3+j] = 0.0;
 	}
 	press[i] = 0.0;
-	// Set maximum position to lastParticle
-	pos[i*3  ] = PSystem->domainMaxX - PSystem->partDist;
-	pos[i*3+1] = PSystem->domainMaxY - PSystem->partDist;
-	if (PSystem->dim == 2) {
-		pos[i*3+2] = 0.0;
+	// Change position to infinity
+	pos[i*3  ] += PSystem->domainMaxX;// PSystem->nearInfinity;//PSystem->domainMaxX - PSystem->partDist;
+	pos[i*3+1] += PSystem->domainMaxY;// PSystem->nearInfinity;//PSystem->domainMaxY - PSystem->partDist;
+	if (PSystem->dim == 3) {
+		pos[i*3+2] += PSystem->domainMaxZ;// PSystem->nearInfinity;//PSystem->domainMaxZ - PSystem->partDist;
 	}
-	else {
-		pos[i*3+2] = PSystem->domainMaxZ - PSystem->partDist;
-	}
+	// Set signed distance to infinite
 	if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
-		signDist[i]=10e8*PSystem->partDist;
-		isInIORegion[i]=false;
+		signDist[i] = PSystem->nearInfinity;
+		isInIORegion[i] = false;
 	}
 }
 
@@ -376,23 +378,12 @@ void MpsParticle::moveGhostToLastPosArray(MpsParticleSystem *PSystem) {
 
 				// Decrease number of Real particles
 				newNumRealParticles--;
-
-				// Verify if the simulation has InOutflow bondary conditions
-				if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
-					
-					// ID of last Real+IO particle
-					int iLastRealIOParticle = newNumRealIOParticles - 1;
-
-					// Swap the data between "Last Real+IO Particle" and "Last Real Particle" previously assigned as ghost
-					swapDataLastRealIOPartAndLastRealPart(iLastRealParticle, iLastRealIOParticle, PSystem);
-					
-					// Decrease number of Real+IO particles
-					newNumRealIOParticles--;
-				}	
+				// Decrease number of Real+IO particles
+				newNumRealIOParticles--;
 			}
 		}
 	}
-	else if (PSystem->numInOutflowPlane > 0) {
+	else if (PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
 		// Reverse for loop
 		// https://stackoverflow.com/questions/275994/whats-the-best-way-to-do-a-backwards-loop-in-c-c-c
 		for (int i = numParticles; i --> 0; )
@@ -423,6 +414,11 @@ void MpsParticle::moveGhostToLastPosArray(MpsParticleSystem *PSystem) {
 	// Update number of Real and Real+IO particles
 	numParticles = newNumRealParticles;
 	numRealAndIOParticles = newNumRealIOParticles;
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	cout << __PRETTY_FUNCTION__ << endl;
+#endif
 }
 
 
@@ -472,11 +468,11 @@ void MpsParticle::swapDataLastRealPartAndGhostPart(const int i, const int iLastR
 		swap(S33[i], S33[iLastReal]);
 	}
 
-	if(PSystem->mpsType == calcPressType::IMPLICIT_PND || 
-		PSystem->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
-		swap(pressurePPE(i), pressurePPE(iLastReal));
-		swap(sourceTerm(i), sourceTerm(iLastReal));
-	}
+	// if(PSystem->mpsType == calcPressType::IMPLICIT_PND || 
+	// 	PSystem->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
+	// 	swap(pressurePPE(i), pressurePPE(iLastReal));
+	// 	// swap(sourceTerm(i), sourceTerm(iLastReal));
+	// }
 	
 	if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
 		swap(signDist[i], signDist[iLastReal]);
@@ -610,7 +606,7 @@ void MpsParticle::setWallForceZero(const int nNodes, double *nodeforceX, double 
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 

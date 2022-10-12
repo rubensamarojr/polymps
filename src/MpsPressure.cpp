@@ -103,7 +103,7 @@ void MpsPressure::calcPressEMPS(MpsParticleSystem *PSystem, MpsParticle *Particl
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -158,7 +158,7 @@ void MpsPressure::calcPressWCMPS(MpsParticleSystem *PSystem, MpsParticle *Partic
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -217,8 +217,32 @@ void MpsPressure::solvePressurePoissonPnd(MpsParticleSystem *PSystem, MpsParticl
 					// PSystem->coeffPPE = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero)
 					double mat_ij = wL*PSystem->coeffPPE;
 					if (Particles->particleType[j] == PSystem->dummyWall) {
+						// Approximate Pj - Pi = rho * grav * rij
 						double pgh = Particles->RHO[j]*(v0ij*PSystem->gravityX + v1ij*PSystem->gravityY + v2ij*PSystem->gravityZ)*wL;
 						Particles->sourceTerm(i) -= PSystem->coeffPPE*pgh;
+					}
+					else if(Particles->particleType[j] == PSystem->inOutflowParticle) {
+						// Extrapolate pressure to ioFlowParticle
+						// double alp = 0.75;
+						// double normX = 1.0;
+						// double Pw = 0;
+						// if(posXi > 0.08) {
+						// 	normX = -1.0;
+						// 	Pw = 100;
+						// }
+						// double invDstiio = (alp * Particles->signDist[i] - (1-alp) * v0ij * normX);
+
+						// Particles->sourceTerm(i) += PSystem->coeffPPE * v0ij * normX / invDstiio * wL * Pw;
+						// sum += mat_ij * v0ij * normX / invDstiio;
+
+						// Pio = Pw
+						Particles->sourceTerm(i) += - PSystem->coeffPPE * wL * Particles->press[j];
+						sum += -mat_ij;
+
+						// Pio = 2*Pw - Pi
+						// Particles->sourceTerm(i) += - 2.0 * PSystem->coeffPPE * wL * Particles->press[j];
+						// sum += - 2.0 * mat_ij;
+
 					}
 					else
 					{
@@ -249,7 +273,8 @@ void MpsPressure::solvePressurePoissonPnd(MpsParticleSystem *PSystem, MpsParticl
 		coeffs.push_back(T(i, i, sum));
 
 		//PSystem->coeffPPESource = PSystem->relaxPND/(PSystem->timeStep*PSystem->timeStep*PSystem->pndSmallZero)
-		Particles->sourceTerm(i) = - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero);
+////		Particles->sourceTerm(i) = - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero);
+		Particles->sourceTerm(i) += - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero);
 
 		// 2019 - Enhancement of stabilization of MPS to arbitrary geometries with a generic wall boundary condition
 		//double pndc = 0.0;
@@ -281,7 +306,7 @@ void MpsPressure::solvePressurePoissonPnd(MpsParticleSystem *PSystem, MpsParticl
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -340,6 +365,29 @@ void MpsPressure::solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsPar
 						double pgh = Particles->RHO[j]*(v0ij*PSystem->gravityX + v1ij*PSystem->gravityY + v2ij*PSystem->gravityZ)*wL;
 						Particles->sourceTerm(i) -= PSystem->coeffPPE*pgh;
 					}
+					else if(Particles->particleType[j] == PSystem->inOutflowParticle) {
+						// Extrapolate pressure to ioFlowParticle
+						// double alp = 0.75;
+						// double normX = 1.0;
+						// double Pw = 0;
+						// if(posXi > 0.08) {
+						// 	normX = -1.0;
+						// 	Pw = 100;
+						// }
+						// double invDstiio = (alp * Particles->signDist[i] - (1-alp) * v0ij * normX);
+
+						// Particles->sourceTerm(i) += PSystem->coeffPPE * v0ij * normX / invDstiio * wL * Pw;
+						// sum += mat_ij * v0ij * normX / invDstiio;
+
+						// Pio = Pw
+						Particles->sourceTerm(i) += - PSystem->coeffPPE * wL * Particles->press[j];
+						sum += -mat_ij;
+
+						// Pio = 2*Pw - Pi
+						// Particles->sourceTerm(i) += - 2.0 * PSystem->coeffPPE * wL * Particles->press[j];
+						/// sum += - 2.0 * mat_ij;
+
+					}
 					else
 					{
 						sum -= mat_ij;
@@ -370,7 +418,7 @@ void MpsPressure::solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsPar
 
 		//PSystem->coeffPPESource = PSystem->relaxPND/(PSystem->timeStep*PSystem->timeStep*PSystem->pndSmallZero)
 		//Particles->sourceTerm(i) = - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
-		Particles->sourceTerm(i) = - PSystem->coeffPPESource*density*(Particles->pndki[i] - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
+		Particles->sourceTerm(i) += - PSystem->coeffPPESource*density*(Particles->pndki[i] - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
 		//Particles->sourceTerm(i) = - 4.0*density*(ni - PSystem->pndSmallZero)/(partDist*partDist*PSystem->pndSmallZero) 
 		//				+ 2.0*density*Particles->velDivergence[i]*PSystem->invPartDist;
 
@@ -416,7 +464,7 @@ void MpsPressure::solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsPar
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -430,6 +478,18 @@ void MpsPressure::solveConjugateGradient(Eigen::SparseMatrix<double> p_mat, MpsP
 		cerr << "Error: Failed decompostion." << endl;
 	}
 	//Particles->pressurePPE = cg.solve(Particles->sourceTerm);
+
+	// If the number of ghost particles is positive (in the current step), then the number
+	// of real (efective) particles chnaged, and consequently pressurePPE array should be updated
+	if(Particles->numGhostParticles > 0) {
+		// Resize vector of pressure
+		Particles->pressurePPE.resize(Particles->numParticles); // Resizing a dynamic-size vector
+#pragma omp parallel for
+		for(int i=0; i<Particles->numParticles; i++) {
+			Particles->pressurePPE(i) = Particles->press[i];
+		}
+	}
+
 	Particles->pressurePPE = cg.solveWithGuess(Particles->sourceTerm, Particles->pressurePPE);
 
 #pragma omp parallel for
@@ -451,6 +511,17 @@ void MpsPressure::solveBiConjugateGradientStabilized(Eigen::SparseMatrix<double>
 	bicg.compute(p_mat);
 	if (bicg.info() != Eigen::ComputationInfo::Success) {
 		cerr << "Error: Failed decompostion." << endl;
+	}
+
+	// If the number of ghost particles is positive (in the current step), then the number
+	// of real (efective) particles chnaged, and consequently pressurePPE array should be updated
+	if(Particles->numGhostParticles > 0) {
+		// Resize vector of pressure
+		Particles->pressurePPE.resize(Particles->numParticles); // Resizing a dynamic-size vector
+#pragma omp parallel for
+		for(int i=0; i<Particles->numParticles; i++) {
+			Particles->pressurePPE(i) = Particles->press[i];
+		}
 	}
 
 	Particles->pressurePPE = bicg.solveWithGuess(Particles->sourceTerm, Particles->pressurePPE);
@@ -546,7 +617,7 @@ void MpsPressure::calcVelDivergence(MpsParticleSystem *PSystem, MpsParticle *Par
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -649,7 +720,7 @@ void MpsPressure::calcWallSlipVelDivergence(MpsParticleSystem *PSystem, MpsParti
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -783,7 +854,7 @@ void MpsPressure::calcWallNoSlipVelDivergence(MpsParticleSystem *PSystem, MpsPar
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -839,7 +910,7 @@ void MpsPressure::extrapolatePressParticlesWallDummy(MpsParticleSystem *PSystem,
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -919,7 +990,7 @@ void MpsPressure::extrapolatePressParticlesNearPolygonWall(MpsParticleSystem *PS
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1021,7 +1092,7 @@ void MpsPressure::predictionPressGradient(MpsParticleSystem *PSystem, MpsParticl
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1207,7 +1278,7 @@ void MpsPressure::predictionWallPressGradient(MpsParticleSystem *PSystem, MpsPar
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1331,7 +1402,7 @@ void MpsPressure::calcPressGradient(MpsParticleSystem *PSystem, MpsParticle *Par
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1541,7 +1612,7 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1555,7 +1626,7 @@ void MpsPressure::repulsiveForceHarada(double *force, const double *normal, cons
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1569,7 +1640,7 @@ void MpsPressure::repulsiveForceMitsume(double *force, const double *normal, con
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1586,7 +1657,7 @@ void MpsPressure::repulsiveForceLennardJones(double *force, const double *normal
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1602,7 +1673,7 @@ void MpsPressure::repulsiveForceMonaghanKajtar(double *force, const double *norm
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
