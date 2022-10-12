@@ -103,7 +103,7 @@ void MpsPressure::calcPressEMPS(MpsParticleSystem *PSystem, MpsParticle *Particl
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -158,7 +158,7 @@ void MpsPressure::calcPressWCMPS(MpsParticleSystem *PSystem, MpsParticle *Partic
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -249,14 +249,14 @@ void MpsPressure::solvePressurePoissonPnd(MpsParticleSystem *PSystem, MpsParticl
 		coeffs.push_back(T(i, i, sum));
 
 		//PSystem->coeffPPESource = PSystem->relaxPND/(PSystem->timeStep*PSystem->timeStep*PSystem->pndSmallZero)
-		Particles->sourceTerm(i) = - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero);
+		Particles->sourceTerm(i) += - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero);
 
 		// 2019 - Enhancement of stabilization of MPS to arbitrary geometries with a generic wall boundary condition
 		//double pndc = 0.0;
 		//if(ni > 0)
 		//	pndc = (ni - pndWallContribution[i])/ni;
-		//Particles->sourceTerm(i) = pndc*((1.0-PSystem->relaxPND)*(Particles->pndki[i] - ni) + PSystem->relaxPND*(PSystem->pndSmallZero - pndski[i]))*ddt/PSystem->pndSmallZero;
-		//Particles->sourceTerm(i) = - PSystem->relaxPND*ddt*(pndski[i] - PSystem->pndSmallZero)/PSystem->pndSmallZero;
+		//Particles->sourceTerm(i) += pndc*((1.0-PSystem->relaxPND)*(Particles->pndki[i] - ni) + PSystem->relaxPND*(PSystem->pndSmallZero - pndski[i]))*ddt/PSystem->pndSmallZero;
+		//Particles->sourceTerm(i) += - PSystem->relaxPND*ddt*(pndski[i] - PSystem->pndSmallZero)/PSystem->pndSmallZero;
 
 		//double riw[3], riwSqrt;
 		// Normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
@@ -266,7 +266,7 @@ void MpsPressure::solvePressurePoissonPnd(MpsParticleSystem *PSystem, MpsParticl
 		//double ST2 = 0.0;
 		//if(riwSqrt < 0.5*partDist)
 		//	ST2 = - Cdiag*(1.0-beta)*2.0*partDist/PSystem->lambdaZero*(0.5*partDist - riwSqrt)/(PSystem->timeStep*PSystem->timeStep);
-		//Particles->sourceTerm(i) = ST1 + ST2;
+		//Particles->sourceTerm(i) += ST1 + ST2;
 	}
 
 	// Finished setup matrix
@@ -281,7 +281,7 @@ void MpsPressure::solvePressurePoissonPnd(MpsParticleSystem *PSystem, MpsParticl
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -369,9 +369,9 @@ void MpsPressure::solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsPar
 		coeffs.push_back(T(i, i, sum));
 
 		//PSystem->coeffPPESource = PSystem->relaxPND/(PSystem->timeStep*PSystem->timeStep*PSystem->pndSmallZero)
-		//Particles->sourceTerm(i) = - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
-		Particles->sourceTerm(i) = - PSystem->coeffPPESource*density*(Particles->pndki[i] - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
-		//Particles->sourceTerm(i) = - 4.0*density*(ni - PSystem->pndSmallZero)/(partDist*partDist*PSystem->pndSmallZero) 
+		//Particles->sourceTerm(i) += - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
+		Particles->sourceTerm(i) += - PSystem->coeffPPESource*density*(Particles->pndki[i] - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
+		//Particles->sourceTerm(i) += - 4.0*density*(ni - PSystem->pndSmallZero)/(partDist*partDist*PSystem->pndSmallZero) 
 		//				+ 2.0*density*Particles->velDivergence[i]*PSystem->invPartDist;
 
 		// Sun et al., 2015. Modified MPS method for the 2D fluid structure interaction problem with free surface
@@ -383,15 +383,15 @@ void MpsPressure::solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsPar
 		//	a1 += dtPhysical*fabs(Particles->velDivergence[i]);
 		//}
 		////double a2 = fabs((ni - PSystem->pndSmallZero)/PSystem->pndSmallZero);
-		//Particles->sourceTerm(i) = - a1*density/(dtPhysical*dtPhysical)*(ni - PSystem->pndSmallZero)/PSystem->pndSmallZero 
+		//Particles->sourceTerm(i) += - a1*density/(dtPhysical*dtPhysical)*(ni - PSystem->pndSmallZero)/PSystem->pndSmallZero 
 		//	+ density*Particles->velDivergence[i]/dtPhysical;
 
 		// 2019 - Enhancement of stabilization of MPS to arbitrary geometries with a generic wall boundary condition
 		//double pndc = 0.0;
 		//if(ni > 0)
 		//	pndc = (ni - pndWallContribution[i])/ni;
-		//Particles->sourceTerm(i) = pndc*((1.0-PSystem->relaxPND)*(Particles->pndki[i] - ni) + PSystem->relaxPND*(PSystem->pndSmallZero - pndski[i]))*ddt/PSystem->pndSmallZero;
-		//Particles->sourceTerm(i) = - PSystem->relaxPND*ddt*(pndski[i] - PSystem->pndSmallZero)/PSystem->pndSmallZero;
+		//Particles->sourceTerm(i) += pndc*((1.0-PSystem->relaxPND)*(Particles->pndki[i] - ni) + PSystem->relaxPND*(PSystem->pndSmallZero - pndski[i]))*ddt/PSystem->pndSmallZero;
+		//Particles->sourceTerm(i) += - PSystem->relaxPND*ddt*(pndski[i] - PSystem->pndSmallZero)/PSystem->pndSmallZero;
 
 		//double riw[3], riwSqrt;
 		// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
@@ -401,7 +401,7 @@ void MpsPressure::solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsPar
 		//double ST2 = 0.0;
 		//if(riwSqrt < 0.5*partDist)
 		//	ST2 = - Cdiag*(1.0-beta)*2.0*partDist/PSystem->lambdaZero*(0.5*partDist - riwSqrt)/(PSystem->timeStep*PSystem->timeStep);
-		//Particles->sourceTerm(i) = ST1 + ST2;
+		//Particles->sourceTerm(i) += ST1 + ST2;
 	}
 
 	// Finished setup matrix
@@ -416,7 +416,7 @@ void MpsPressure::solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsPar
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -546,7 +546,7 @@ void MpsPressure::calcVelDivergence(MpsParticleSystem *PSystem, MpsParticle *Par
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -649,7 +649,7 @@ void MpsPressure::calcWallSlipVelDivergence(MpsParticleSystem *PSystem, MpsParti
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -783,7 +783,7 @@ void MpsPressure::calcWallNoSlipVelDivergence(MpsParticleSystem *PSystem, MpsPar
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -839,7 +839,7 @@ void MpsPressure::extrapolatePressParticlesWallDummy(MpsParticleSystem *PSystem,
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -919,7 +919,7 @@ void MpsPressure::extrapolatePressParticlesNearPolygonWall(MpsParticleSystem *PS
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1021,7 +1021,7 @@ void MpsPressure::predictionPressGradient(MpsParticleSystem *PSystem, MpsParticl
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1207,7 +1207,7 @@ void MpsPressure::predictionWallPressGradient(MpsParticleSystem *PSystem, MpsPar
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1331,7 +1331,7 @@ void MpsPressure::calcPressGradient(MpsParticleSystem *PSystem, MpsParticle *Par
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1541,7 +1541,7 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1555,7 +1555,7 @@ void MpsPressure::repulsiveForceHarada(double *force, const double *normal, cons
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1569,7 +1569,7 @@ void MpsPressure::repulsiveForceMitsume(double *force, const double *normal, con
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1586,7 +1586,7 @@ void MpsPressure::repulsiveForceLennardJones(double *force, const double *normal
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1602,7 +1602,7 @@ void MpsPressure::repulsiveForceMonaghanKajtar(double *force, const double *norm
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 

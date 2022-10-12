@@ -2,6 +2,7 @@
 // Distributed under the MIT License.
 
 #include <experimental/filesystem> 	///< numeric_limits
+#include <iostream>					///< cout
 #include "MpsParticleVelPos.h"
 
 using namespace std;
@@ -44,7 +45,7 @@ void MpsParticleVelPos::updateVelocityPosition1st(MpsParticleSystem *PSystem, Mp
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -91,7 +92,7 @@ void MpsParticleVelPos::updateVelocityPosition2nd(MpsParticleSystem *PSystem, Mp
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -153,6 +154,6 @@ void MpsParticleVelPos::updateVelocityParticlesWallDummy(MpsParticleSystem *PSys
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }

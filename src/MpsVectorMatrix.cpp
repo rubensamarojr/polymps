@@ -2,6 +2,7 @@
 // Distributed under the MIT License.
 
 #include <experimental/filesystem> 	///< numeric_limits
+#include <iostream>					///< cout
 #include "MpsVectorMatrix.h"
 
 using namespace std;
@@ -87,7 +88,7 @@ void MpsVectorMatrix::correctionMatrix(MpsParticleSystem *PSystem, MpsParticle *
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 

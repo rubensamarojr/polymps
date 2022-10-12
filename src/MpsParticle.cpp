@@ -1,6 +1,7 @@
 // Copyright (c) 2021 Rubens AMARO
 // Distributed under the MIT License.
 
+#include <iostream>					///< cout
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
 #include <Eigen/IterativeLinearSolvers>
@@ -374,7 +375,7 @@ void MpsParticle::checkParticleOutDomain(MpsParticleSystem *PSystem) {
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -400,7 +401,7 @@ void MpsParticle::setWallForceZero(const int nNodes, double *nodeforceX, double 
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 

@@ -2,6 +2,7 @@
 // Distributed under the MIT License.
 
 #include <experimental/filesystem> 	///< numeric_limits
+#include <iostream>					///< cout
 #include "MpsParticleCollision.h"
 
 using namespace std;
@@ -113,7 +114,7 @@ void MpsParticleCollision::checkParticleCollisions(MpsParticleSystem *PSystem, M
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -286,6 +287,6 @@ void MpsParticleCollision::checkDynamicParticleCollisions(MpsParticleSystem *PSy
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }

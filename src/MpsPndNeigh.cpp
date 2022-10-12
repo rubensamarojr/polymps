@@ -2,6 +2,7 @@
 // Distributed under the MIT License.
 
 #include <experimental/filesystem> 	///< numeric_limits
+#include <iostream>					///< cout
 #include "MpsPndNeigh.h"
 
 using namespace std;
@@ -189,7 +190,7 @@ void MpsPndNeigh::calcWallNPCD(MpsParticleSystem *PSystem, MpsParticle *Particle
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -325,7 +326,7 @@ void MpsPndNeigh::calcPndnNeighNPCD(MpsParticleSystem *PSystem, MpsParticle *Par
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -482,7 +483,7 @@ void MpsPndNeigh::calcPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsParticle *
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -595,7 +596,7 @@ void MpsPndNeigh::calcWallSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsPa
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -737,7 +738,7 @@ void MpsPndNeigh::calcWallNoSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, Mps
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -767,7 +768,7 @@ void MpsPndNeigh::updatePnd(MpsParticle *Particles) {
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -841,7 +842,7 @@ void MpsPndNeigh::meanPndParticlesWallDummySurface(MpsParticleSystem *PSystem, M
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -906,7 +907,7 @@ for(int i=0; i<Particles->numParticles; i++) {
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -977,7 +978,7 @@ void MpsPndNeigh::meanWallPnd(MpsParticleSystem *PSystem, MpsParticle *Particles
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1033,6 +1034,6 @@ void MpsPndNeigh::meanNeighFluidPnd(MpsParticleSystem *PSystem, MpsParticle *Par
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }

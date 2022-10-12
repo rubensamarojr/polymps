@@ -2,6 +2,7 @@
 // Distributed under the MIT License.
 
 #include <experimental/filesystem> 	///< numeric_limits
+#include <iostream>					///< cout
 #include "MpsShifting.h"
 
 using namespace std;
@@ -95,7 +96,7 @@ void MpsShifting::calcShifting(MpsParticleSystem *PSystem, MpsParticle *Particle
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -168,7 +169,7 @@ void MpsShifting::calcNormalParticles(MpsParticleSystem *PSystem, MpsParticle *P
 	}
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -423,7 +424,7 @@ void MpsShifting::calcWallNormalParticles(MpsParticleSystem *PSystem, MpsParticl
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -572,7 +573,7 @@ void MpsShifting::calcConcAndConcGradient(MpsParticleSystem *PSystem, MpsParticl
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -690,7 +691,7 @@ void MpsShifting::calcWallConcAndConcGradient(MpsParticleSystem *PSystem, MpsPar
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -715,6 +716,6 @@ void MpsShifting::calcNormalConcentration(MpsParticle *Particles) {
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }

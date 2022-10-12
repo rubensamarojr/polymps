@@ -2,6 +2,7 @@
 // Distributed under the MIT License.
 
 #include <experimental/filesystem> 	///< numeric_limits
+#include <iostream>					///< cout
 #include "MpsViscosity.h"
 
 using namespace std;
@@ -93,7 +94,7 @@ void MpsViscosity::calcViscosityGravity(MpsParticleSystem *PSystem, MpsParticle 
 	
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -183,7 +184,7 @@ void MpsViscosity::calcVolumeFraction(MpsParticleSystem *PSystem, MpsParticle *P
 	}
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -693,7 +694,7 @@ void MpsViscosity::calcViscosityInteractionVal(MpsParticleSystem *PSystem, MpsPa
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1102,7 +1103,7 @@ void MpsViscosity::calcWallSlipViscosityInteractionVal(MpsParticleSystem *PSyste
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1517,7 +1518,7 @@ void MpsViscosity::calcWallNoSlipViscosityInteractionVal(MpsParticleSystem *PSys
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1677,7 +1678,7 @@ void MpsViscosity::calcWallSlipViscosity(MpsParticleSystem *PSystem, MpsParticle
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
 
@@ -1904,6 +1905,6 @@ void MpsViscosity::calcWallNoSlipViscosity(MpsParticleSystem *PSystem, MpsPartic
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
+	cout << __PRETTY_FUNCTION__ << endl;
 #endif
 }
