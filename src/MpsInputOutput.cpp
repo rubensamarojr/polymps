@@ -122,185 +122,472 @@ void MpsInputOutput::readInputFile(MpsParticleSystem *PSystem, MpsParticle *Part
 	// Set parameter ignore_comments to true in the parse function to ignore // or /* */ comments. 
 	// Comments will then be treated as whitespace.
 	// If skip_comments is set to true, the comments are skipped during parsing
-	json je = json::parse(ifs,
-					/* callback */ nullptr,
-					/* allow exceptions */ true,
-					/* skip_comments */ true);
+	try
+	{
+		json je = json::parse(ifs,
+						/* callback */ nullptr,
+						/* allow exceptions */ true,
+						/* skip_comments */ true);
 
-	// Access the values
-	// Types of Simulations
-	PSystem->wallType = je.at("flags").value("wall_type", 1);
-	PSystem->femOn = je.at("flags").value("fem_MESH", false);
-	PSystem->forcedOn = je.at("flags").value("forced_MESH", false);
-	
-	// Types of Outputs
-	vtuType = je.at("flags").at("output_VTU").value("type", 0);
-	freeSurfWall = je.at("flags").at("output_VTU").value("only_freeSurface", false);
-	outputPnd = je.at("flags").at("output_VTU").value("pnd", false);
-	outputNeigh = je.at("flags").at("output_VTU").value("neigh", false);
-	outputDeviation = je.at("flags").at("output_VTU").value("deviation", false);
-	outputConcentration = je.at("flags").at("output_VTU").value("concentration", false);
-	outputAuxiliar = je.at("flags").at("output_VTU").value("auxiliar", false);
-	outputNonNewtonian = je.at("flags").at("output_VTU").value("non_newtonian", false);
-	txtPress = je.at("flags").at("output_TXT").value("press", false);
-	txtForce = je.at("flags").at("output_TXT").value("force", false);
-	
-	// Paths of input and output files/folders
-	gridFilename = je.at("pathNames").value("particle_grid_file", "oops");
-	meshRigidFilename = je.at("pathNames").value("mesh_rigid_file", "oops");
-	meshDeformableFilename = je.at("pathNames").value("mesh_deformable_file", "oops");
-	meshForcedFilename = je.at("pathNames").value("mesh_forced_file", "oops");
-	vtuOutputFoldername = je.at("pathNames").value("vtu_output_folder", "oops");
-	forceTxtFilename = je.at("pathNames").value("forceTxt_file", "oops");
-	pressTxtFilename = je.at("pathNames").value("pressTxt_file", "oops");
-	
-	// Geometry dimension limits
-	PSystem->domainMinX = je.at("domain").at("min").value("x", 0.0);
-	PSystem->domainMinY = je.at("domain").at("min").value("y", 0.0);
-	PSystem->domainMinZ = je.at("domain").at("min").value("z", 0.0);
-	PSystem->domainMaxX = je.at("domain").at("max").value("x", 0.0);
-	PSystem->domainMaxY = je.at("domain").at("max").value("y", 0.0);
-	PSystem->domainMaxZ = je.at("domain").at("max").value("z", 0.0);
-	// Domain Periodic boundary condition
-	PSystem->domainTypeBC = je.at("domain").at("boundary").value("type", 0);
-	PSystem->numBC = 1;
-	PSystem->limitTypeBC = je.at("domain").at("boundary").value("limit", 0);
-	PSystem->periodicDirectionX = je.at("domain").at("boundary").at("direction").value("x", false);
-	PSystem->periodicDirectionY = je.at("domain").at("boundary").at("direction").value("y", false);
-	PSystem->periodicDirectionZ = je.at("domain").at("boundary").at("direction").value("z", false);
-
-	// Inflow/Outflow boundary conditions
-	PSystem->inOutflowOn = je.at("domain").at("in_out_flow").value("set_on", false);
-	if (PSystem->inOutflowOn == true) {
-		PSystem->numInOutflowPlane = je.at("domain").at("in_out_flow").at("planes").size();
-		// std::cout << "\n Planes: " << je.at("domain").at("in_out_flow").at("planes").size() << '\n';
-		if (PSystem->numInOutflowPlane > 0) {
-			allocateMemoryInOutflow(PSystem);
-			int ii = 0;
-			for (auto& el : je.at("domain").at("in_out_flow").at("planes").items())
-			{
-				PSystem->inOutflowPlaneID[ii] = el.value()["id"];
-				PSystem->inOutflowTypeBC[ii] = el.value()["type_bc"];
-				PSystem->inOutflowPt[ii*3  ] = el.value()["seed_point"]["x"];
-				PSystem->inOutflowPt[ii*3+1] = el.value()["seed_point"]["y"];
-				PSystem->inOutflowPt[ii*3+2] = el.value()["seed_point"]["z"];
-				PSystem->inOutflowNormal[ii*3  ] = el.value()["normal"]["x"];
-				PSystem->inOutflowNormal[ii*3+1] = el.value()["normal"]["y"];
-				PSystem->inOutflowNormal[ii*3+2] = el.value()["normal"]["z"];
-				PSystem->inOutflowVel[ii*3  ] = el.value()["velocity"]["x"];
-				PSystem->inOutflowVel[ii*3+1] = el.value()["velocity"]["y"];
-				PSystem->inOutflowVel[ii*3+2] = el.value()["velocity"]["z"];
-				PSystem->inOutflowPress[ii] = el.value()["pressure"];
-				// std::cout << el.key() << " : " << el.value()["id"] << '\n';
-				// std::cout << el.key() << " : " << el.value()["type_bc"] << '\n';
-				// std::cout << el.key() << " : " << el.value()["seed_point"]["x"] << '\n';
-				// std::cout << el.key() << " : " << el.value()["seed_point"]["y"] << '\n';
-				// std::cout << el.key() << " : " << el.value()["seed_point"]["z"] << '\n';
-				// std::cout << el.key() << " : " << el.value()["normal"]["x"] << '\n';
-				// std::cout << el.key() << " : " << el.value()["normal"]["y"] << '\n';
-				// std::cout << el.key() << " : " << el.value()["normal"]["z"] << '\n';
-				// std::cout << el.key() << " : " << el.value()["velocity"]["x"] << '\n';
-				// std::cout << el.key() << " : " << el.value()["velocity"]["y"] << '\n';
-				// std::cout << el.key() << " : " << el.value()["velocity"]["z"] << '\n';
-				// std::cout << el.key() << " : " << el.value()["pressure"] << '\n';
-				ii++;
+		// Access the values
+		// Types of Simulations
+		try {
+			const json jflags = je.at("flags");
+			
+			PSystem->wallType = jflags.value("wall_type", 1);
+			PSystem->femOn = 	jflags.value("fem_MESH", false);
+			PSystem->forcedOn = jflags.value("forced_MESH", false);
+			
+			// Types of Outputs
+			try {
+				const json joutVtu = jflags.at("output_VTU");
+				
+				vtuType = 				joutVtu.value("type", 0);
+				freeSurfWall = 			joutVtu.value("only_freeSurface", false);
+				outputPnd = 			joutVtu.value("pnd", false);
+				outputNeigh = 			joutVtu.value("neigh", false);
+				outputDeviation = 		joutVtu.value("deviation", false);
+				outputConcentration = 	joutVtu.value("concentration", false);
+				outputAuxiliar = 		joutVtu.value("auxiliar", false);
+				outputNonNewtonian =	joutVtu.value("non_newtonian", false);
 			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+			
+			try {
+				const json joutTxt = jflags.at("output_TXT");
+				txtPress = joutTxt.value("press", false);
+				txtForce = joutTxt.value("force", false);
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
 		}
+		catch (json::out_of_range& e) {
+			cout << e.what() << '\n';
+		}
+		
+		// Paths of input and output files/folders
+		try {
+			const json jpNames = je.at("pathNames");
+
+			gridFilename = 			jpNames.value("particle_grid_file", "oops");
+			meshRigidFilename = 	jpNames.value("mesh_rigid_file", "oops");
+			meshDeformableFilename =jpNames.value("mesh_deformable_file", "oops");
+			meshForcedFilename = 	jpNames.value("mesh_forced_file", "oops");
+			vtuOutputFoldername = 	jpNames.value("vtu_output_folder", "oops");
+			forceTxtFilename = 		jpNames.value("forceTxt_file", "oops");
+			pressTxtFilename = 		jpNames.value("pressTxt_file", "oops");
+		}
+		catch (json::out_of_range& e) {
+			cout << e.what() << '\n';
+		}
+		
+		// Geometry dimension limits
+		try {
+			const json jdomain = je.at("domain");
+			
+			try {
+				const json jdomainMin = jdomain.at("min");
+				PSystem->domainMinX = jdomainMin.value("x", 0.0);
+				PSystem->domainMinY = jdomainMin.value("y", 0.0);
+				PSystem->domainMinZ = jdomainMin.value("z", 0.0);
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+			
+			try {
+				const json jdomainMax = jdomain.at("max");
+				PSystem->domainMaxX = jdomainMax.value("x", 0.0);
+				PSystem->domainMaxY = jdomainMax.value("y", 0.0);
+				PSystem->domainMaxZ = jdomainMax.value("z", 0.0);
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
+			// Domain Periodic boundary condition
+			try {
+				const json jdomainBoundary = jdomain.at("boundary");
+
+				PSystem->domainTypeBC = jdomainBoundary.value("type", 0);
+				PSystem->limitTypeBC = 	jdomainBoundary.value("limit", 0);
+				PSystem->numBC = 1;
+
+				try {
+					const json jdomainBoundaryDir = jdomainBoundary.at("direction");
+
+					PSystem->periodicDirectionX = jdomainBoundaryDir.value("x", false);
+					PSystem->periodicDirectionY = jdomainBoundaryDir.value("y", false);
+					PSystem->periodicDirectionZ = jdomainBoundaryDir.value("z", false);
+				}
+				catch (json::out_of_range& e) {
+					cout << e.what() << '\n';
+
+					PSystem->periodicDirectionX = false;
+					PSystem->periodicDirectionY = false;
+					PSystem->periodicDirectionZ = false;
+				}
+				
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
+			// Inflow/Outflow boundary conditions
+			try {
+				const json jdomainBoundaryIO = jdomain.at("in_out_flow");
+
+				PSystem->inOutflowOn = jdomainBoundaryIO.value("set_on", false);
+
+				if (PSystem->inOutflowOn == true) {
+					try {
+						const json jdomainBoundaryIOPlanes = jdomainBoundaryIO.at("planes");
+
+						PSystem->numInOutflowPlane = jdomainBoundaryIOPlanes.size();
+						// std::cout << "\n Planes: " << jdomainBoundaryIOPlanes.size() << '\n';
+						if (PSystem->numInOutflowPlane > 0) {
+							allocateMemoryInOutflow(PSystem);
+							int ii = 0;
+							for (auto& el : jdomainBoundaryIOPlanes.items())
+							{
+								PSystem->inOutflowPlaneID[ii] = 	el.value()["id"];
+								PSystem->inOutflowTypeBC[ii] = 		el.value()["type_bc"];
+								PSystem->inOutflowPt[ii*3  ] = 		el.value()["seed_point"]["x"];
+								PSystem->inOutflowPt[ii*3+1] = 		el.value()["seed_point"]["y"];
+								PSystem->inOutflowPt[ii*3+2] = 		el.value()["seed_point"]["z"];
+								PSystem->inOutflowNormal[ii*3  ] = 	el.value()["normal"]["x"];
+								PSystem->inOutflowNormal[ii*3+1] = 	el.value()["normal"]["y"];
+								PSystem->inOutflowNormal[ii*3+2] = 	el.value()["normal"]["z"];
+								PSystem->inOutflowVel[ii*3  ] = 	el.value()["velocity"]["x"];
+								PSystem->inOutflowVel[ii*3+1] = 	el.value()["velocity"]["y"];
+								PSystem->inOutflowVel[ii*3+2] = 	el.value()["velocity"]["z"];
+								PSystem->inOutflowPress[ii] = 		el.value()["pressure"];
+								// std::cout << el.key() << " : " << el.value()["id"] << '\n';
+								// std::cout << el.key() << " : " << el.value()["type_bc"] << '\n';
+								// std::cout << el.key() << " : " << el.value()["seed_point"]["x"] << '\n';
+								// std::cout << el.key() << " : " << el.value()["seed_point"]["y"] << '\n';
+								// std::cout << el.key() << " : " << el.value()["seed_point"]["z"] << '\n';
+								// std::cout << el.key() << " : " << el.value()["normal"]["x"] << '\n';
+								// std::cout << el.key() << " : " << el.value()["normal"]["y"] << '\n';
+								// std::cout << el.key() << " : " << el.value()["normal"]["z"] << '\n';
+								// std::cout << el.key() << " : " << el.value()["velocity"]["x"] << '\n';
+								// std::cout << el.key() << " : " << el.value()["velocity"]["y"] << '\n';
+								// std::cout << el.key() << " : " << el.value()["velocity"]["z"] << '\n';
+								// std::cout << el.key() << " : " << el.value()["pressure"] << '\n';
+								ii++;
+							}
+						}
+					}
+					catch (json::out_of_range& e) {
+						cout << e.what() << '\n';
+						PSystem->numInOutflowPlane = 0;
+					}
+					
+				}
+				else {
+					PSystem->numInOutflowPlane = 0;
+				}
+
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+				PSystem->inOutflowOn = false;
+				PSystem->numInOutflowPlane = 0;
+			}
+
+		}
+		catch (json::out_of_range& e) {
+			cout << e.what() << '\n';
+		}
+		
+		// Physical parameters
+		try {
+			const json jphysical = je.at("physical");
+
+			PSystem->densityFluid = jphysical.value("fluid_density", 1000.0);
+			PSystem->densityWall = 	jphysical.value("wall_density", 1000.0);
+			PSystem->KNM_VS1 = 		jphysical.value("kinematic_visc", 0.000001);
+			PSystem->fluidType = 	jphysical.value("fluid_type", 0);
+
+			try {
+				const json jphysicalGrav = jphysical.at("gravity");
+
+				PSystem->gravityX = jphysicalGrav.value("x", 0.0);
+				PSystem->gravityY = jphysicalGrav.value("y", 0.0);
+				PSystem->gravityZ = jphysicalGrav.value("z", -9.81);
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
+			// Rheological parameters
+			try {
+				const json jphysicalRheo = jphysical.at("rheological");
+
+				PSystem->KNM_VS2 = 	jphysicalRheo.value("kinematic_visc_phase_2", 0.000001);
+				PSystem->DNS_FL1 = 	jphysicalRheo.value("fluid_density_phase_1", 1000.0);
+				PSystem->DNS_FL2 = 	jphysicalRheo.value("fluid_density_phase_2", 1540.0);
+				PSystem->DNS_SDT = 	jphysicalRheo.value("sediment_density", 1540.0);
+				PSystem->N = 		jphysicalRheo.value("power_law_index", 1.2);
+				PSystem->MEU0 = 	jphysicalRheo.value("consistency_index", 0.03);
+
+				try {
+					const json jphysicalRheoPhi = jphysicalRheo.at("phi");
+					
+					PSystem->PHI_1 = 	jphysicalRheoPhi.value("lower", 0.541);
+					PSystem->PHI_WAL = 	jphysicalRheoPhi.value("wall", 0.541);
+					PSystem->PHI_BED = 	jphysicalRheoPhi.value("bed", 0.541);
+					PSystem->PHI_2 = 	jphysicalRheoPhi.value("second", 0.6);
+				}
+				catch (json::out_of_range& e) {
+					cout << e.what() << '\n';
+				}
+
+				PSystem->cohes = 				jphysicalRheo.value("cohes_coeff", 0.0);
+				PSystem->Fraction_method = 		jphysicalRheo.value("fraction_method", 2);
+				// visc_max = jphysicalRheo.value("visc_max", 20);
+				PSystem->DG = 					jphysicalRheo.value("grain_size", 0.0035);
+				PSystem->I0 = 					jphysicalRheo.value("I0", 0.75);
+				PSystem->mm = 					jphysicalRheo.value("mm", 100.0);
+				PSystem->stress_calc_method = 	jphysicalRheo.value("stress_calc_method", 1);
+				
+				try {
+					const json jphysicalRheoVisc = jphysicalRheo.at("viscosity");
+					
+					PSystem->visc_itr_num = jphysicalRheoVisc.value("iter_num", 1);
+					PSystem->visc_error = 	jphysicalRheoVisc.value("error", 0.0);
+					PSystem->visc_ave = 	jphysicalRheoVisc.value("average", 0.0);
+				}
+				catch (json::out_of_range& e) {
+					cout << e.what() << '\n';
+				}
+
+				PSystem->Cd = jphysicalRheo.value("drag_coeff", 0.47);
+
+				try {
+					const json jphysicalRheoVol = jphysicalRheo.at("volume_fraction");
+					
+					PSystem->VF_min = jphysicalRheoVol.value("min", 0.25);
+					PSystem->VF_max = jphysicalRheoVol.value("max", 0.65);
+				}
+				catch (json::out_of_range& e) {
+					cout << e.what() << '\n';
+				}
+
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
+		}
+		catch (json::out_of_range& e) {
+			cout << e.what() << '\n';
+		}
+		
+		
+		// Numerical parameters
+		try {
+			const json jnumerical = je.at("numerical");
+			
+			PSystem->dim = 				jnumerical.value("dimension", 3.0);
+			PSystem->partDist = 		jnumerical.value("particle_dist", 0.01);
+			PSystem->timeStep = 		jnumerical.value("time_step", 0.0005);
+			PSystem->timeSimulation = 	jnumerical.value("final_time", 1.0);
+			PSystem->iterOutput = 		jnumerical.value("iter_output", 80);
+			PSystem->cflNumber = 		jnumerical.value("CFL_number", 0.2);
+			PSystem->weightType = 		jnumerical.value("weight_type", 0);
+			PSystem->slipCondition = 	jnumerical.value("slip_condition", 0);
+
+			try {
+				const json jnumericalRe = jnumerical.at("effective_radius");
+				
+				PSystem->reS = jnumericalRe.value("small", 2.1);
+				PSystem->reL = jnumericalRe.value("large", 2.1);
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
+			try {
+				const json jnumericalGrad = jnumerical.at("gradient");
+				
+				PSystem->gradientType = 		jnumericalGrad.value("type", 0);
+				PSystem->gradientCorrection = 	jnumericalGrad.value("correction", false);
+				PSystem->relaxPress = 			jnumericalGrad.value("relax_fact", 1.0);
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
+			PSystem->mpsType = jnumerical.value("mps_type", 1);
+
+			try {
+				const json jnumericalExp = jnumerical.at("explicit_mps");
+
+				try {
+					const json jnumericalExpEq = jnumericalExp.at("equation_state");
+
+					PSystem->soundSpeed = 	jnumericalExpEq.value("speed_sound", 15.0);
+					PSystem->gamma = 		jnumericalExpEq.value("gamma", 7.0);
+				}
+				catch (json::out_of_range& e) {
+					cout << e.what() << '\n';
+				}
+				
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
+			try {
+				const json jnumericalImp = jnumerical.at("semi_implicit_mps");
+
+				PSystem->solverType = jnumericalImp.value("solver_type", 0);
+
+				try {
+					const json jnumericalImpWeak = jnumericalImp.at("weak_compressibility");
+
+					PSystem->alphaCompressibility = jnumericalImpWeak.value("alpha", 0.000001);
+				}
+				catch (json::out_of_range& e) {
+					cout << e.what() << '\n';
+				}
+
+				try {
+					const json jnumericalImpSource = jnumericalImp.at("source_term");
+
+					PSystem->relaxPND = jnumericalImpSource.value("relax_pnd", 0.001);
+				}
+				catch (json::out_of_range& e) {
+					cout << e.what() << '\n';
+				}
+				
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
+			try {
+				const json jnumericalShift = jnumerical.at("particle_shifting");
+
+				PSystem->shiftingType = jnumericalShift.value("type", 2);
+				PSystem->dri = 			jnumericalShift.value("DRI", 0.01);
+				PSystem->coefA = 		jnumericalShift.value("coef_A", 2.0);
+				PSystem->machNumber = 	jnumericalShift.value("mach_number", 0.1);
+				PSystem->VEL_A = 		jnumericalShift.value("adj_vel_A", 0.1);
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
+			try {
+				const json jnumericalPnd = jnumerical.at("pnd");
+				
+				PSystem->pndType = 		jnumericalPnd.value("type", 0);
+				PSystem->diffusiveCoef =jnumericalPnd.value("diffusive_coeff", 0.35);
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
+			try {
+				const json jnumericalWallForce = jnumerical.at("wall_repulsive_force");
+				
+				PSystem->repulsiveForceType = 	jnumericalWallForce.value("type", 2);
+				PSystem->reRepulsiveForce = 	jnumericalWallForce.value("re", 0.5);
+				PSystem->expectMaxVelocity = 	jnumericalWallForce.value("maxVel", 6.0);
+
+				try {
+					const json jnumericalWallForceCoef = jnumericalWallForce.at("coefficient");
+
+					PSystem->repForceCoefMitsume = 			jnumericalWallForceCoef.value("Mitsume", 40000000.0);
+					PSystem->repForceCoefLennardJones = 	jnumericalWallForceCoef.value("Lennard-Jones", 2.0);
+					PSystem->repForceCoefMonaghanKajtar = 	jnumericalWallForceCoef.value("Monaghan-Kajtar", 1.0);
+				}
+				catch (json::out_of_range& e) {
+					cout << e.what() << '\n';
+				}
+
+				PSystem->EPS_RE = jnumericalWallForce.value("eps_re", 0.01);
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
+			try {
+				const json jnumericalFree = jnumerical.at("free_surface_threshold");
+				
+				PSystem->freeSurfType = 	jnumericalFree.value("type", 0);
+				PSystem->pndThreshold = 	jnumericalFree.value("pnd", 0.98);
+				PSystem->neighThreshold = 	jnumericalFree.value("neigh", 0.85);
+				PSystem->npcdThreshold = 	jnumericalFree.value("NPCD", 0.20);
+				PSystem->thetaThreshold = 	jnumericalFree.value("ARC", 45.0);
+				PSystem->normThreshold = 	jnumericalFree.value("normal", 0.1);
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
+			try {
+				const json jnumericalCol = jnumerical.at("particle_collision");
+				
+				PSystem->collisionType = 	jnumericalCol.value("type", 0);
+				PSystem->collisionRatio = 	jnumericalCol.value("ratio", 0.20);
+				PSystem->distLimitRatio = 	jnumericalCol.value("dist_limit_ratio", 0.85);
+				PSystem->lambdaCollision = 	jnumericalCol.value("lambda", 0.20);
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
+			try {
+				const json jnumericalPtype = jnumerical.at("particle_type");
+
+				PSystem->ghost = 	jnumericalPtype.value("ghost", -1);
+				PSystem->fluid = 	jnumericalPtype.value("fluid",  0);
+				PSystem->wall = 	jnumericalPtype.value("wall", 2);
+				PSystem->dummyWall =jnumericalPtype.value("dummyWall", 3);
+				if (PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
+					PSystem->inOutflowParticle = jnumericalPtype.value("inOutflow", 4);
+				}
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
+			try {
+				const json jnumericalBtype = jnumerical.at("boundary_type");
+				
+				PSystem->surface = 	jnumericalBtype.value("free_surface", 1);
+				PSystem->inner = 	jnumericalBtype.value("inner", 0);
+				PSystem->other = 	jnumericalBtype.value("other", -1);
+			}
+			catch (json::out_of_range& e) {
+				cout << e.what() << '\n';
+			}
+
+		}
+		catch (json::out_of_range& e) {
+			cout << e.what() << '\n';
+		}
+		
 	}
-	else {
-		PSystem->numInOutflowPlane = 0;
+	catch (json::parse_error& e)
+	{
+		// output exception information
+		cout 	<< '\n' << "JSON INPUT FILE ERROR !!!" << '\n'
+				<< "message: " << e.what() << '\n'
+				<< "exception id: " << e.id << '\n'
+				<< "byte position of error: " << e.byte << '\n'
+				<< "For more information, see https://json.nlohmann.me/home/exceptions" << endl;
+		
+		throw std::exception();
 	}
 
-	
-	// Physical parameters
-	PSystem->densityFluid = je.at("physical").value("fluid_density", 1000.0);
-	PSystem->densityWall = je.at("physical").value("wall_density", 1000.0);
-	PSystem->KNM_VS1 = je.at("physical").value("kinematic_visc", 0.000001);
-	PSystem->fluidType = je.at("physical").value("fluid_type", 0);
-	PSystem->gravityX = je.at("physical").at("gravity").value("x", 0.0);
-	PSystem->gravityY = je.at("physical").at("gravity").value("y", 0.0);
-	PSystem->gravityZ = je.at("physical").at("gravity").value("z", -9.81);
-	// Rheological parameters
-	PSystem->KNM_VS2 = je.at("physical").at("rheological").value("kinematic_visc_phase_2", 0.000001);
-	PSystem->DNS_FL1 = je.at("physical").at("rheological").value("fluid_density_phase_1", 1000.0);
-	PSystem->DNS_FL2 = je.at("physical").at("rheological").value("fluid_density_phase_2", 1540.0);
-	PSystem->DNS_SDT = je.at("physical").at("rheological").value("sediment_density", 1540.0);
-	PSystem->N = je.at("physical").at("rheological").value("power_law_index", 1.2);
-	PSystem->MEU0 = je.at("physical").at("rheological").value("consistency_index", 0.03);
-	PSystem->PHI_1 = je.at("physical").at("rheological").at("phi").value("lower", 0.541);
-	PSystem->PHI_WAL = je.at("physical").at("rheological").at("phi").value("wall", 0.541);
-	PSystem->PHI_BED = je.at("physical").at("rheological").at("phi").value("bed", 0.541);
-	PSystem->PHI_2 = je.at("physical").at("rheological").at("phi").value("second", 0.6);
-	PSystem->cohes = je.at("physical").at("rheological").value("cohes_coeff", 0.0);
-	PSystem->Fraction_method = je.at("physical").at("rheological").value("fraction_method", 2);
-	//visc_max = je.at("physical").at("rheological").value("visc_max", 20);
-	PSystem->DG = je.at("physical").at("rheological").value("grain_size", 0.0035);
-	PSystem->I0 = je.at("physical").at("rheological").value("I0", 0.75);
-	PSystem->mm = je.at("physical").at("rheological").value("mm", 100.0);
-	PSystem->stress_calc_method = je.at("physical").at("rheological").value("stress_calc_method", 1);
-	PSystem->visc_itr_num = je.at("physical").at("rheological").at("viscosity").value("iter_num", 1);
-	PSystem->visc_error = je.at("physical").at("rheological").at("viscosity").value("error", 0.0);
-	PSystem->visc_ave = je.at("physical").at("rheological").at("viscosity").value("average", 0.0);
-	PSystem->Cd = je.at("physical").at("rheological").value("drag_coeff", 0.47);
-	PSystem->VF_min = je.at("physical").at("rheological").at("volume_fraction").value("min", 0.25);
-	PSystem->VF_max = je.at("physical").at("rheological").at("volume_fraction").value("max", 0.65);
-	
-	// Numerical parameters
-	PSystem->dim = je.at("numerical").value("dimension", 3.0);
-	PSystem->partDist = je.at("numerical").value("particle_dist", 0.01);
-	PSystem->timeStep = je.at("numerical").value("time_step", 0.0005);
-	PSystem->timeSimulation = je.at("numerical").value("final_time", 1.0);
-	PSystem->iterOutput = je.at("numerical").value("iter_output", 80);
-	PSystem->cflNumber = je.at("numerical").value("CFL_number", 0.2);
-	PSystem->weightType = je.at("numerical").value("weight_type", 0);
-	PSystem->slipCondition = je.at("numerical").value("slip_condition", 0);
-	PSystem->reS = je.at("numerical").at("effective_radius").value("small", 2.1);
-	PSystem->reL = je.at("numerical").at("effective_radius").value("large", 2.1);
-	PSystem->gradientType = je.at("numerical").at("gradient").value("type", 3);
-	PSystem->gradientCorrection = je.at("numerical").at("gradient").value("correction", false);
-	PSystem->relaxPress = je.at("numerical").at("gradient").value("relax_fact", 1.0);
-	PSystem->mpsType = je.at("numerical").value("mps_type", 1);
-	PSystem->soundSpeed = je.at("numerical").at("explicit_mps").at("equation_state").value("speed_sound", 15.0);
-	PSystem->gamma = je.at("numerical").at("explicit_mps").at("equation_state").value("gamma", 7.0);
-	PSystem->solverType = je.at("numerical").at("semi_implicit_mps").value("solver_type", 0);
-	PSystem->alphaCompressibility = je.at("numerical").at("semi_implicit_mps").at("weak_compressibility").value("alpha", 0.000001);
-	PSystem->relaxPND = je.at("numerical").at("semi_implicit_mps").at("source_term").value("relax_pnd", 0.001);
-	PSystem->shiftingType = je.at("numerical").at("particle_shifting").value("type", 2);
-	PSystem->dri = je.at("numerical").at("particle_shifting").value("DRI", 0.01);
-	PSystem->coefA = je.at("numerical").at("particle_shifting").value("coef_A", 2.0);
-	PSystem->machNumber = je.at("numerical").at("particle_shifting").value("mach_number", 0.1);
-	PSystem->VEL_A = je.at("numerical").at("particle_shifting").value("adj_vel_A", 0.1);
-	PSystem->pndType = je.at("numerical").at("pnd").value("type", 0);
-	PSystem->diffusiveCoef = je.at("numerical").at("pnd").value("diffusive_coeff", 0.35);
-	PSystem->repulsiveForceType = je.at("numerical").at("wall_repulsive_force").value("type", 2);
-	PSystem->reRepulsiveForce = je.at("numerical").at("wall_repulsive_force").value("re", 0.5);
-	PSystem->expectMaxVelocity = je.at("numerical").at("wall_repulsive_force").value("maxVel", 6.0);
-	PSystem->repForceCoefMitsume = je.at("numerical").at("wall_repulsive_force").at("coefficient").value("Mitsume", 40000000.0);
-	PSystem->repForceCoefLennardJones = je.at("numerical").at("wall_repulsive_force").at("coefficient").value("Lennard-Jones", 2.0);
-	PSystem->repForceCoefMonaghanKajtar = je.at("numerical").at("wall_repulsive_force").at("coefficient").value("Monaghan-Kajtar", 1.0);
-	PSystem->EPS_RE = je.at("numerical").at("wall_repulsive_force").value("eps_re", 0.01);
-	PSystem->freeSurfType = je.at("numerical").at("free_surface_threshold").value("type", 0);
-	PSystem->pndThreshold = je.at("numerical").at("free_surface_threshold").value("pnd", 0.98);
-	PSystem->neighThreshold = je.at("numerical").at("free_surface_threshold").value("neigh", 0.85);
-	PSystem->npcdThreshold = je.at("numerical").at("free_surface_threshold").value("NPCD", 0.20);
-	PSystem->thetaThreshold = je.at("numerical").at("free_surface_threshold").value("ARC", 45.0);
-	PSystem->normThreshold = je.at("numerical").at("free_surface_threshold").value("normal", 0.1);
-	PSystem->collisionType = je.at("numerical").at("particle_collision").value("type", 0);
-	PSystem->collisionRatio = je.at("numerical").at("particle_collision").value("ratio", 0.20);
-	PSystem->distLimitRatio = je.at("numerical").at("particle_collision").value("dist_limit_ratio", 0.85);
-	PSystem->lambdaCollision = je.at("numerical").at("particle_collision").value("lambda", 0.20);
-	PSystem->ghost = je.at("numerical").at("particle_type").value("ghost", -1);
-	PSystem->fluid = je.at("numerical").at("particle_type").value("fluid",  0);
-	PSystem->wall = je.at("numerical").at("particle_type").value("wall", 2);
-	PSystem->dummyWall = je.at("numerical").at("particle_type").value("dummyWall", 3);
-
-	if (PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
-		PSystem->inOutflowParticle = je.at("numerical").at("particle_type").value("inOutflow", 4);
-	}
-	
-	PSystem->surface = je.at("numerical").at("boundary_type").value("free_surface", 1);
-	PSystem->inner = je.at("numerical").at("boundary_type").value("inner", 0);
-	PSystem->other = je.at("numerical").at("boundary_type").value("other", -1);
 	PSystem->numPartTypes = 3;
 
 	printf("OK\n");
@@ -311,8 +598,9 @@ void MpsInputOutput::readInputFile(MpsParticleSystem *PSystem, MpsParticle *Part
 
 	// Error message
 	if(PSystem->partDist*PSystem->partDist <= PSystem->epsilonZero) {
-			printf("\nError: Operations using squared particle distance lower than the machine double precision. Use a model with a higher particle distance.\n");
-			throw std::exception();
+		printf("\nError: Operations using squared particle distance lower than the machine double precision."
+			" Use a model with a higher particle distance.\n");
+		throw std::exception();
 	}
 
 	if(PSystem->mpsType == calcPressType::IMPLICIT_PND || PSystem->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
