@@ -212,7 +212,8 @@ void MpsParticle::setParameters(MpsParticleSystem *PSystem) {
 void MpsParticle::checkParticleOutDomain(MpsParticleSystem *PSystem) {
 
 #pragma omp parallel for
-	for(int i=0; i<numParticles; i++) {
+	for(int ip=0; ip<numParticles; ip++) {
+		int i = particleID[ip];
 		for(int b=0; b<PSystem->numBC; b++) {
 			if(bucketTypeBC[b] == domainBC::PERIODIC) {
 				// Periodic in X
@@ -265,7 +266,8 @@ void MpsParticle::checkParticleOutDomain(MpsParticleSystem *PSystem) {
 
 	// Set outside particles as ghost
 #pragma omp parallel for reduction(+:numGhostParticlesAux)
-	for(int i=0; i<numParticles; i++) {
+	for(int ip=0; ip<numParticles; ip++) {
+		int i = particleID[ip];
 		if((pos[i*3  ]>limMaxX || pos[i*3  ]<limMinX ||
 			pos[i*3+1]>limMaxY || pos[i*3+1]<limMinY ||
 			(PSystem->dim == 3 && (pos[i*3+2]>limMaxZ || pos[i*3+2]<limMinZ)))) {
@@ -285,7 +287,8 @@ void MpsParticle::checkParticleOutDomain(MpsParticleSystem *PSystem) {
 	// 	moveGhostToLastPosArray(PSystem);
 	// }
 	
-	// for(int i=0; i<numParticles; i++) {
+	// for(int ip=0; ip<numParticles; ip++) {
+	// int i = particleID[ip];
 	// 	if((pos[i*3  ]>limMaxX || pos[i*3  ]<limMinX ||
 	// 		pos[i*3+1]>limMaxY || pos[i*3+1]<limMinY ||
 	// 		(PSystem->dim == 3 && (pos[i*3+2]>limMaxZ || pos[i*3+2]<limMinZ)))) {
@@ -352,6 +355,7 @@ void MpsParticle::setParticleDataToGhost(const int i, MpsParticleSystem *PSystem
 	if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
 		signDist[i] = PSystem->nearInfinity;
 		isInIORegion[i] = false;
+		// motherID[i] = -1;
 	}
 }
 
@@ -366,15 +370,18 @@ void MpsParticle::moveGhostToLastPosArray(MpsParticleSystem *PSystem) {
 	if(PSystem->inOutflowOn == false) {
 		// Reverse for loop
 		// https://stackoverflow.com/questions/275994/whats-the-best-way-to-do-a-backwards-loop-in-c-c-c
-		for (int i = numParticles; i --> 0; )
+		for (int ip = numParticles; ip --> 0; )
 		{
+			int i = particleID[ip];
 			if (particleType[i] == PSystem->ghost)
 			{
 				// ID of last Real particle
-				int iLastRealParticle = newNumRealParticles - 1;
+				int ipLastRealParticle = newNumRealParticles - 1;
+				// int iLastRealParticle = particleID[ipLastRealParticle];
 
 				// Swap the data between "Last Real Particle" and i-th Ghost particle
-				swapDataLastRealPartAndGhostPart(i, iLastRealParticle, PSystem);
+				// swapDataLastRealPartAndGhostPart(i, iLastRealParticle, PSystem);
+				swapDataLastRealPartAndGhostPart(ip, ipLastRealParticle, PSystem);
 
 				// Decrease number of Real particles
 				newNumRealParticles--;
@@ -386,24 +393,29 @@ void MpsParticle::moveGhostToLastPosArray(MpsParticleSystem *PSystem) {
 	else if (PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
 		// Reverse for loop
 		// https://stackoverflow.com/questions/275994/whats-the-best-way-to-do-a-backwards-loop-in-c-c-c
-		for (int i = numParticles; i --> 0; )
+		for (int ip = numParticles; ip --> 0; )
 		{
+			int i = particleID[ip];
 			if (particleType[i] == PSystem->ghost)
 			{
 				// ID of last Real particle
-				int iLastRealParticle = newNumRealParticles - 1;
+				int ipLastRealParticle = newNumRealParticles - 1;
+				// int iLastRealParticle = particleID[ipLastRealParticle];
 
 				// Swap the data between "Last Real Particle" and i-th Ghost particle
-				swapDataLastRealPartAndGhostPart(i, iLastRealParticle, PSystem);
+				// swapDataLastRealPartAndGhostPart(i, iLastRealParticle, PSystem);
+				swapDataLastRealPartAndGhostPart(ip, ipLastRealParticle, PSystem);
 
 				// Decrease number of Real particles
 				newNumRealParticles--;
 
 				// ID of last Real+IO particle
-				int iLastRealIOParticle = newNumRealIOParticles - 1;
+				int ipLastRealIOParticle = newNumRealIOParticles - 1;
+				// int iLastRealIOParticle = particleID[ipLastRealIOParticle];
 
 				// Swap the data between "Last Real+IO Particle" and "Last Real Particle" previously assigned as ghost
-				swapDataLastRealIOPartAndLastRealPart(iLastRealParticle, iLastRealIOParticle, PSystem);
+				// swapDataLastRealIOPartAndLastRealPart(iLastRealParticle, iLastRealIOParticle, PSystem);
+				swapDataLastRealIOPartAndLastRealPart(ipLastRealParticle, ipLastRealIOParticle, PSystem);
 				
 				// Decrease number of Real+IO particles
 				newNumRealIOParticles--;
@@ -424,171 +436,180 @@ void MpsParticle::moveGhostToLastPosArray(MpsParticleSystem *PSystem) {
 
 // Swap the data between "Last Real Particle" and i-th Ghost particle
 void MpsParticle::swapDataLastRealPartAndGhostPart(const int i, const int iLastReal, MpsParticleSystem *PSystem) {
-	// Swapping elements in the array
-	// Scalars
-	swap(particleType[i], particleType[iLastReal]);
-	swap(particleBC[i], particleBC[iLastReal]);
-	swap(numNeigh[i], numNeigh[iLastReal]);
-	swap(press[i], press[iLastReal]);
-	swap(pressAverage[i], pressAverage[iLastReal]);
-	swap(pndi[i], pndi[iLastReal]);
-	swap(pndki[i], pndki[iLastReal]);
-	swap(pndski[i], pndski[iLastReal]);
-	swap(pndSmall[i], pndSmall[iLastReal]);
-	swap(npcdDeviation2[i], npcdDeviation2[iLastReal]);
-	swap(concentration[i], concentration[iLastReal]);
-	swap(velDivergence[i], velDivergence[iLastReal]);
-	swap(diffusiveTerm[i], diffusiveTerm[iLastReal]);
-	swap(nearMeshType[i], nearMeshType[iLastReal]);
-	swap(particleNearWall[i], particleNearWall[iLastReal]);
-	swap(numNeighWallContribution[i], numNeighWallContribution[iLastReal]);
-	swap(pndWallContribution[i], pndWallContribution[iLastReal]);
-	swap(deviationDotPolygonNormal[i], deviationDotPolygonNormal[iLastReal]);
-	swap(numNeighborsSurfaceParticles[i], numNeighborsSurfaceParticles[iLastReal]);
-	swap(distParticleWall2[i], distParticleWall2[iLastReal]);
-	swap(PTYPE[i], PTYPE[iLastReal]);
-	swap(RHO[i], RHO[iLastReal]);
-	swap(MEU[i], MEU[iLastReal]);
-	swap(elementID[i], elementID[iLastReal]);
+	// Swapping particle ID in the array
+	swap(particleID[i], particleID[iLastReal]);
 
-	if(PSystem->fluidType == viscType::NON_NEWTONIAN) {
-		swap(Cv[i], Cv[iLastReal]);
-		swap(II[i], II[iLastReal]);
-		swap(MEU_Y[i], MEU_Y[iLastReal]);
-		swap(Inertia[i], Inertia[iLastReal]);
-		swap(pnew[i], pnew[iLastReal]);
-		swap(p_rheo_new[i], p_rheo_new[iLastReal]);
-		swap(p_smooth[i], p_smooth[iLastReal]);
-		swap(VF[i], VF[iLastReal]);
-		swap(S12[i], S12[iLastReal]);
-		swap(S13[i], S13[iLastReal]);
-		swap(S23[i], S23[iLastReal]);
-		swap(S11[i], S11[iLastReal]);
-		swap(S22[i], S22[iLastReal]);
-		swap(S33[i], S33[iLastReal]);
-	}
+	// // Swapping elements in the array
+	// // Scalars
+	// swap(particleType[i], particleType[iLastReal]);
+	// swap(particleBC[i], particleBC[iLastReal]);
+	// swap(numNeigh[i], numNeigh[iLastReal]);
+	// swap(press[i], press[iLastReal]);
+	// swap(pressAverage[i], pressAverage[iLastReal]);
+	// swap(pndi[i], pndi[iLastReal]);
+	// swap(pndki[i], pndki[iLastReal]);
+	// swap(pndski[i], pndski[iLastReal]);
+	// swap(pndSmall[i], pndSmall[iLastReal]);
+	// swap(npcdDeviation2[i], npcdDeviation2[iLastReal]);
+	// swap(concentration[i], concentration[iLastReal]);
+	// swap(velDivergence[i], velDivergence[iLastReal]);
+	// swap(diffusiveTerm[i], diffusiveTerm[iLastReal]);
+	// swap(nearMeshType[i], nearMeshType[iLastReal]);
+	// swap(particleNearWall[i], particleNearWall[iLastReal]);
+	// swap(numNeighWallContribution[i], numNeighWallContribution[iLastReal]);
+	// swap(pndWallContribution[i], pndWallContribution[iLastReal]);
+	// swap(deviationDotPolygonNormal[i], deviationDotPolygonNormal[iLastReal]);
+	// swap(numNeighborsSurfaceParticles[i], numNeighborsSurfaceParticles[iLastReal]);
+	// swap(distParticleWall2[i], distParticleWall2[iLastReal]);
+	// swap(PTYPE[i], PTYPE[iLastReal]);
+	// swap(RHO[i], RHO[iLastReal]);
+	// swap(MEU[i], MEU[iLastReal]);
+	// swap(elementID[i], elementID[iLastReal]);
 
-	// if(PSystem->mpsType == calcPressType::IMPLICIT_PND || 
-	// 	PSystem->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
-	// 	swap(pressurePPE(i), pressurePPE(iLastReal));
-	// 	// swap(sourceTerm(i), sourceTerm(iLastReal));
+	// if(PSystem->fluidType == viscType::NON_NEWTONIAN) {
+	// 	swap(Cv[i], Cv[iLastReal]);
+	// 	swap(II[i], II[iLastReal]);
+	// 	swap(MEU_Y[i], MEU_Y[iLastReal]);
+	// 	swap(Inertia[i], Inertia[iLastReal]);
+	// 	swap(pnew[i], pnew[iLastReal]);
+	// 	swap(p_rheo_new[i], p_rheo_new[iLastReal]);
+	// 	swap(p_smooth[i], p_smooth[iLastReal]);
+	// 	swap(VF[i], VF[iLastReal]);
+	// 	swap(S12[i], S12[iLastReal]);
+	// 	swap(S13[i], S13[iLastReal]);
+	// 	swap(S23[i], S23[iLastReal]);
+	// 	swap(S11[i], S11[iLastReal]);
+	// 	swap(S22[i], S22[iLastReal]);
+	// 	swap(S33[i], S33[iLastReal]);
 	// }
-	
-	if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
-		swap(signDist[i], signDist[iLastReal]);
-		swap(isInIORegion[i], isInIORegion[iLastReal]);
-	}
 
-	// Vectors
-	for (int j = 0; j < 3; j++) {
-		swap(acc[i*3+j], acc[iLastReal*3+j]);
-		swap(accStar[i*3+j], accStar[iLastReal*3+j]);
-		swap(pos[i*3+j], pos[iLastReal*3+j]);
-		swap(vel[i*3+j], vel[iLastReal*3+j]);
-		swap(npcdDeviation[i*3+j], npcdDeviation[iLastReal*3+j]);
-		swap(gradConcentration[i*3+j], gradConcentration[iLastReal*3+j]);
-		swap(correcMatrixRow1[i*3+j], correcMatrixRow1[iLastReal*3+j]);
-		swap(correcMatrixRow2[i*3+j], correcMatrixRow2[iLastReal*3+j]);
-		swap(correcMatrixRow3[i*3+j], correcMatrixRow3[iLastReal*3+j]);
-		swap(normal[i*3+j], normal[iLastReal*3+j]);
-		swap(dvelCollision[i*3+j], dvelCollision[iLastReal*3+j]);
-		swap(particleAtWallPos[i*3+j], particleAtWallPos[iLastReal*3+j]);
-		swap(mirrorParticlePos[i*3+j], mirrorParticlePos[iLastReal*3+j]);
-		swap(wallParticleForce1[i*3+j], wallParticleForce1[iLastReal*3+j]);
-		swap(wallParticleForce2[i*3+j], wallParticleForce2[iLastReal*3+j]);
-		swap(polygonNormal[i*3+j], polygonNormal[iLastReal*3+j]);
-		swap(forceWall[i*3+j], forceWall[iLastReal*3+j]);
-		// swap(Posk[i*3+j], Posk[iLastReal*3+j]);
-		// swap(Velk[i*3+j], Velk[iLastReal*3+j]);
-		// swap(Acv[i*3+j], Acv[iLastReal*3+j]);
-	}
+	// // if(PSystem->mpsType == calcPressType::IMPLICIT_PND || 
+	// // 	PSystem->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
+	// // 	swap(pressurePPE(i), pressurePPE(iLastReal));
+	// // 	// swap(sourceTerm(i), sourceTerm(iLastReal));
+	// // }
+	
+	// if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
+	// 	swap(signDist[i], signDist[iLastReal]);
+	// 	swap(isInIORegion[i], isInIORegion[iLastReal]);
+	// 	swap(motherID[i], motherID[iLastReal]);
+	// }
+
+	// // Vectors
+	// for (int j = 0; j < 3; j++) {
+	// 	swap(acc[i*3+j], acc[iLastReal*3+j]);
+	// 	swap(accStar[i*3+j], accStar[iLastReal*3+j]);
+	// 	swap(pos[i*3+j], pos[iLastReal*3+j]);
+	// 	swap(vel[i*3+j], vel[iLastReal*3+j]);
+	// 	swap(npcdDeviation[i*3+j], npcdDeviation[iLastReal*3+j]);
+	// 	swap(gradConcentration[i*3+j], gradConcentration[iLastReal*3+j]);
+	// 	swap(correcMatrixRow1[i*3+j], correcMatrixRow1[iLastReal*3+j]);
+	// 	swap(correcMatrixRow2[i*3+j], correcMatrixRow2[iLastReal*3+j]);
+	// 	swap(correcMatrixRow3[i*3+j], correcMatrixRow3[iLastReal*3+j]);
+	// 	swap(normal[i*3+j], normal[iLastReal*3+j]);
+	// 	swap(dvelCollision[i*3+j], dvelCollision[iLastReal*3+j]);
+	// 	swap(particleAtWallPos[i*3+j], particleAtWallPos[iLastReal*3+j]);
+	// 	swap(mirrorParticlePos[i*3+j], mirrorParticlePos[iLastReal*3+j]);
+	// 	swap(wallParticleForce1[i*3+j], wallParticleForce1[iLastReal*3+j]);
+	// 	swap(wallParticleForce2[i*3+j], wallParticleForce2[iLastReal*3+j]);
+	// 	swap(polygonNormal[i*3+j], polygonNormal[iLastReal*3+j]);
+	// 	swap(forceWall[i*3+j], forceWall[iLastReal*3+j]);
+	// 	// swap(Posk[i*3+j], Posk[iLastReal*3+j]);
+	// 	// swap(Velk[i*3+j], Velk[iLastReal*3+j]);
+	// 	// swap(Acv[i*3+j], Acv[iLastReal*3+j]);
+	// }
 }
 
 // Swap the data between "Last Real+IO Particle" and "Last Real Particle" previously assigned as ghost
 void MpsParticle::swapDataLastRealIOPartAndLastRealPart(const int iLastReal, const int iLastRealIO, MpsParticleSystem *PSystem) {
-	// Swapping elements in the array
-	// Scalars
-	swap(particleType[iLastReal], particleType[iLastRealIO]);
-	swap(particleBC[iLastReal], particleBC[iLastRealIO]);
-	swap(numNeigh[iLastReal], numNeigh[iLastRealIO]);
-	swap(press[iLastReal], press[iLastRealIO]);
-	swap(pressAverage[iLastReal], pressAverage[iLastRealIO]);
-	swap(pndi[iLastReal], pndi[iLastRealIO]);
-	swap(pndki[iLastReal], pndki[iLastRealIO]);
-	swap(pndski[iLastReal], pndski[iLastRealIO]);
-	swap(pndSmall[iLastReal], pndSmall[iLastRealIO]);
-	swap(npcdDeviation2[iLastReal], npcdDeviation2[iLastRealIO]);
-	swap(concentration[iLastReal], concentration[iLastRealIO]);
-	swap(velDivergence[iLastReal], velDivergence[iLastRealIO]);
-	swap(diffusiveTerm[iLastReal], diffusiveTerm[iLastRealIO]);
-	swap(nearMeshType[iLastReal], nearMeshType[iLastRealIO]);
-	swap(particleNearWall[iLastReal], particleNearWall[iLastRealIO]);
-	swap(numNeighWallContribution[iLastReal], numNeighWallContribution[iLastRealIO]);
-	swap(pndWallContribution[iLastReal], pndWallContribution[iLastRealIO]);
-	swap(deviationDotPolygonNormal[iLastReal], deviationDotPolygonNormal[iLastRealIO]);
-	swap(numNeighborsSurfaceParticles[iLastReal], numNeighborsSurfaceParticles[iLastRealIO]);
-	swap(distParticleWall2[iLastReal], distParticleWall2[iLastRealIO]);
-	swap(PTYPE[iLastReal], PTYPE[iLastRealIO]);
-	swap(RHO[iLastReal], RHO[iLastRealIO]);
-	swap(MEU[iLastReal], MEU[iLastRealIO]);
-	swap(elementID[iLastReal], elementID[iLastRealIO]);
+	// Swapping particle ID in the array
+	swap(particleID[iLastReal], particleID[iLastRealIO]);
+	
+	// // Swapping elements in the array
+	// // Scalars
+	// swap(particleType[iLastReal], particleType[iLastRealIO]);
+	// swap(particleBC[iLastReal], particleBC[iLastRealIO]);
+	// swap(numNeigh[iLastReal], numNeigh[iLastRealIO]);
+	// swap(press[iLastReal], press[iLastRealIO]);
+	// swap(pressAverage[iLastReal], pressAverage[iLastRealIO]);
+	// swap(pndi[iLastReal], pndi[iLastRealIO]);
+	// swap(pndki[iLastReal], pndki[iLastRealIO]);
+	// swap(pndski[iLastReal], pndski[iLastRealIO]);
+	// swap(pndSmall[iLastReal], pndSmall[iLastRealIO]);
+	// swap(npcdDeviation2[iLastReal], npcdDeviation2[iLastRealIO]);
+	// swap(concentration[iLastReal], concentration[iLastRealIO]);
+	// swap(velDivergence[iLastReal], velDivergence[iLastRealIO]);
+	// swap(diffusiveTerm[iLastReal], diffusiveTerm[iLastRealIO]);
+	// swap(nearMeshType[iLastReal], nearMeshType[iLastRealIO]);
+	// swap(particleNearWall[iLastReal], particleNearWall[iLastRealIO]);
+	// swap(numNeighWallContribution[iLastReal], numNeighWallContribution[iLastRealIO]);
+	// swap(pndWallContribution[iLastReal], pndWallContribution[iLastRealIO]);
+	// swap(deviationDotPolygonNormal[iLastReal], deviationDotPolygonNormal[iLastRealIO]);
+	// swap(numNeighborsSurfaceParticles[iLastReal], numNeighborsSurfaceParticles[iLastRealIO]);
+	// swap(distParticleWall2[iLastReal], distParticleWall2[iLastRealIO]);
+	// swap(PTYPE[iLastReal], PTYPE[iLastRealIO]);
+	// swap(RHO[iLastReal], RHO[iLastRealIO]);
+	// swap(MEU[iLastReal], MEU[iLastRealIO]);
+	// swap(elementID[iLastReal], elementID[iLastRealIO]);
 
-	if(PSystem->fluidType == viscType::NON_NEWTONIAN) {
-		swap(Cv[iLastReal], Cv[iLastRealIO]);
-		swap(II[iLastReal], II[iLastRealIO]);
-		swap(MEU_Y[iLastReal], MEU_Y[iLastRealIO]);
-		swap(Inertia[iLastReal], Inertia[iLastRealIO]);
-		swap(pnew[iLastReal], pnew[iLastRealIO]);
-		swap(p_rheo_new[iLastReal], p_rheo_new[iLastRealIO]);
-		swap(p_smooth[iLastReal], p_smooth[iLastRealIO]);
-		swap(VF[iLastReal], VF[iLastRealIO]);
-		swap(S12[iLastReal], S12[iLastRealIO]);
-		swap(S13[iLastReal], S13[iLastRealIO]);
-		swap(S23[iLastReal], S23[iLastRealIO]);
-		swap(S11[iLastReal], S11[iLastRealIO]);
-		swap(S22[iLastReal], S22[iLastRealIO]);
-		swap(S33[iLastReal], S33[iLastRealIO]);
-	}
-
-	// if(PSystem->mpsType == calcPressType::IMPLICIT_PND || 
-	// 	PSystem->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
-	// 	swap(pressurePPE(iLastReal), pressurePPE(iLastRealIO));
-	// 	swap(sourceTerm(iLastReal), sourceTerm(iLastRealIO));
+	// if(PSystem->fluidType == viscType::NON_NEWTONIAN) {
+	// 	swap(Cv[iLastReal], Cv[iLastRealIO]);
+	// 	swap(II[iLastReal], II[iLastRealIO]);
+	// 	swap(MEU_Y[iLastReal], MEU_Y[iLastRealIO]);
+	// 	swap(Inertia[iLastReal], Inertia[iLastRealIO]);
+	// 	swap(pnew[iLastReal], pnew[iLastRealIO]);
+	// 	swap(p_rheo_new[iLastReal], p_rheo_new[iLastRealIO]);
+	// 	swap(p_smooth[iLastReal], p_smooth[iLastRealIO]);
+	// 	swap(VF[iLastReal], VF[iLastRealIO]);
+	// 	swap(S12[iLastReal], S12[iLastRealIO]);
+	// 	swap(S13[iLastReal], S13[iLastRealIO]);
+	// 	swap(S23[iLastReal], S23[iLastRealIO]);
+	// 	swap(S11[iLastReal], S11[iLastRealIO]);
+	// 	swap(S22[iLastReal], S22[iLastRealIO]);
+	// 	swap(S33[iLastReal], S33[iLastRealIO]);
 	// }
+
+	// // if(PSystem->mpsType == calcPressType::IMPLICIT_PND || 
+	// // 	PSystem->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
+	// // 	swap(pressurePPE(iLastReal), pressurePPE(iLastRealIO));
+	// // 	swap(sourceTerm(iLastReal), sourceTerm(iLastRealIO));
+	// // }
 	
-	swap(signDist[iLastReal], signDist[iLastRealIO]);
-	swap(isInIORegion[iLastReal], isInIORegion[iLastRealIO]);
+	// swap(signDist[iLastReal], signDist[iLastRealIO]);
+	// swap(isInIORegion[iLastReal], isInIORegion[iLastRealIO]);
+	// swap(motherID[iLastReal], motherID[iLastRealIO]);
 	
-	// Vectors
-	for (int j = 0; j < 3; j++) {
-		swap(acc[iLastReal*3+j], acc[iLastRealIO*3+j]);
-		swap(accStar[iLastReal*3+j], accStar[iLastRealIO*3+j]);
-		swap(pos[iLastReal*3+j], pos[iLastRealIO*3+j]);
-		swap(vel[iLastReal*3+j], vel[iLastRealIO*3+j]);
-		swap(npcdDeviation[iLastReal*3+j], npcdDeviation[iLastRealIO*3+j]);
-		swap(gradConcentration[iLastReal*3+j], gradConcentration[iLastRealIO*3+j]);
-		swap(correcMatrixRow1[iLastReal*3+j], correcMatrixRow1[iLastRealIO*3+j]);
-		swap(correcMatrixRow2[iLastReal*3+j], correcMatrixRow2[iLastRealIO*3+j]);
-		swap(correcMatrixRow3[iLastReal*3+j], correcMatrixRow3[iLastRealIO*3+j]);
-		swap(normal[iLastReal*3+j], normal[iLastRealIO*3+j]);
-		swap(dvelCollision[iLastReal*3+j], dvelCollision[iLastRealIO*3+j]);
-		swap(particleAtWallPos[iLastReal*3+j], particleAtWallPos[iLastRealIO*3+j]);
-		swap(mirrorParticlePos[iLastReal*3+j], mirrorParticlePos[iLastRealIO*3+j]);
-		swap(wallParticleForce1[iLastReal*3+j], wallParticleForce1[iLastRealIO*3+j]);
-		swap(wallParticleForce2[iLastReal*3+j], wallParticleForce2[iLastRealIO*3+j]);
-		swap(polygonNormal[iLastReal*3+j], polygonNormal[iLastRealIO*3+j]);
-		swap(forceWall[iLastReal*3+j], forceWall[iLastRealIO*3+j]);
-		// swap(Posk[iLastReal*3+j], Posk[iLastRealIO*3+j]);
-		// swap(Velk[iLastReal*3+j], Velk[iLastRealIO*3+j]);
-		// swap(Acv[iLastReal*3+j], Acv[iLastRealIO*3+j]);
-	}
+	// // Vectors
+	// for (int j = 0; j < 3; j++) {
+	// 	swap(acc[iLastReal*3+j], acc[iLastRealIO*3+j]);
+	// 	swap(accStar[iLastReal*3+j], accStar[iLastRealIO*3+j]);
+	// 	swap(pos[iLastReal*3+j], pos[iLastRealIO*3+j]);
+	// 	swap(vel[iLastReal*3+j], vel[iLastRealIO*3+j]);
+	// 	swap(npcdDeviation[iLastReal*3+j], npcdDeviation[iLastRealIO*3+j]);
+	// 	swap(gradConcentration[iLastReal*3+j], gradConcentration[iLastRealIO*3+j]);
+	// 	swap(correcMatrixRow1[iLastReal*3+j], correcMatrixRow1[iLastRealIO*3+j]);
+	// 	swap(correcMatrixRow2[iLastReal*3+j], correcMatrixRow2[iLastRealIO*3+j]);
+	// 	swap(correcMatrixRow3[iLastReal*3+j], correcMatrixRow3[iLastRealIO*3+j]);
+	// 	swap(normal[iLastReal*3+j], normal[iLastRealIO*3+j]);
+	// 	swap(dvelCollision[iLastReal*3+j], dvelCollision[iLastRealIO*3+j]);
+	// 	swap(particleAtWallPos[iLastReal*3+j], particleAtWallPos[iLastRealIO*3+j]);
+	// 	swap(mirrorParticlePos[iLastReal*3+j], mirrorParticlePos[iLastRealIO*3+j]);
+	// 	swap(wallParticleForce1[iLastReal*3+j], wallParticleForce1[iLastRealIO*3+j]);
+	// 	swap(wallParticleForce2[iLastReal*3+j], wallParticleForce2[iLastRealIO*3+j]);
+	// 	swap(polygonNormal[iLastReal*3+j], polygonNormal[iLastRealIO*3+j]);
+	// 	swap(forceWall[iLastReal*3+j], forceWall[iLastRealIO*3+j]);
+	// 	// swap(Posk[iLastReal*3+j], Posk[iLastRealIO*3+j]);
+	// 	// swap(Velk[iLastReal*3+j], Velk[iLastRealIO*3+j]);
+	// 	// swap(Acv[iLastReal*3+j], Acv[iLastRealIO*3+j]);
+	// }
 }
 
 // Set force on wall to zero
 //void MpsParticle::WallZeroForce_omp(int nNodes, int nSolids, solid_fem * &solid) {
 void MpsParticle::setWallForceZero(const int nNodes, double *nodeforceX, double *nodeforceY, double *nodeforceZ, MpsParticleSystem *PSystem) {
 #pragma omp parallel for
-	for(int i=0; i<numParticles; i++) {
+	for(int ip=0; ip<numParticles; ip++) {
+		int i = particleID[ip];
 		if(particleType[i] == PSystem->fluid) {
 			forceWall[i*3]=forceWall[i*3+1]=forceWall[i*3+2]=0.0;
 		}
@@ -624,7 +645,8 @@ void MpsParticle::setWallForceZero(const int nNodes, double *nodeforceX, double 
 // #pragma omp parallel for reduction(+: resForce_x, resForce_y, resForce_z, pForce_x, pForce_y, pForce_z)
 // 	//for(int im=0;im<nPartNearMesh;im++) {
 // 	//int i = partNearMesh[im];
-// 	for(int i=0; i<numParticles; i++) {
+// 	for(int ip=0; ip<numParticles; ip++) {
+// 	int i = particleID[ip];
 
 // 	//if(particleType[i] == fluid && nearMeshType[i] == meshType::DEFORMABLE) {
 // 	if(particleType[i] == fluid && particleNearWall[i] == true && nearMeshType[i] == meshType::DEFORMABLE) {

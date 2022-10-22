@@ -71,13 +71,13 @@ double MpsInflowOutflow::calcSignedDistance(const double Px, const double Py, co
 // Impose motion to particles
 void MpsInflowOutflow::imposeMotionParticles(MpsParticleSystem *PSystem, MpsParticle *Particles) {
 	
-	int motType = 0;
+	int motType = 1;
 
 	double Amp[3], AccX, AccY, AccZ;
 	
 	// Cte motion
 	if (motType == 0) {
-		Amp[0] = -0.0;	Amp[1] = 0.0; Amp[2] = 0.0;	///< Amplitude motion (m)
+		Amp[0] = 0.1;	Amp[1] = 0.0; Amp[2] = 0.0;	///< Amplitude motion (m)
 		AccX = Amp[0];	AccY = Amp[1];	AccZ = Amp[2];
 	}
 	// Oscillatory motion
@@ -92,27 +92,28 @@ void MpsInflowOutflow::imposeMotionParticles(MpsParticleSystem *PSystem, MpsPart
 	}
 
 #pragma omp parallel for
-	for(int i=0; i<Particles->numParticles; i++) {
-	if(Particles->particleType[i] == PSystem->fluid) {
-		if (motType == 0) {
-			Particles->acc[i*3  ] += AccX;
-			// Particles->vel[i*3  ] += AccX * PSystem->timeStep;
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
+		if(Particles->particleType[i] == PSystem->fluid) {
+			if (motType == 0) {
+				Particles->acc[i*3  ] += AccX;
+				// Particles->vel[i*3  ] += AccX * PSystem->timeStep;
+			}
+			else {
+				Particles->acc[i*3  ] += AccX * (Particles->pos[i*3+2] - 0.25);
+				// Particles->vel[i*3  ] += AccX * (Particles->pos[i*3+2] - 0.25)/0.045 * PSystem->timeStep;
+			}
+
+			Particles->acc[i*3+1] += AccY;
+			Particles->acc[i*3+2] += AccZ;
+
+			// Particles->vel[i*3+1] += AccY * PSystem->timeStep;
+			// Particles->vel[i*3+2] += AccZ * PSystem->timeStep;
+
+			// Particles->pos[i*3  ] += Particles->vel[i*3  ]*PSystem->timeStep;
+			// Particles->pos[i*3+1] += Particles->vel[i*3+1]*PSystem->timeStep;
+			// Particles->pos[i*3+2] += Particles->vel[i*3+2]*PSystem->timeStep;
 		}
-		else {
-			Particles->acc[i*3  ] += AccX * (Particles->pos[i*3+2] - 0.25);
-			// Particles->vel[i*3  ] += AccX * (Particles->pos[i*3+2] - 0.25)/0.045 * PSystem->timeStep;
-		}
-
-		Particles->acc[i*3+1] += AccY;
-		Particles->acc[i*3+2] += AccZ;
-
-		// Particles->vel[i*3+1] += AccY * PSystem->timeStep;
-		// Particles->vel[i*3+2] += AccZ * PSystem->timeStep;
-
-		// Particles->pos[i*3  ] += Particles->vel[i*3  ]*PSystem->timeStep;
-		// Particles->pos[i*3+1] += Particles->vel[i*3+1]*PSystem->timeStep;
-		// Particles->pos[i*3+2] += Particles->vel[i*3+2]*PSystem->timeStep;
-	}
 	}
 }
 
@@ -121,14 +122,15 @@ void MpsInflowOutflow::setInOutflowVariables(MpsParticleSystem *PSystem, MpsPart
 	// Set number of created and deleted particles to zero
 	Particles->numCreatedParticles = 0;
 	Particles->numDeletedParticles = 0;
-	// Set number of Real + IO particles to number of real particles, i.e.,
+	// Set number of Real + IO particles to number of Real particles, i.e.,
 	// the number of IO particles is zero
 	Particles->numRealAndIOParticles = Particles->numParticles;
 	Particles->numIOParticles = 0;
 
 	// Set value of euclidean signed distance to infinity
 #pragma omp parallel for
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		if(Particles->particleType[i] == PSystem->fluid) {
 			Particles->signDist[i] = PSystem->nearInfinity;
 		}
@@ -145,14 +147,15 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 	
 	//double minDistIOcreation = 1.1*PSystem->partDist;
 	// Auxiliar variables
-	int numCreatedParticlesAux, numDeletedParticlesAux, idLastRealParticle, idLastRealandIOParticle, atLeastOneRealParticleCreated;
+	int numCreatedParticlesAux, numDeletedParticlesAux, idLastRealandIOParticle, atLeastOneRealParticleCreated;
+	// int idLastRealParticle;
 //#pragma omp parallel
 //{
 	// Set auxiliar variables
 	numCreatedParticlesAux = 0;						///< Number of created particles
 	numDeletedParticlesAux = 0;						///< Number of deleted particles
 	atLeastOneRealParticleCreated = 0;				///< If > 0, at least one real particle was created
-	idLastRealParticle = Particles->numParticles;	///< Array ID of the last real particle + 1
+	// idLastRealParticle = Particles->numParticles;	///< Array ID of the last real particle + 1
 	idLastRealandIOParticle = Particles->numRealAndIOParticles;	///< Array ID of the last real+created particle + 1
 
 	// printf("\n Ioid: %2d - Time: %.5e sec - NumPart: %4d - idLaRePar: %4d - numReIOPart: %4d - idLaReIOPar: %4d"
@@ -163,8 +166,8 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 	// Set number of created particles to zero
 	// Particles->numCreatedParticles = 0;
 
-	int sumAux, sumAux1, sumAux2;
-	sumAux = sumAux1 = sumAux2 = 0;
+	// int sumAux, sumAux1, sumAux2;
+	// sumAux = sumAux1 = sumAux2 = 0;
 
 	struct timeval time_now, time_end;
 	double time_taken;
@@ -173,7 +176,8 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 // 	gettimeofday(&time_now, NULL);
 // //#pragma omp parallel for reduction(+:sumAux, sumAux1, sumAux2)
 // // #pragma omp parallel for
-// 	for(int i=0; i<Particles->numParticles; i++) {
+// 	for(int ip=0; ip<Particles->numParticles; ip++) {
+// 	int i = Particles->particleID[ip];
 // 	if(Particles->particleType[i] == PSystem->fluid) {
 
 // 		if(i%2==0||i%3==0)
@@ -216,7 +220,8 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 //#pragma omp parallel for reduction(+:numCreatedParticlesAux, sumAux)
 
 #pragma omp parallel for reduction(+:numCreatedParticlesAux, numDeletedParticlesAux, atLeastOneRealParticleCreated)
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+	int i = Particles->particleID[ip];
 	if(Particles->particleType[i] == PSystem->fluid) {
 		
 		// Computes euclidean signed distance between particle i and the current plane
@@ -243,7 +248,7 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 				// Create two IO particles along the line normal to the IOplan and passing from the i-th position
 				// Each thread of the "parallel for" has private (local) variables of two IO particles index
 				// Be aware that they are defined using the shared (global) variable idLastRealandIOParticle
-				int idIO1, idIO2;
+				int ipIO1, ipIO2, idIO1, idIO2;
 
 // Specifies that code is only executed on one thread at a time
 // #pragma omp critical (after_if)
@@ -258,10 +263,12 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 // idIO1 atomically captures the original value of idLastRealandIOParticle. Then, atomically updates idLastRealandIOParticle
 #pragma omp atomic capture
 				{
-					idIO1 = idLastRealandIOParticle;
+					ipIO1 = idLastRealandIOParticle;
 					idLastRealandIOParticle += 2;
 				}
-				idIO2 = idIO1+1;
+				ipIO2 = ipIO1+1;
+				idIO1 = Particles->particleID[ipIO1];
+				idIO2 = Particles->particleID[ipIO2];
 
 				// IO particles are placed at distances partDist and 2*partdDist from i-th position
 				Particles->pos[idIO1*3  ] = Particles->pos[i*3  ] - (PSystem->partDist)*Pio.a;
@@ -284,10 +291,20 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 				Particles->particleBC[idIO2] = PSystem->other;
 				Particles->particleType[idIO1] = PSystem->inOutflowParticle;
 				Particles->particleType[idIO2] = PSystem->inOutflowParticle;
-				Particles->press[idIO1] = Pio.press;
-				Particles->press[idIO2] = Pio.press;
-				Particles->signDist[idIO1] = Particles->signDist[i] - PSystem->partDist;
-				Particles->signDist[idIO2] = Particles->signDist[i] - 2.0*PSystem->partDist;
+				Particles->signDist[idIO1] = -signDistAux; // signDistAux is positive
+				Particles->signDist[idIO2] = -signDistAux - PSystem->partDist;
+
+				Particles->motherID[idIO1] = i;
+				Particles->motherID[idIO2] = i;
+				// Particles->press[idIO1] = Pio.press;
+				// Particles->press[idIO2] = Pio.press;
+				// w: ioPlan wall
+				// Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
+				// Particles->press[idIO1] = Pio.press * 2.0 - Particles->press[i];
+				// Particles->press[idIO2] = (Pio.press * (2.0 * signDistAux + PSystem->partDist) - Particles->press[i] * (signDistAux + PSystem->partDist) ) / (signDistAux + 0.01 * PSystem->reS2);
+				
+				Particles->ioflowID[idIO1] = Pio.ID;
+				Particles->ioflowID[idIO2] = Pio.ID;
 
 				Particles->pndi[idIO1] = Particles->pndi[i];
 				Particles->pndi[idIO2] = Particles->pndi[i];
@@ -327,16 +344,20 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 					// Create one Real particle and two IO particles along the line normal to the IOplan and passing from the idReal-th position
 					// Each thread of the "parallel for" has private (local) variables of two IO particles index
 					// Be aware that they are defined using the shared (global) variable idLastRealandIOParticle
-					int idReal, idIO1, idIO2;
+					int ipReal, ipIO1, ipIO2, idReal, idIO1, idIO2;
 
 // idReal atomically captures the original value of idLastRealandIOParticle. Then, atomically updates idLastRealandIOParticle
 #pragma omp atomic capture
 					{
-						idReal = idLastRealandIOParticle;
+						ipReal = idLastRealandIOParticle;
 						idLastRealandIOParticle += 3;
 					}
-					idIO1 = idReal+1;
-					idIO2 = idIO1+1;
+					ipIO1 = ipReal+1;
+					ipIO2 = ipIO1+1;
+
+					idReal = Particles->particleID[ipReal];
+					idIO1 = Particles->particleID[ipIO1];
+					idIO2 = Particles->particleID[ipIO2];
 					
 					// Real particle is placed at distance partDist from i-th position
 					Particles->pos[idReal*3  ] = Particles->pos[i*3  ] - (PSystem->partDist)*Pio.a;
@@ -371,17 +392,24 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 					Particles->particleType[idIO1] = PSystem->inOutflowParticle;
 					Particles->particleType[idIO2] = PSystem->inOutflowParticle;
 					
+					Particles->motherID[idIO1] = idReal;
+					Particles->motherID[idIO2] = idReal;
+
 					Particles->press[idReal] = Particles->press[i];
-					Particles->press[idIO1] = Pio.press;
-					Particles->press[idIO2] = Pio.press;
+					// Particles->press[idIO1] = Pio.press;
+					// Particles->press[idIO2] = Pio.press;
+
+					Particles->ioflowID[idReal] = Pio.ID;
+					Particles->ioflowID[idIO1] = Pio.ID;
+					Particles->ioflowID[idIO2] = Pio.ID;
 					
 					Particles->isInIORegion[idReal] = true;
 					Particles->isInIORegion[idIO1] = false;
 					Particles->isInIORegion[idIO2] = false;
 
-					Particles->signDist[idReal] = Particles->signDist[i];
-					Particles->signDist[idIO1] = Particles->signDist[idReal] - PSystem->partDist;
-					Particles->signDist[idIO2] = Particles->signDist[idReal] - 2.0*PSystem->partDist;
+					Particles->signDist[idReal] = signDistAux - PSystem->partDist; // signDistAux is positive
+					Particles->signDist[idIO1] = -signDistAux;
+					Particles->signDist[idIO2] = -signDistAux - PSystem->partDist;
 
 					Particles->pndi[idReal] = Particles->pndi[i];
 					Particles->pndi[idIO1] = Particles->pndi[i];
@@ -555,39 +583,45 @@ void MpsInflowOutflow::swapIdRealAndIOParticlesInOutflow(MpsParticleSystem *PSys
 // #pragma omp parallel for reduction(+:numCreatedRealParticlesAux)
 	// for(int i=0; i<Particles->numCreatedParticles; i++) {
 	// 	int idIO = i + Particles->numParticles;
-	for(int idIO=Particles->numParticles; idIO<Particles->numRealAndIOParticles; idIO++) {
+	for(int idIOp=Particles->numParticles; idIOp<Particles->numRealAndIOParticles; idIOp++) {
+		int idIO = Particles->particleID[idIOp];
 	// Verify if the created particle is real
 		// if(Particles->particleBC[idIO] == PSystem->inner) {
 		if(Particles->particleType[idIO] == PSystem->fluid) {
 		
 			// Array ID to be filled with a Real particle
-			int idReal;
+			int ipReal;
+			// int idReal;
 
 // idReal atomically captures the original value of idLastRealParticle. Then, atomically updates idLastRealParticle
 // #pragma omp atomic capture
-			idReal = idLastRealParticle++;
-			
+			ipReal = idLastRealParticle++;
+			// idReal = Particles->particleID[ipReal];
+
 			// if(Particles->particleBC[idReal] != PSystem->inner)
 			// if(Particles->particleType[idReal] != PSystem->fluid)
 			// {
+				// Swapping particle ID in the array
+				swap(Particles->particleID[ipReal], Particles->particleID[idIOp]);
+
 				// Update the variables in the array
 				// Swapping elements of the new real particle and IO
-				swap(Particles->pos[idReal*3  ], Particles->pos[idIO*3  ]);
-				swap(Particles->pos[idReal*3+1], Particles->pos[idIO*3+1]);
-				swap(Particles->pos[idReal*3+2], Particles->pos[idIO*3+2]);
-				swap(Particles->vel[idReal*3  ], Particles->vel[idIO*3  ]);
-				swap(Particles->vel[idReal*3+1], Particles->vel[idIO*3+1]);
-				swap(Particles->vel[idReal*3+2], Particles->vel[idIO*3+2]);
-				swap(Particles->particleBC[idReal], Particles->particleBC[idIO]);
-				swap(Particles->particleType[idReal], Particles->particleType[idIO]);
-				swap(Particles->press[idReal], Particles->press[idIO]);
+				// swap(Particles->pos[idReal*3  ], Particles->pos[idIO*3  ]);
+				// swap(Particles->pos[idReal*3+1], Particles->pos[idIO*3+1]);
+				// swap(Particles->pos[idReal*3+2], Particles->pos[idIO*3+2]);
+				// swap(Particles->vel[idReal*3  ], Particles->vel[idIO*3  ]);
+				// swap(Particles->vel[idReal*3+1], Particles->vel[idIO*3+1]);
+				// swap(Particles->vel[idReal*3+2], Particles->vel[idIO*3+2]);
+				// swap(Particles->particleBC[idReal], Particles->particleBC[idIO]);
+				// swap(Particles->particleType[idReal], Particles->particleType[idIO]);
+				// swap(Particles->press[idReal], Particles->press[idIO]);
 
-				swap(Particles->numNeigh[idReal], Particles->numNeigh[idIO]);
-				swap(Particles->pressAverage[idReal], Particles->pressAverage[idIO]);
-				swap(Particles->pndi[idReal], Particles->pndi[idIO]);
-				swap(Particles->pndki[idReal], Particles->pndki[idIO]);
-				swap(Particles->pndski[idReal], Particles->pndski[idIO]);
-				swap(Particles->pndSmall[idReal], Particles->pndSmall[idIO]);
+				// swap(Particles->numNeigh[idReal], Particles->numNeigh[idIO]);
+				// swap(Particles->pressAverage[idReal], Particles->pressAverage[idIO]);
+				// swap(Particles->pndi[idReal], Particles->pndi[idIO]);
+				// swap(Particles->pndki[idReal], Particles->pndki[idIO]);
+				// swap(Particles->pndski[idReal], Particles->pndski[idIO]);
+				// swap(Particles->pndSmall[idReal], Particles->pndSmall[idIO]);
 			// }
 			
 			// Update shared (global) variable number of Real, IO particles
@@ -599,7 +633,8 @@ void MpsInflowOutflow::swapIdRealAndIOParticlesInOutflow(MpsParticleSystem *PSys
 	// Updates number of Real particles
 	Particles->numParticles += numCreatedRealParticlesAux;
 	// Updates number of inOutflow (IO) particles
-	Particles->numIOParticles = Particles->numCreatedParticles - numCreatedRealParticlesAux;
+	// Particles->numIOParticles = Particles->numCreatedParticles - numCreatedRealParticlesAux;
+	Particles->numIOParticles -= numCreatedRealParticlesAux;
 	// Updates number of particles including IO particles
 	// Particles->numRealAndIOParticles = Particles->numParticles + Particles->numIOParticles;
 	
@@ -608,7 +643,8 @@ void MpsInflowOutflow::swapIdRealAndIOParticlesInOutflow(MpsParticleSystem *PSys
 // 		// Resize vector of pressure
 // 		Particles->pressurePPE.resize(Particles->numParticles); // Resizing a dynamic-size vector
 // #pragma omp parallel for
-// 		for(int i=0; i<Particles->numParticles; i++) {
+// 		for(int ip=0; ip<Particles->numParticles; ip++) {
+// 			int i = Particles->particleID[ip];
 // 			Particles->pressurePPE(i) = Particles->press[i];
 // 		}
 // 	}
@@ -621,12 +657,14 @@ void MpsInflowOutflow::swapIdRealAndIOParticlesInOutflow(MpsParticleSystem *PSys
 	// // Move ghost particles to the last positons of the array
 	// // Reverse for loop
 	// // https://stackoverflow.com/questions/275994/whats-the-best-way-to-do-a-backwards-loop-in-c-c-c
-	// for (int i = Particles->numParticles; i --> 0; )
+	// for (int ip = Particles->numParticles; ip --> 0; )
 	// {
+	// 	int i = Particles->particleID[ip];
 	// 	if (Particles->particleType[i] == PSystem->ghost)
 	// 	{
 	// 		// ID of last Real particle
-	// 		int iLastRealParticle = newNumRealParticles - 1;
+	// 		int ipLastRealParticle = newNumRealParticles - 1;
+	// 		int iLastRealParticle = Particles->particleID[ipLastRealParticle];
 
 	// 		// Swap the data between "Last Real Particle" and i-th Ghost particle
 	// 		Particles->swapDataLastRealPartAndGhostPart(i, iLastRealParticle, PSystem);
@@ -635,7 +673,8 @@ void MpsInflowOutflow::swapIdRealAndIOParticlesInOutflow(MpsParticleSystem *PSys
 	// 		newNumRealParticles--;
 
 	// 		// ID of last Real+IO particle
-	// 		int iLastRealIOParticle = newNumRealIOParticles - 1;
+	// 		int ipLastRealIOParticle = newNumRealIOParticles - 1;
+	// 		int iLastRealIOParticle = Particles->particleID[ipLastRealIOParticle];
 
 	// 		// Swap the data between "Last Real+IO Particle" and "Last Real Particle" previously assigned as ghost
 	// 		Particles->swapDataLastRealIOPartAndLastRealPart(iLastRealParticle, iLastRealIOParticle, PSystem);
@@ -682,7 +721,8 @@ void MpsInflowOutflow::checkOverlapedIOParticles(MpsParticleSystem *PSystem, Mps
 #pragma omp parallel for reduction(+:numGhostParticlesAux)
 	for(int ioID=0; ioID<Particles->numIOParticles; ioID++) {
 
-		int i = ioID + Particles->numParticles;	// Global ID in the array Real+IO particles
+		int ip = ioID + Particles->numParticles;	// Global ID in the array Real+IO particles
+		int i = Particles->particleID[ip];
 	
 		if(Particles->particleType[i] == PSystem->inOutflowParticle) {
 
@@ -704,7 +744,8 @@ void MpsInflowOutflow::checkOverlapedIOParticles(MpsParticleSystem *PSystem, Mps
 				double plx, ply, plz;
 				Particles->getPeriodicLengths(jb, plx, ply, plz, PSystem);
 				while(true) {
-					double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
+					double v0ij, v1ij, v2ij, dstij2;
+					// double v0imj, v1imj, v2imj, dstimj2;
 					
 					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
 					Particles->sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2, plx, ply, plz);
@@ -715,6 +756,15 @@ void MpsInflowOutflow::checkOverlapedIOParticles(MpsParticleSystem *PSystem, Mps
 					if(dstij2 < limitDist2) {
 					if(j != i) {
 
+						// if(Particles->particleType[j] == PSystem->fluid) {
+						// 	// Set particle data as Ghost data
+						// 	Particles->setParticleDataToGhost(j, PSystem);
+						// }
+						// else {
+						// 	// Set particle data as Ghost data
+						// 	Particles->setParticleDataToGhost(i, PSystem);
+						// }
+						
 						// Set particle data as Ghost data
 						Particles->setParticleDataToGhost(i, PSystem);
 
@@ -760,7 +810,8 @@ void MpsInflowOutflow::checkOverlapedIOParticles(MpsParticleSystem *PSystem, Mps
 // // Be aware with "race condition" in OpenMP
 // // Loop only for IO particles
 // //#pragma omp parallel for reduction(+:numIOParticlesAux)
-// 	for(int idIO=Particles->numParticles; idIO<Particles->numRealAndIOParticles; idIO++) {
+// 	for(int idIOp=Particles->numParticles; idIOp<Particles->numRealAndIOParticles; idIOp++) {
+// 		int idIO = Particles->particleID[idIOp];
 // 	// if(Particles->particleType[idIO] == PSystem->fluid) {
 		
 // 		// Computes euclidean signed distance between particle i and the current plane
@@ -856,8 +907,8 @@ void MpsInflowOutflow::checkOverlapedIOParticles(MpsParticleSystem *PSystem, Mps
 // // Clear variables only of the inOutflow (IO) particles
 // void MpsInflowOutflow::clearVariablesInOutflowParticles(MpsParticleSystem *PSystem, MpsParticle *Particles) {
 // //#pragma omp parallel for schedule(dynamic,64)
-// 	for(int i=Particles->numParticles-1; i<Particles->numRealAndIOParticles; i++) {
-	
+// 	for(int ip=Particles->numParticles-1; ip<Particles->numRealAndIOParticles; ip++) {
+// 	int i = Particles->particleID[ip];
 // 	// Update some data of IO Particle
 // 	Particles->particleType[i]=PSystem->ghost;
 // 	Particles->particleBC[i]=PSystem->other;

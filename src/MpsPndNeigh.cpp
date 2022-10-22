@@ -20,7 +20,8 @@ MpsPndNeigh::~MpsPndNeigh()
 // Set initial PND, number of neighbors and weighted deviation
 void MpsPndNeigh::setInitialPndNumberOfNeighNPCD(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 #pragma omp parallel for schedule(dynamic,64)
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
 		double wSum = 0.0;
@@ -109,7 +110,8 @@ void MpsPndNeigh::calcWallNPCD(MpsParticleSystem *PSystem, MpsParticle *Particle
 #pragma omp parallel for schedule(dynamic,64)
 	//for(int im=0;im<nPartNearMesh;im++) {
 	//int i = partNearMesh[im];
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true) {
 			double npcdDeviationXi = 0.0;	double npcdDeviationYi = 0.0;	double npcdDeviationZi = 0.0;
 			double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
@@ -198,7 +200,8 @@ void MpsPndNeigh::calcWallNPCD(MpsParticleSystem *PSystem, MpsParticle *Particle
 // Calculates PND, number of neighbors and weighted deviation
 void MpsPndNeigh::calcPndnNeighNPCD(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 #pragma omp parallel for schedule(dynamic,64)
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
 		double ni = 0.0; double wSum = 0.0;
@@ -333,12 +336,14 @@ void MpsPndNeigh::calcPndnNeighNPCD(MpsParticleSystem *PSystem, MpsParticle *Par
 // Calculates PND based on continuity equation including a diffusive term. Contribution of the neighboring particles.
 void MpsPndNeigh::calcPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 	// PSystem->coeffViscMultiphase = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero);
-	double C1 = PSystem->diffusiveCoef*PSystem->timeStep*PSystem->soundSpeed*PSystem->soundSpeed*PSystem->coeffViscMultiphase/(PSystem->pndLargeZero);
-	double C2 = PSystem->diffusiveCoef*PSystem->partDist*PSystem->soundSpeed*PSystem->coeffViscMultiphase/(PSystem->pndLargeZero);
+	// double C1 = PSystem->diffusiveCoef*PSystem->timeStep*PSystem->soundSpeed*PSystem->soundSpeed*PSystem->coeffViscMultiphase/(PSystem->pndLargeZero);
+	// double C2 = PSystem->diffusiveCoef*PSystem->partDist*PSystem->soundSpeed*PSystem->coeffViscMultiphase/(PSystem->pndLargeZero);
 #pragma omp parallel for schedule(dynamic,64)
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 //	if(Particles->particleType[i] == PSystem->fluid) {
-		double Di = 0.0; double DivV = 0.0; double flagDi = 1.0; double pndAux = 0.0;
+		double Di = 0.0; double DivV = 0.0; double flagDi = 1.0; 
+		// double pndAux = 0.0;
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 		double velXi = Particles->vel[i*3  ];	double velYi = Particles->vel[i*3+1];	double velZi = Particles->vel[i*3+2];
 		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
@@ -374,52 +379,52 @@ void MpsPndNeigh::calcPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsParticle *
 				// is not at the same side of im (avoid real j in the virtual neihborhood)
 				if(dstij2 < PSystem->reL2 && (dstij2 < dstimj2 || PSystem->wallType == boundaryWallType::PARTICLE)) {
 					if(j != i) {
-	//				if(j != i && Particles->particleType[j] == PSystem->fluid) {
+//					if(j != i && Particles->particleType[j] == PSystem->fluid) {
 						double dst = sqrt(dstij2);
 						double wL = Particles->weight(dst, PSystem->reL, PSystem->weightType);
-						double nj = Particles->pndi[j];
+						// double nj = Particles->pndi[j];
 						if(Particles->particleType[i] == PSystem->fluid && Particles->particleType[j] == PSystem->fluid) {
-						//if(Particles->particleType[i] == PSystem->inner) {
-	//					if(Particles->particleType[i] == PSystem->fluid && Particles->particleType[j] == PSystem->fluid && Particles->particleBC[i] == PSystem->inner) {
-							// PSystem->coeffViscMultiphase = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero);
-	//						double pgh = Particles->RHO[i]*(PSystem->gravityX*v0+PSystem->gravityY*v1+PSystem->gravityZ*v2);
-	//						double CB = Particles->RHO[i]*PSystem->soundSpeed*PSystem->soundSpeed/PSystem->gamma;
-	//						double nijH = PSystem->pndSmallZero*(pow((pgh+1.0)/CB,1.0/PSystem->gamma)-1.0);
-	//						double nijH = PSystem->pndSmallZero*(pow((pgh)/CB+1.0,1.0/PSystem->gamma)-1.0);
-	//
-						//	pow( ( pgh + 1.0 ) / CB - 1.0 , 1.0  )
+						// if(Particles->particleType[i] == PSystem->inner) {
+						// if(Particles->particleType[i] == PSystem->fluid && Particles->particleType[j] == PSystem->fluid && Particles->particleBC[i] == PSystem->inner) {
+						// 	PSystem->coeffViscMultiphase = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero);
+						// 	double pgh = Particles->RHO[i]*(PSystem->gravityX*v0+PSystem->gravityY*v1+PSystem->gravityZ*v2);
+						// 	double CB = Particles->RHO[i]*PSystem->soundSpeed*PSystem->soundSpeed/PSystem->gamma;
+						// 	double nijH = PSystem->pndSmallZero*(pow((pgh+1.0)/CB,1.0/PSystem->gamma)-1.0);
+						// 	double nijH = PSystem->pndSmallZero*(pow((pgh)/CB+1.0,1.0/PSystem->gamma)-1.0);
+	
+						// 	pow( ( pgh + 1.0 ) / CB - 1.0 , 1.0  )
 
-							//double CB = PSystem->soundSpeed*PSystem->soundSpeed*Particles->RHO[i];
-							//double nijH = PSystem->pndSmallZero*((PijH+1.0)/CB-1);
-	//						if(isnan(nijH) == 0)
-	//							Di += C1*(nj - ni - nijH)*wL;
-	//						else
-								////////Di += C1*(nj - ni)*wL;
-							//if(isnan(nijH) == 1)
-							//if(i == 200)
+						// 	double CB = PSystem->soundSpeed*PSystem->soundSpeed*Particles->RHO[i];
+						// 	double nijH = PSystem->pndSmallZero*((PijH+1.0)/CB-1);
+						// 	if(isnan(nijH) == 0)
+						// 		Di += C1*(nj - ni - nijH)*wL;
+						// 	else
+						// 		//////Di += C1*(nj - ni)*wL;
+							// if(isnan(nijH) == 1)
+							// if(i == 200)
 							//	printf(" pgh %e CB %e ni %e nj %e nijH %e PSystem->reS %e \n", pgh, CB, ni, nj, nijH, PSystem->pndSmallZero*(pow((pgh+1)/CB,1/PSystem->gamma)-1));
 							// PND
-	//						Di += C1*(nj-ni)*wL;
-							//Di += C2*(nj-ni)*wL;
+							// Di += C1*(nj-ni)*wL;
+							// Di += C2*(nj-ni)*wL;
 							// Pressure
 							// Delta Voronoi smoothed particle hydrodynamics, δ-VSPH
 							// https://doi.org/10.1016/j.jcp.2019.109000
 							double pgh = -2.0*(Particles->RHO[i]*Particles->RHO[j]/(Particles->RHO[i]+Particles->RHO[j]))*(PSystem->gravityX*v0ij+PSystem->gravityY*v1ij+PSystem->gravityZ*v2ij);
 							double Pj = Particles->press[j];
 							Di += PSystem->timeStep/Particles->RHO[i]*PSystem->coeffViscMultiphase*(Pj-Pi-pgh)*wL;
-							//Di += (PSystem->partDist/PSystem->soundSpeed)/Particles->RHO[i]*PSystem->coeffViscMultiphase*(Pj-Pi+pgh)*wL;
+							// Di += (PSystem->partDist/PSystem->soundSpeed)/Particles->RHO[i]*PSystem->coeffViscMultiphase*(Pj-Pi+pgh)*wL;
 						}
-						//else
-						//	flagDi = 0.0;
+						// else
+						// 	flagDi = 0.0;
 						if(dstij2 < PSystem->reS2) {
 							double vijx = Particles->vel[j*3  ]-velXi;
 							double vijy = Particles->vel[j*3+1]-velYi;
 							double vijz = Particles->vel[j*3+2]-velZi;
 							double wS = Particles->weight(dst, PSystem->reS, PSystem->weightType);
-							//if(ni > PSystem->epsilonZero)
-							//{
-							//	DivV += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
-							//}
+							// if(ni > PSystem->epsilonZero)
+							// {
+							// 	DivV += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
+							// }
 							if(PSystem->gradientCorrection == false) {
 								if(ni > PSystem->epsilonZero) {
 									DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[j]/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
@@ -432,13 +437,13 @@ void MpsPndNeigh::calcPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsParticle *
 								DivV += (PSystem->dim/PSystem->pndSmallZero)*(vijx*v0ijC+vijy*v1ijC+vijz*v2ijC)*wS/dstij2;
 							}
 
-	//						M1[0][0] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v0*vijx)*wS/dst2; M1[0][1] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v0*vijy)*wS/dst2; M1[0][2] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v0*vijz)*wS/dst2;
-	//						M1[1][0] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v1*vijx)*wS/dst2; M1[1][1] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v1*vijy)*wS/dst2; M1[1][2] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v1*vijz)*wS/dst2;
-	//						M1[2][0] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v2*vijx)*wS/dst2; M1[2][1] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v2*vijy)*wS/dst2; M1[2][2] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v2*vijz)*wS/dst2;
+							// M1[0][0] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v0*vijx)*wS/dst2; M1[0][1] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v0*vijy)*wS/dst2; M1[0][2] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v0*vijz)*wS/dst2;
+							// M1[1][0] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v1*vijx)*wS/dst2; M1[1][1] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v1*vijy)*wS/dst2; M1[1][2] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v1*vijz)*wS/dst2;
+							// M1[2][0] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v2*vijx)*wS/dst2; M1[2][1] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v2*vijy)*wS/dst2; M1[2][2] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v2*vijz)*wS/dst2;
 
-	//						if(Particles->particleType[i] == PSystem->wall)
-	//						if(Particles->particleType[i] == PSystem->wall || Particles->particleBC[i] == PSystem->surface)
-	//							pndAux += wS;
+							// if(Particles->particleType[i] == PSystem->wall)
+							// if(Particles->particleType[i] == PSystem->wall || Particles->particleBC[i] == PSystem->surface)
+							// 	pndAux += wS;
 						}
 					}
 				}
@@ -475,7 +480,8 @@ void MpsPndNeigh::calcPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsParticle *
 //		}
 	}
 //#pragma omp parallel for
-//	for(int i=0; i<Particles->numParticles; i++) {
+//	for(int ip=0; ip<Particles->numParticles; ip++) {
+//		int i = Particles->particleID[ip];
 /////	if(Particles->particleType[i] == PSystem->fluid) {
 //		Particles->pndi[i] = Particles->acc[i*3];
 //		Particles->acc[i*3]=0.0;
@@ -495,7 +501,8 @@ void MpsPndNeigh::calcWallSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsPa
 #pragma omp parallel for schedule(dynamic,64)
 	//for(int im=0;im<nPartNearMesh;im++) {
 	//int i = partNearMesh[im];
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		double ni = Particles->pndi[i];
 		//if(Particles->particleType[i] == PSystem->fluid && ni > PSystem->epsilonZero) {
 		if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true && ni > PSystem->epsilonZero) {
@@ -588,7 +595,8 @@ void MpsPndNeigh::calcWallSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsPa
 		}
 	}
 //#pragma omp parallel for
-//	for(int i=0; i<Particles->numParticles; i++) {
+//	for(int ip=0; ip<Particles->numParticles; ip++) {
+//		int i = Particles->particleID[ip];
 //	if(Particles->particleType[i] == PSystem->fluid) {
 //		Particles->pndi[i] += Particles->acc[i*3];
 //		Particles->acc[i*3]=0.0;
@@ -602,26 +610,31 @@ void MpsPndNeigh::calcWallSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsPa
 
 // Calculates PND based on continuity equation including a diffusive term. Contribution of the closest polygon wall. No-slip boundary condition.
 void MpsPndNeigh::calcWallNoSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
+	//  Inverse transformation matrix Rinv_i = - I
+	double Rinv_i[9];
+	Rinv_i[0] = -1.0; Rinv_i[1] =  0.0; Rinv_i[2] =  0.0;
+	Rinv_i[3] =  0.0; Rinv_i[4] = -1.0; Rinv_i[5] =  0.0;
+	Rinv_i[6] =  0.0; Rinv_i[7] =  0.0; Rinv_i[8] = -1.0;
 	//int nPartNearMesh = partNearMesh.size();
 	//printf(" Mesh %d \n", nPartNearMesh);
 	// Loop only for particles near mesh
 #pragma omp parallel for schedule(dynamic,64)
 	//for(int im=0;im<nPartNearMesh;im++) {
 	//int i = partNearMesh[im];
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		double ni = Particles->pndi[i];
-		//if(Particles->particleType[i] == PSystem->fluid && ni > PSystem->epsilonZero) {
+		// if(Particles->particleType[i] == PSystem->fluid && ni > PSystem->epsilonZero) {
 		if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true && ni > PSystem->epsilonZero) {
-	//	if(Particles->particleType[i] == PSystem->fluid) {
+		// if(Particles->particleType[i] == PSystem->fluid) {
 			double DivV = 0.0;
 			//double Pi = Particles->press[i];
 			double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 			double velXi = Particles->vel[i*3  ];	double velYi = Particles->vel[i*3+1];	double velZi = Particles->vel[i*3+2];
 			double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
-	//		double velXi = Velk[i*3  ];	double velYi = Velk[i*3+1];	double velZi = Velk[i*3+2
+			// double velXi = Velk[i*3  ];	double velYi = Velk[i*3+1];	double velZi = Velk[i*3+2
 
-			// Inverse matrix Rinv_i = - I
-			double Rinv_i[9], Rref_i[9], normaliw[3], normalMod2;
+			double Rref_i[9], normaliw[3], normalMod2;
 		    // normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
 		    normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 		    normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
@@ -636,11 +649,6 @@ void MpsPndNeigh::calcWallNoSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, Mps
 		    	normaliw[1] = 0;
 		    	normaliw[2] = 0;
 		    }
-
-		    //  Inverse transformation matrix Rinv_i = - I
-		    Rinv_i[0] = -1.0; Rinv_i[1] =  0.0; Rinv_i[2] =  0.0;
-			Rinv_i[3] =  0.0; Rinv_i[4] = -1.0; Rinv_i[5] =  0.0;
-			Rinv_i[6] =  0.0; Rinv_i[7] =  0.0; Rinv_i[8] = -1.0;
 
 		    //  Transformation matrix Rref_i = I - 2.0*normal_iwall*normal_iwall
 		    Rref_i[0] = 1.0 - 2.0*normaliw[0]*normaliw[0]; Rref_i[1] = 0.0 - 2.0*normaliw[0]*normaliw[1]; Rref_i[2] = 0.0 - 2.0*normaliw[0]*normaliw[2];
@@ -730,7 +738,8 @@ void MpsPndNeigh::calcWallNoSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, Mps
 		}
 	}
 //#pragma omp parallel for
-//	for(int i=0; i<Particles->numParticles; i++) {
+//	for(int ip=0; ip<Particles->numParticles; ip++) {
+//		int i = Particles->particleID[ip];
 //	if(Particles->particleType[i] == PSystem->fluid) {
 //		Particles->pndi[i] += Particles->acc[i*3];
 //		Particles->acc[i*3]=0.0;
@@ -745,7 +754,8 @@ void MpsPndNeigh::calcWallNoSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, Mps
 // Updates diffusive PND
 void MpsPndNeigh::updatePnd(MpsParticle *Particles) {
 #pragma omp parallel for
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 	//		if(Particles->particleType[i] == PSystem->fluid)
 			Particles->pndi[i] = Particles->acc[i*3];
 //		else
@@ -775,7 +785,8 @@ void MpsPndNeigh::updatePnd(MpsParticle *Particles) {
 // Mean diffusive PND at wall, dummy or free-surface particles
 void MpsPndNeigh::meanPndParticlesWallDummySurface(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 #pragma omp parallel for schedule(dynamic,64)
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 //	if(Particles->particleType[i] == PSystem->wall) {
 		if(Particles->particleType[i] == PSystem->wall || Particles->particleBC[i] == PSystem->surface) {
 //	if(Particles->particleBC[i] == PSystem->surface) {
@@ -824,7 +835,8 @@ void MpsPndNeigh::meanPndParticlesWallDummySurface(MpsParticleSystem *PSystem, M
 		}
 	}
 #pragma omp parallel for
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 //	if(Particles->particleType[i] == PSystem->wall) {
 		if(Particles->particleType[i] == PSystem->wall || Particles->particleBC[i] == PSystem->surface) {
 //	if(Particles->particleBC[i] == PSystem->surface) {
@@ -849,7 +861,8 @@ void MpsPndNeigh::meanPndParticlesWallDummySurface(MpsParticleSystem *PSystem, M
 // Mean PND computed as the sum of the weight function. Contribution of the neighboring particles.
 void MpsPndNeigh::meanPnd(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 #pragma omp parallel for schedule(dynamic,64)
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		double PNDup = 0.0;
 		double PNDdo = 0.0;
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
@@ -893,7 +906,8 @@ void MpsPndNeigh::meanPnd(MpsParticleSystem *PSystem, MpsParticle *Particles, Mp
 		//Particles->acc[i*3] = PSystem->pndSmallZero*(1.0+PSystem->timeStep*(-DivV+Di*flagDi));
 	}
 #pragma omp parallel for
-for(int i=0; i<Particles->numParticles; i++) {
+for(int ip=0; ip<Particles->numParticles; ip++) {
+	int i = Particles->particleID[ip];
 //	if(Particles->particleType[i] == PSystem->fluid) {
 	// Prevent PNDdo = 0
 		if(Particles->numNeigh[i] < 1) {
@@ -919,7 +933,8 @@ void MpsPndNeigh::meanWallPnd(MpsParticleSystem *PSystem, MpsParticle *Particles
 #pragma omp parallel for schedule(dynamic,64)
 	//for(int im=0;im<nPartNearMesh;im++) {
 	//int i = partNearMesh[im];
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 //	if(Particles->particleType[i] == PSystem->fluid) {
 		if(Particles->particleNearWall[i] == true) {
 			double PNDup = 0.0;
@@ -985,7 +1000,8 @@ void MpsPndNeigh::meanWallPnd(MpsParticleSystem *PSystem, MpsParticle *Particles
 // Mean PND computed as the sum of the weight function. Contribution of the fluid neighboring particles. // CHANGED
 void MpsPndNeigh::meanNeighFluidPnd(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 #pragma omp parallel for schedule(dynamic,64)
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		double PNDup = 0.0;
 		double PNDdo = 0.0;
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];

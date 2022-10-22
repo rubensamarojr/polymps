@@ -21,9 +21,10 @@ MpsParticleCollision::~MpsParticleCollision()
 // https://doi.org/10.1016/j.cma.2010.12.001
 void MpsParticleCollision::checkParticleCollisions(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 #pragma omp parallel for schedule(dynamic,64)
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		if(Particles->particleType[i] == PSystem->fluid) {
-	//		double mi = Particles->Dns[partType::PSystem->fluid];
+			// double mi = Particles->Dns[partType::PSystem->fluid];
 			double mi;
 			if(Particles->PTYPE[i] == 1) mi = PSystem->DNS_FL1;
 			else mi = PSystem->DNS_FL2;
@@ -100,7 +101,8 @@ void MpsParticleCollision::checkParticleCollisions(MpsParticleSystem *PSystem, M
 		}
 	}
 #pragma omp parallel for
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		if(Particles->particleType[i] == PSystem->fluid) {
 			// CHANGED !!!
 			//Particles->pos[i*3  ]+=(acc[i*3  ]-Particles->vel[i*3  ])*PSystem->timeStep; Particles->pos[i*3+1]+=(acc[i*3+1]-Particles->vel[i*3+1])*PSystem->timeStep; Particles->pos[i*3+2]+=(acc[i*3+2]-Particles->vel[i*3+2])*PSystem->timeStep;
@@ -133,7 +135,8 @@ void MpsParticleCollision::checkDynamicParticleCollisions(MpsParticleSystem *PSy
 {
 	double local_pmax = 0.0;
 #pragma omp for
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		if(Particles->particleType[i] == PSystem->wall) {
 			local_pmax = max(local_pmax, Particles->press[i]);
 		}
@@ -146,9 +149,10 @@ void MpsParticleCollision::checkDynamicParticleCollisions(MpsParticleSystem *PSy
 }
 	// Compute collision and repulsive terms and the dynamic coefficients
 #pragma omp parallel for schedule(dynamic,64)
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		if(Particles->particleType[i] == PSystem->fluid) {
-	//		double mi = Particles->Dns[partType::PSystem->fluid];
+			// double mi = Particles->Dns[partType::PSystem->fluid];
 			double mi;
 			if(Particles->PTYPE[i] == 1) mi = PSystem->DNS_FL1;
 			else mi = PSystem->DNS_FL2;
@@ -256,7 +260,8 @@ void MpsParticleCollision::checkDynamicParticleCollisions(MpsParticleSystem *PSy
 	}
 	// Update velocity and position
 #pragma omp parallel for
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		if(Particles->particleType[i] == PSystem->fluid) {
 			
 			Particles->vel[i*3  ]+=Particles->dvelCollision[i*3  ];	Particles->vel[i*3+1]+=Particles->dvelCollision[i*3+1];	Particles->vel[i*3+2]+=Particles->dvelCollision[i*3+2];

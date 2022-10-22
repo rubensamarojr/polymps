@@ -163,7 +163,7 @@
 		"dimension": 		3,			"_comment": "Dimension (2 or 3)",
 		"particle_dist": 	0.01,		"_comment": "Average particle distance (m)",
 		"time_step": 		0.0001,	"_comment": "Time step (s)",
-		"final_time": 		100.0,		"_comment": "Time of simulation (s)",
+		"final_time": 		10.0,		"_comment": "Time of simulation (s)",
 		"iter_output": 		1000,		"_comment": "Number of iterations to determine the output interval",
 		"CFL_number":	 	0.2,		"_comment": "Courant (CFL) condition number (0.2 is recomendable)",
 		"_comment": "Weight function",

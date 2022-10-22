@@ -19,6 +19,7 @@
 #include "MpsParticleSystem.h"
 #include "MpsParticle.h"
 #include "MpsBucket.h"
+#include "MpsInflowOutflow.h"
 
 /**
  * @brief      This class describes the mps particle pressure engine.
@@ -44,9 +45,10 @@ public:
 	 * @param      PSystem    The particle system
 	 * @param      Particles  The particles data
 	 * @param      Buckets    The buckets data
+	 * @param      ioFlow     The Inflow/Outflow boundary data
 	 * @see        Eq. (21) in <a href="https://doi.org/10.1016/j.compfluid.2016.07.014" target="_blank">Improvements for accuracy and stability in a weakly-compressible particle method</a>
 	 */
-	void calcPress(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+	void calcPress(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets, MpsInflowOutflow *ioFlow);
 
 	/**
 	 * @brief      Allocates memory for pressure and source term Vector
@@ -73,7 +75,7 @@ public:
 	
 	/**
 	 * @brief      Calculates the pressure using Incompressible MPS with pnd source term.
-	 *
+	 * @details    Perform conjugate gradient method on sparse square symmetric matrix A to solve Ax=b.
 	 * @param      PSystem    The particle system
 	 * @param      Particles  The particles data
 	 * @param      Buckets    The buckets data
@@ -82,12 +84,33 @@ public:
 	
 	/**
 	 * @brief      Calculates the pressure using Incompressible MPS with pnd + divergence of velocity source term.
-	 *
+	 * @details    Perform conjugate gradient method on sparse square symmetric matrix A to solve Ax=b.
 	 * @param      PSystem    The particle system
 	 * @param      Particles  The particles data
 	 * @param      Buckets    The buckets data
 	 */
 	void solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+
+	/**
+	 * @brief      Calculates the pressure using Incompressible MPS with pnd source term.
+	 * @details    Used only in the simulations with Inflow/Ouftlow Boundary Condition. Perform a bi conjugate 
+	 * gradient stabilized solver for sparse square asymmetric matrix A to solve Ax=b.
+	 * @param      PSystem    The particle system
+	 * @param      Particles  The particles data
+	 * @param      Buckets    The buckets data
+	 */
+	void solvePressurePoissonPndInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+	
+	/**
+	 * @brief      Calculates the pressure using Incompressible MPS with pnd + divergence of velocity source term.
+	 * @details    Used only in the simulations with Inflow/Ouftlow Boundary Condition. Perform a bi conjugate 
+	 * gradient stabilized solver for sparse square asymmetric matrix A to solve Ax=b.
+	 * @param      PSystem    The particle system
+	 * @param      Particles  The particles data
+	 * @param      Buckets    The buckets data
+	 * @param      ioFlow     The Inflow/Outflow boundary data
+	 */
+	void solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets, MpsInflowOutflow *ioFlow);
 	
 	/**
 	 * @brief      Calculates the divergence of the velocity.
@@ -198,11 +221,10 @@ public:
 	 * @param      force       The repulsive force vector
 	 * @param[in]  normal      The normal vector
 	 * @param[in]  normalSqrt  The normal vector magnitude
-	 * @param[in]  i           Particle index
 	 * @param      Particles   The particles data
 	 * @see        Eq. (19) in <a href="https://doi.org/10.1007/s40571-019-00269-6" target="_blank">Parallel analysis system for free-surface flow using MPS method with explicitly represented polygon wall boundary model</a>
 	 */
-	void repulsiveForceMitsume(double *force, const double *normal, const double normalSqrt, const int i, MpsParticleSystem *PSystem, MpsParticle *Particles);
+	void repulsiveForceMitsume(double *force, const double *normal, const double normalSqrt, MpsParticleSystem *PSystem, MpsParticle *Particles);
 
 	/**
 	 * @brief      Calculates a Repulsive force perpendicular to the polygon wall.

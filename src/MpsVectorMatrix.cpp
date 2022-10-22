@@ -19,7 +19,8 @@ MpsVectorMatrix::~MpsVectorMatrix()
 // Correction matrix
 void MpsVectorMatrix::correctionMatrix(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 #pragma omp parallel for schedule(dynamic,64)
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 //	if(particleType[i] == PSystem->fluid) {
 		Particles->correcMatrixRow1[i*3  ] = 0.0; Particles->correcMatrixRow1[i*3+1] = 0.0; Particles->correcMatrixRow1[i*3+2] = 0.0;
 		Particles->correcMatrixRow2[i*3  ] = 0.0; Particles->correcMatrixRow2[i*3+1] = 0.0; Particles->correcMatrixRow2[i*3+2] = 0.0;
@@ -167,10 +168,11 @@ int MpsVectorMatrix::inverseMatrix(double &M11, double &M12, double &M13, double
 // 3D triangle to xy plane
 // https://math.stackexchange.com/questions/856666/how-can-i-transform-a-3d-triangle-to-xy-plane
 void MpsVectorMatrix::transformMatrix(double *V1, double *V2, double *V3, double *RM, const double epsZero) {
-	double A[3],B[3],C[3],U[3],V[3],W[3];
+	// double A[3];
+	double B[3],C[3],U[3],V[3],W[3];
 	// Translate the vertex "V1" to origin 0,0,0
 	for(unsigned int i = 0; i < 3; i++) {
-		//A[i] = V1[i] - V1[i];
+		// A[i] = V1[i] - V1[i];
 		B[i] = V2[i] - V1[i];
 		C[i] = V3[i] - V1[i];
 	}

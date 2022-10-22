@@ -735,17 +735,18 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 
 	// Memory allocation
 	// Scalars
-	Particles->particleType = (int*)malloc(sizeof(int)*Particles->numParticlesMemory);		// Particle type
+	Particles->particleType = (int*)malloc(sizeof(int)*Particles->numParticlesMemory);			// Particle type
+	Particles->particleID = (int*)malloc(sizeof(int)*Particles->numParticlesMemory);			// Global and static particle ID
 	Particles->particleBC = (int*)malloc(sizeof(int)*Particles->numParticlesMemory);			// BC particle type
-	Particles->numNeigh = (int*)malloc(sizeof(int)*Particles->numParticlesMemory);			// Number of neighbors
+	Particles->numNeigh = (int*)malloc(sizeof(int)*Particles->numParticlesMemory);				// Number of neighbors
 
 	Particles->press = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);			// Particle pressure
 	Particles->pressAverage = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	// Time averaged particle pressure
 	Particles->pndi = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);			// PND
 	Particles->pndki = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);			// PND step k
-	Particles->pndski = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);		// Mean fluid neighbor PND step k
+	Particles->pndski = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);			// Mean fluid neighbor PND step k
 	Particles->pndSmall = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);		// PND small = sum(wij)
-	Particles->npcdDeviation2 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);// NPCD deviation modulus
+	Particles->npcdDeviation2 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	// NPCD deviation modulus
 	Particles->concentration = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	// Concentration
 	Particles->velDivergence = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	// Divergence of velocity
 	Particles->diffusiveTerm = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	// Diffusive term
@@ -763,7 +764,7 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 	Particles->correcMatrixRow1 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);	// Correction matrix - Row 1
 	Particles->correcMatrixRow2 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);	// Correction matrix - Row 2
 	Particles->correcMatrixRow3 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);	// Correction matrix - Row 3
-	Particles->normal = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);				// Particle normal
+	Particles->normal = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);			// Particle normal
 	Particles->dvelCollision = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);		// Variation of velocity due collision
 
 
@@ -771,29 +772,31 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 	if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
 		Particles->signDist = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	// Signed distance between particle and inOutflow plane
 		Particles->isInIORegion = (bool*)malloc(sizeof(bool)*Particles->numParticlesMemory);	// True if the particle is in the inOutflow region
+		Particles->motherID = (int*)malloc(sizeof(int)*Particles->numParticlesMemory);			// ID of the real (effective) particle that generates the IO particle
+		Particles->ioflowID = (int*)malloc(sizeof(int)*Particles->numParticlesMemory);			// ID of the inOutflow Plane near the IO particle
 	}
-	
+	Particles->ppeID = (int*)malloc(sizeof(int)*Particles->numParticlesMemory);			// ID of the inner Particles PPE solver
 
 	// Polygons
 	// Scalars
-	Particles->nearMeshType = (int*)malloc(sizeof(int)*Particles->numParticlesMemory);			// Type of mesh near particle
+	Particles->nearMeshType = (int*)malloc(sizeof(int)*Particles->numParticlesMemory);				// Type of mesh near particle
 	Particles->particleNearWall = (bool*)malloc(sizeof(bool)*Particles->numParticlesMemory);		// Particle near polygon wall
-	Particles->numNeighWallContribution = (int*)malloc(sizeof(int)*Particles->numParticlesMemory);// Number of neighbors due wall
+	Particles->numNeighWallContribution = (int*)malloc(sizeof(int)*Particles->numParticlesMemory);	// Number of neighbors due wall
 
-	Particles->pndWallContribution = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);		// PND wall
+	Particles->pndWallContribution = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);			// PND wall
 	Particles->deviationDotPolygonNormal = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	// Deviation vector X polygonal wall
 	Particles->numNeighborsSurfaceParticles = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);// Number of free-surface particle neighbors
 	Particles->distParticleWall2 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);			// Squared distance of particle to triangle mesh
 	// Vectors
 	Particles->particleAtWallPos = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);	// Particle at wall coordinate
 	Particles->mirrorParticlePos = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);	// Mirrored particle coordinate
-	Particles->wallParticleForce1 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);	// Wall-Particle force
-	Particles->wallParticleForce2 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);	// Wall-Particle force
+	Particles->wallParticleForce1 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);// Wall-Particle force
+	Particles->wallParticleForce2 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);// Wall-Particle force
 	Particles->polygonNormal = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);		// Polygon normal
 	
-//	Posk = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);		// Particle coordinates
-//	Velk = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);		// Particle velocity
-//	Acv = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);		// Part
+	// Posk = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);		// Particle coordinates
+	// Velk = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);		// Particle velocity
+	// Acv = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);		// Part
 
 	// Non-Newtonian
 	// Scalars
@@ -803,12 +806,12 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 
 	// Alocate memory only if Non-newtonian is used
 	if(PSystem->fluidType == viscType::NON_NEWTONIAN) {
-		Particles->Cv = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);		// Concentration
-		Particles->II = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);		// Invariant
+		Particles->Cv = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);			// Concentration
+		Particles->II = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);			// Invariant
 		Particles->MEU_Y = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);		// Dynamic viscosity ??
-		Particles->Inertia = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	//
+		Particles->Inertia = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);		//
 		Particles->pnew = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);		// New pressure
-		Particles->p_rheo_new = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);//
+		Particles->p_rheo_new = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	//
 		Particles->p_smooth = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	//
 		Particles->VF = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);		//
 		Particles->S12 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);		//
@@ -846,12 +849,32 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 		//	i*3 = x			i*3+1 = y			i*3+2 = z
 		Particles->press[i]=b[6];	Particles->pressAverage[i]=b[7];
 
-//		printf("X: %d %lf %lf %lf %lf %lf %lf %lf %lf\n",particleType[i],pos[3*i],pos[3*i+1],pos[3*i+2],vel[3*i],vel[3*i+1],vel[3*i+2],press[i],pressAverage[i]);
-//		Posk[i*3]=b[0];	Posk[i*3+1]=b[1];	Posk[i*3+2]=b[2];
-//		Velk[i*3]=b[3];	Velk[i*3+1]=b[4];	Velk[i*3+2]=b[5];
+		// printf("X: %d %lf %lf %lf %lf %lf %lf %lf %lf\n",particleType[i],pos[3*i],pos[3*i+1],pos[3*i+2],vel[3*i],vel[3*i+1],vel[3*i+2],press[i],pressAverage[i]);
+		// Posk[i*3]=b[0];	Posk[i*3+1]=b[1];	Posk[i*3+2]=b[2];
+		// Velk[i*3]=b[3];	Velk[i*3+1]=b[4];	Velk[i*3+2]=b[5];
 	}
 	// Close .grid file
 	fclose(fp);
+
+	// Set Global and fixed particle ID
+	for(int i=0; i<Particles->numParticlesZero; i++) {
+		Particles->particleID[i] = i;
+	}
+
+	// Check if the number of particles used to allocate memory (Important for inOutflow) is higher than nmber of real (effective) particles
+	if (Particles->numParticlesZero > Particles->numParticles) {
+		int numGhostParticlesAux = 0;
+		
+		// Assign particles as Ghost
+		for(int i=Particles->numParticles; i<Particles->numParticlesMemory; i++) {
+			// Set particle data as Ghost data
+			Particles->setParticleDataToGhost(i, PSystem);
+			numGhostParticlesAux++;
+		}
+
+		// Updates the number of ghost particles in the current step
+		Particles->numGhostParticles += numGhostParticlesAux;
+	}
 	
 	// Set vectors to zero
 	//for(int i=0; i<Particles->numParticles*3; i++) {
@@ -896,26 +919,29 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 		for(int i=0; i<Particles->numParticlesZero; i++) {
 			Particles->signDist[i] = PSystem->nearInfinity;
 			Particles->isInIORegion[i] = false;
+			Particles->motherID[i] = -1;
+			Particles->ppeID[i] = -1;
+			Particles->ioflowID[i] = -1;
 		}
 	}
 	// Assign type and density
 	//for(int i=0; i<Particles->numParticles; i++) {
 	for(int i=0; i<Particles->numParticlesZero; i++) {
-		/*
-		// Assign type and density
-		if(pos[i*3+2] <= 0.3) {
-			PTYPE[i]=2;
-			Particles->RHO[i] = PSystem->DNS_FL2;
-			// CHANGED Only at the first time step
-			Particles->MEU[i] = PSystem->KNM_VS2 * PSystem->DNS_FL2;
-		}
-		else {
-			PTYPE[i]=1;
-			Particles->RHO[i] = PSystem->DNS_FL1;
-			// CHANGED Only at the first time step
-			Particles->MEU[i] = PSystem->KNM_VS1 * PSystem->DNS_FL1;
-		}
-		*/
+		
+		// // Assign type and density
+		// if(pos[i*3+2] <= 0.3) {
+		// 	PTYPE[i]=2;
+		// 	Particles->RHO[i] = PSystem->DNS_FL2;
+		// 	// CHANGED Only at the first time step
+		// 	Particles->MEU[i] = PSystem->KNM_VS2 * PSystem->DNS_FL2;
+		// }
+		// else {
+		// 	PTYPE[i]=1;
+		// 	Particles->RHO[i] = PSystem->DNS_FL1;
+		// 	// CHANGED Only at the first time step
+		// 	Particles->MEU[i] = PSystem->KNM_VS1 * PSystem->DNS_FL1;
+		// }
+		
 
 		if(PSystem->fluidType == viscType::NEWTONIAN) {
 			Particles->RHO[i] = PSystem->DNS_FL1;
@@ -1026,7 +1052,7 @@ void MpsInputOutput::writeVtuBinary(MpsParticleSystem *PSystem, MpsParticle *Par
 	ofstream file;
 	file.open(output_filename, ios::out | ios::binary);
 
-	int nParticles = Particles->numParticles;
+	int nParticles = Particles->numRealAndIOParticles;
 
 	// Header
 	//file << "<?xml version='1.0' encoding='UTF-8'?>" << endl;
@@ -1037,8 +1063,9 @@ void MpsInputOutput::writeVtuBinary(MpsParticleSystem *PSystem, MpsParticle *Par
 	// Point data
 	file << "      <PointData>" << endl;
 	file << "        <DataArray type='Float32' Name='Velocity' NumberOfComponents='3' format='binary'>" << endl;
-	for(size_t i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		{
 			float ptx = (float)Particles->vel[i*3  ];
 			float pty = (float)Particles->vel[i*3+1];
@@ -1056,8 +1083,9 @@ void MpsInputOutput::writeVtuBinary(MpsParticleSystem *PSystem, MpsParticle *Par
 	file << endl << "        </DataArray>" << endl;
 	
 	file << "        <DataArray type='Float32' Name='PreSmallsure' format='binary'>" << endl;
-	for(size_t i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		{
 			float ptv = (float)Particles->press[i];
 			SwapEnd(ptv);
@@ -1067,8 +1095,9 @@ void MpsInputOutput::writeVtuBinary(MpsParticleSystem *PSystem, MpsParticle *Par
 	file << endl << "        </DataArray>" << endl;
 	
 	file << "<        DataArray type='Int32' Name='BC' format='binary'>" << endl;
-	for(size_t i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		{
 			int32_t type = Particles->particleBC[i];
 			int type_i = static_cast<int>(type);
@@ -1081,8 +1110,9 @@ void MpsInputOutput::writeVtuBinary(MpsParticleSystem *PSystem, MpsParticle *Par
 	if(outputPnd) 
 	{
 		file << "        <DataArray type='Float32' Name='pnd' format='binary'>" << endl;
-		for(size_t i=0; i<Particles->numParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			{
 				float ptv = Particles->pndi[i];
 				SwapEnd(ptv);
@@ -1092,8 +1122,9 @@ void MpsInputOutput::writeVtuBinary(MpsParticleSystem *PSystem, MpsParticle *Par
 		file << endl << "        </DataArray>" << endl;
 		
 		file << "        <DataArray type='Float32' Name='pndSmall' format='binary'>" << endl;
-		for(size_t i=0; i<Particles->numParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			{
 				float ptv = Particles->pndSmall[i];
 				SwapEnd(ptv);
@@ -1106,8 +1137,9 @@ void MpsInputOutput::writeVtuBinary(MpsParticleSystem *PSystem, MpsParticle *Par
 	if(outputNeigh)
 	{
 		file << "        <DataArray type='Int32' Name='nNeigh' format='binary'>" << endl;
-		for(size_t i=0; i<Particles->numParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			{
 				int32_t type = Particles->numNeigh[i];
 				int type_i = static_cast<int>(type);
@@ -1127,8 +1159,9 @@ void MpsInputOutput::writeVtuBinary(MpsParticleSystem *PSystem, MpsParticle *Par
 	//Points
 	file << "      <Points>" << endl;
 	file << "        <DataArray type='Float32' Name='Position' NumberOfComponents='3' format='binary'>" << endl;
-	for(size_t i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		{
 			float ptx = (float)Particles->pos[i*3  ];
 			float pty = (float)Particles->pos[i*3+1];
@@ -1149,8 +1182,9 @@ void MpsInputOutput::writeVtuBinary(MpsParticleSystem *PSystem, MpsParticle *Par
 	// Cells
 	file << "      <Cells>" << endl;
 	file << "        <DataArray type='Int64' Name='connectivity' format='binary'>" << endl;
-	for(size_t i=0, ii=0; i<Particles->numParticles; i++)
+	for(int ip=0, ii = 0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		{
 			int64_t type = ii;
 			int type_i = static_cast<int>(type);
@@ -1162,7 +1196,7 @@ void MpsInputOutput::writeVtuBinary(MpsParticleSystem *PSystem, MpsParticle *Par
 	file << endl << "        </DataArray>" << endl;
 	
 	file << "        <DataArray type='Int64' Name='offsets' format='binary'>" << endl;
-	for(size_t i=0, ii=0; i<Particles->numParticles; i++)
+	for(int i=0, ii=0; i<Particles->numParticles; i++)
 	{
 		{
 			int64_t type = ii+1;
@@ -1175,8 +1209,9 @@ void MpsInputOutput::writeVtuBinary(MpsParticleSystem *PSystem, MpsParticle *Par
 	file << endl << "        </DataArray>" << endl;
 
 	file << "        <DataArray type='UInt8' Name='types' format='binary'>" << endl;
-	for(size_t i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		{
 			uint8_t type = 1;
 			int type_i = static_cast<int>(type);
@@ -1209,8 +1244,9 @@ void MpsInputOutput::writeVtuBinaryFreeSurface(MpsParticleSystem *PSystem, MpsPa
 
 	int nParticles = 0;
 
-	for(int i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 			nParticles++;
 	}
@@ -1228,8 +1264,9 @@ void MpsInputOutput::writeVtuBinaryFreeSurface(MpsParticleSystem *PSystem, MpsPa
 	// Point data
 	file << "      <PointData>" << endl;
 	file << "        <DataArray type='Float32' Name='Velocity' NumberOfComponents='3' format='binary'>" << endl;
-	for(size_t i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 		{
 			float ptx = (float)Particles->vel[i*3  ];
@@ -1248,8 +1285,9 @@ void MpsInputOutput::writeVtuBinaryFreeSurface(MpsParticleSystem *PSystem, MpsPa
 	file << endl << "        </DataArray>" << endl;
 	
 	file << "        <DataArray type='Float32' Name='PreSmallsure' format='binary'>" << endl;
-	for(size_t i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 		{
 			float ptv = (float)Particles->press[i];
@@ -1260,8 +1298,9 @@ void MpsInputOutput::writeVtuBinaryFreeSurface(MpsParticleSystem *PSystem, MpsPa
 	file << endl << "        </DataArray>" << endl;
 	
 	file << "<        DataArray type='Int32' Name='BC' format='binary'>" << endl;
-	for(size_t i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 		{
 			int32_t type = Particles->particleBC[i];
@@ -1275,8 +1314,9 @@ void MpsInputOutput::writeVtuBinaryFreeSurface(MpsParticleSystem *PSystem, MpsPa
 	if(outputPnd)
 	{
 		file << "        <DataArray type='Float32' Name='pnd' format='binary'>" << endl;
-		for(size_t i=0; i<Particles->numParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 			{
 				float ptv = Particles->pndi[i];
@@ -1287,8 +1327,9 @@ void MpsInputOutput::writeVtuBinaryFreeSurface(MpsParticleSystem *PSystem, MpsPa
 		file << endl << "        </DataArray>" << endl;
 		
 		file << "        <DataArray type='Float32' Name='pndSmall' format='binary'>" << endl;
-		for(size_t i=0; i<Particles->numParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 			{
 				float ptv = Particles->pndSmall[i];
@@ -1303,8 +1344,9 @@ void MpsInputOutput::writeVtuBinaryFreeSurface(MpsParticleSystem *PSystem, MpsPa
 	if(outputNeigh)
 	{
 		file << "        <DataArray type='Int32' Name='nNeigh' format='binary'>" << endl;
-		for(size_t i=0; i<Particles->numParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 			{
 				int32_t type = Particles->numNeigh[i];
@@ -1326,8 +1368,9 @@ void MpsInputOutput::writeVtuBinaryFreeSurface(MpsParticleSystem *PSystem, MpsPa
 	//Points
 	file << "      <Points>" << endl;
 	file << "        <DataArray type='Float32' Name='Position' NumberOfComponents='3' format='binary'>" << endl;
-	for(size_t i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 		{
 			float ptx = (float)Particles->pos[i*3  ];
@@ -1349,8 +1392,9 @@ void MpsInputOutput::writeVtuBinaryFreeSurface(MpsParticleSystem *PSystem, MpsPa
 	// Cells
 	file << "      <Cells>" << endl;
 	file << "        <DataArray type='Int64' Name='connectivity' format='binary'>" << endl;
-	for(size_t i=0, ii=0; i<Particles->numParticles; i++)
+	for(int ip=0, ii=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 		{
 			int64_t type = ii;
@@ -1363,8 +1407,9 @@ void MpsInputOutput::writeVtuBinaryFreeSurface(MpsParticleSystem *PSystem, MpsPa
 	file << endl << "        </DataArray>" << endl;
 	
 	file << "        <DataArray type='Int64' Name='offsets' format='binary'>" << endl;
-	for(size_t i=0, ii=0; i<Particles->numParticles; i++)
+	for(int ip=0, ii=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 		{
 			int64_t type = ii+1;
@@ -1377,8 +1422,9 @@ void MpsInputOutput::writeVtuBinaryFreeSurface(MpsParticleSystem *PSystem, MpsPa
 	file << endl << "        </DataArray>" << endl;
 
 	file << "        <DataArray type='UInt8' Name='types' format='binary'>" << endl;
-	for(size_t i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 		{
 			uint8_t type = 1;
@@ -1409,7 +1455,6 @@ void MpsInputOutput::writeVtuAscii(MpsParticleSystem *PSystem, MpsParticle *Part
 	delete[] output_folder_char;
 	output_folder_char = NULL;
 
-	//int nParticles = Particles->numParticles;
 	int nParticles = Particles->numRealAndIOParticles;
 
 	// ASCII FILE
@@ -1424,8 +1469,9 @@ void MpsInputOutput::writeVtuAscii(MpsParticleSystem *PSystem, MpsParticle *Part
 	// Points
 	fprintf(fp,"      <Points>\n");
 	fprintf(fp,"        <DataArray type='Float32' Name='Position' NumberOfComponents='3' format='ascii'>\n          ");
-	for(int i=0; i<Particles->numRealAndIOParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		fprintf(fp,"%lf %lf %lf ",Particles->pos[i*3],Particles->pos[i*3+1],Particles->pos[i*3+2]);
 	}
 	fprintf(fp,"\n        </DataArray>\n");
@@ -1434,24 +1480,31 @@ void MpsInputOutput::writeVtuAscii(MpsParticleSystem *PSystem, MpsParticle *Part
 	// Point data
 	fprintf(fp,"      <PointData>\n");
 	fprintf(fp,"        <DataArray type='Float32' Name='Velocity' NumberOfComponents='3' format='ascii'>\n");
-	for(int i=0; i<Particles->numRealAndIOParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		//double val=sqrt(Particles->vel[i*3]*Particles->vel[i*3]+Particles->vel[i*3+1]*Particles->vel[i*3+1]+Particles->vel[i*3+2]*Particles->vel[i*3+2]);
 		fprintf(fp,"%f %f %f ",(float)Particles->vel[i*3],(float)Particles->vel[i*3+1],(float)Particles->vel[i*3+2]);
 	}
 	fprintf(fp,"\n        </DataArray>\n");
-	//fprintf(fp,"        <DataArray type='Float32' Name='preSmallsave' format='ascii'>\n");
-	//for(int i=0; i<Particles->numRealAndIOParticles; i++) {	fprintf(fp,"%f ",(float)(Particles->pressAverage[i]/PSystem->iterOutput));}
-	//fprintf(fp,"\n        </DataArray>\n");
+	// fprintf(fp,"        <DataArray type='Float32' Name='preSmallsave' format='ascii'>\n");
+	// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++) 
+	// {	
+	// 	int i = Particles->particleID[ip];
+	// 	fprintf(fp,"%f ",(float)(Particles->pressAverage[i]/PSystem->iterOutput));
+	// }
+	// fprintf(fp,"\n        </DataArray>\n");
 	fprintf(fp,"        <DataArray type='Float32' Name='pressure' format='ascii'>\n");
-	for(int i=0; i<Particles->numRealAndIOParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		fprintf(fp,"%f ",(float)Particles->press[i]);
 	}
 	fprintf(fp,"\n        </DataArray>\n");
 	fprintf(fp,"        <DataArray type='Int32' Name='BC' format='ascii'>\n");
-	for(int i=0; i<Particles->numRealAndIOParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		fprintf(fp,"%d ",Particles->particleBC[i]);
 	}
 	fprintf(fp,"\n        </DataArray>\n");
@@ -1459,34 +1512,39 @@ void MpsInputOutput::writeVtuAscii(MpsParticleSystem *PSystem, MpsParticle *Part
 	if(outputPnd)
 	{
 		fprintf(fp,"        <DataArray type='Float32' Name='pnd' format='ascii'>\n");
-		for(int i=0; i<Particles->numRealAndIOParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			fprintf(fp,"%f ",(float)Particles->pndi[i]);
 		}
 		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='pndSmall' format='ascii'>\n");
-		for(int i=0; i<Particles->numRealAndIOParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			fprintf(fp,"%f ",(float)Particles->pndSmall[i]);
 		}
 		fprintf(fp,"\n        </DataArray>\n");
-//		fprintf(fp,"        <DataArray type='Float32' Name='pndk' format='ascii'>\n");
-//		for(int i=0; i<Particles->numRealAndIOParticles; i++)
-//		{
-//			fprintf(fp,"%f ",(float)pndki[i]);
-//		}
-//		fprintf(fp,"\n        </DataArray>\n");
-//		fprintf(fp,"        <DataArray type='Float32' Name='pndsk' format='ascii'>\n");
-//		for(int i=0; i<Particles->numRealAndIOParticles; i++)
-//		{
-//			fprintf(fp,"%f ",(float)pndski[i]);
-//		}
-//		fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='pndk' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	fprintf(fp,"%f ",(float)pndki[i]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='pndsk' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	fprintf(fp,"%f ",(float)pndski[i]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
 	}
 	if(outputNeigh) {
 		fprintf(fp,"        <DataArray type='Int32' Name='nNeigh' format='ascii'>\n");
-		for(int i=0; i<Particles->numRealAndIOParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			fprintf(fp,"%d ",Particles->numNeigh[i]);
 		}
 		fprintf(fp,"\n        </DataArray>\n");
@@ -1494,56 +1552,74 @@ void MpsInputOutput::writeVtuAscii(MpsParticleSystem *PSystem, MpsParticle *Part
 
 	if(outputDeviation)
 	{
-//		fprintf(fp,"        <DataArray type='Float32' Name='devSquare' format='ascii'>\n");
-//		for(int i=0; i<Particles->numRealAndIOParticles; i++) {	fprintf(fp,"%f ",(float)npcdDeviation2[i]);}
-//		fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='devSquare' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {	
+		// 	int i = Particles->particleID[ip];
+		// 	fprintf(fp,"%f ",(float)npcdDeviation2[i]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='npcdDeviation' NumberOfComponents='3' format='ascii'>\n");
-		for(int i=0; i<Particles->numRealAndIOParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			fprintf(fp,"%f %f %f ",(float)Particles->npcdDeviation[i*3],(float)Particles->npcdDeviation[i*3+1],(float)Particles->npcdDeviation[i*3+2]);
 		}
 		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='polygonNormal' NumberOfComponents='3' format='ascii'>\n");
-		for(int i=0; i<Particles->numRealAndIOParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			fprintf(fp,"%f %f %f ",(float)Particles->polygonNormal[i*3],(float)Particles->polygonNormal[i*3+1],(float)Particles->polygonNormal[i*3+2]);
 		}
 		fprintf(fp,"\n        </DataArray>\n");
-//		fprintf(fp,"        <DataArray type='Float32' Name='deviationDotPolygonNormal' format='ascii'>\n");
-//		for(int i=0; i<Particles->numRealAndIOParticles; i++) {	fprintf(fp,"%f ",(float)deviationDotPolygonNormal[i]);}
-//		fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='deviationDotPolygonNormal' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	fprintf(fp,"%f ",(float)deviationDotPolygonNormal[i]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
 	}
 
 	if(outputConcentration)
 	{
 		fprintf(fp,"        <DataArray type='Float32' Name='concentration' format='ascii'>\n");
-		for(int i=0; i<Particles->numRealAndIOParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			fprintf(fp,"%f ",(float)Particles->concentration[i]);
 		}
 		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='GradCi' NumberOfComponents='3' format='ascii'>\n");
-		for(int i=0; i<Particles->numRealAndIOParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			fprintf(fp,"%f %f %f ",(float)Particles->gradConcentration[i*3],(float)Particles->gradConcentration[i*3+1],(float)Particles->gradConcentration[i*3+2]);
 		}
 		fprintf(fp,"\n        </DataArray>\n");
 	}
 	
 //	fprintf(fp,"        <DataArray type='Float32' Name='wallParticleForce1' NumberOfComponents='3' format='ascii'>\n");
-//	for(int i=0; i<Particles->numRealAndIOParticles; i++) {
+//	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++) 
+//	{
+//		int i = Particles->particleID[ip];
 //		fprintf(fp,"%f %f %f ",(float)wallParticleForce1[i*3],(float)wallParticleForce1[i*3+1],(float)wallParticleForce1[i*3+2]);
 //	}
 //	fprintf(fp,"\n        </DataArray>\n");
 
 //	fprintf(fp,"        <DataArray type='Float32' Name='wallParticleForce2' NumberOfComponents='3' format='ascii'>\n");
-//	for(int i=0; i<Particles->numRealAndIOParticles; i++) {
+//	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+//	{
+//		int i = Particles->particleID[ip];
 //		fprintf(fp,"%f %f %f ",(float)wallParticleForce2[i*3],(float)wallParticleForce2[i*3+1],(float)wallParticleForce2[i*3+2]);
 //	}
 //	fprintf(fp,"\n        </DataArray>\n");
 
 //	fprintf(fp,"        <DataArray type='Float32' Name='Normal' NumberOfComponents='3' format='ascii'>\n");
-//	for(int i=0; i<Particles->numRealAndIOParticles; i++) {
+//	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+//	{
+//		int i = Particles->particleID[ip];
 //		fprintf(fp,"%f %f %f ",(float)normal[i*3],(float)normal[i*3+1],(float)normal[i*3+2]);
 //	}
 //	fprintf(fp,"\n        </DataArray>\n");
@@ -1551,93 +1627,157 @@ void MpsInputOutput::writeVtuAscii(MpsParticleSystem *PSystem, MpsParticle *Part
 	if(outputNonNewtonian)
 	{
 		fprintf(fp,"        <DataArray type='Float32' Name='RHO' format='ascii'>\n");
-			for(int i=0; i<Particles->numRealAndIOParticles; i++) {	fprintf(fp,"%f ",(float)Particles->RHO[i]);}
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{	
+			int i = Particles->particleID[ip];
+			fprintf(fp,"%f ",(float)Particles->RHO[i]);
+		}
 		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='ConcVol' format='ascii'>\n");
-			for(int i=0; i<Particles->numRealAndIOParticles; i++) {	fprintf(fp,"%f ",(float)Particles->Cv[i]);}
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{	
+			int i = Particles->particleID[ip];
+			fprintf(fp,"%f ",(float)Particles->Cv[i]);
+		}
 		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='MEU' format='ascii'>\n");
-			for(int i=0; i<Particles->numRealAndIOParticles; i++) {	fprintf(fp,"%f ",(float)Particles->MEU[i]);}
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
+			fprintf(fp,"%f ",(float)Particles->MEU[i]);
+		}
 		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='MEUy' format='ascii'>\n");
-			for(int i=0; i<Particles->numRealAndIOParticles; i++) {	fprintf(fp,"%f ",(float)Particles->MEU_Y[i]);}
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
+			fprintf(fp,"%f ",(float)Particles->MEU_Y[i]);
+		}
 		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='II' format='ascii'>\n");
-			for(int i=0; i<Particles->numRealAndIOParticles; i++) {	fprintf(fp,"%f ",(float)Particles->II[i]);}
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
+			fprintf(fp,"%f ",(float)Particles->II[i]);
+		}
 		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Int32' Name='PTYPE' format='ascii'>\n");
-			for(int i=0; i<Particles->numRealAndIOParticles; i++) {	fprintf(fp,"%d ",Particles->PTYPE[i]);}
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
+			fprintf(fp,"%d ",Particles->PTYPE[i]);
+		}
 		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='p_smooth' format='ascii'>\n");
-			for(int i=0; i<Particles->numRealAndIOParticles; i++) {	fprintf(fp,"%f ",(float)Particles->p_smooth[i]);}
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
+			fprintf(fp,"%f ",(float)Particles->p_smooth[i]);
+		}
 		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='Inertia' format='ascii'>\n");
-			for(int i=0; i<Particles->numRealAndIOParticles; i++) {	fprintf(fp,"%f ",(float)Particles->Inertia[i]);}
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
+			fprintf(fp,"%f ",(float)Particles->Inertia[i]);
+		}
 		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='Normal_Stress' format='ascii'>\n");
-			for(int i=0; i<Particles->numRealAndIOParticles; i++) {	fprintf(fp,"%f ",(float)Particles->p_rheo_new[i]);}
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
+			fprintf(fp,"%f ",(float)Particles->p_rheo_new[i]);
+		}
 		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='VF' format='ascii'>\n");
-			for(int i=0; i<Particles->numRealAndIOParticles; i++) {	fprintf(fp,"%f ",(float)Particles->VF[i]);}
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
+			fprintf(fp,"%f ",(float)Particles->VF[i]);
+		}
 		fprintf(fp,"\n        </DataArray>\n");
 	}
 	
 	if(outputAuxiliar)
 	{
 		fprintf(fp,"        <DataArray type='Int32' Name='ParticleType' format='ascii'>\n");
-		for(int i=0; i<Particles->numRealAndIOParticles; i++) {
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
 			fprintf(fp,"%d ",Particles->particleType[i]);
 		}
 		fprintf(fp,"\n        </DataArray>\n");
 
-//		fprintf(fp,"        <DataArray type='Float32' Name='mirrorParticlePos' NumberOfComponents='3' format='ascii'>\n");
-//		for(int i=0; i<Particles->numRealAndIOParticles; i++) {
-//			fprintf(fp,"%f %f %f ",(float)mirrorParticlePos[i*3],(float)mirrorParticlePos[i*3+1],(float)mirrorParticlePos[i*3+2]);
-//		}
-//		fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='mirrorParticlePos' NumberOfComponents='3' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	fprintf(fp,"%f %f %f ",(float)mirrorParticlePos[i*3],(float)mirrorParticlePos[i*3+1],(float)mirrorParticlePos[i*3+2]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
 
-//		fprintf(fp,"        <DataArray type='Int32' Name='NearWall' format='ascii'>\n");
-//		for(int i=0; i<Particles->numRealAndIOParticles; i++) {
-//			fprintf(fp,"%d ",particleNearWall[i]);
-//		}
-//		fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Int32' Name='NearWall' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	fprintf(fp,"%d ",particleNearWall[i]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
 
-		//fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
-		//for(int i=0; i<Particles->numRealAndIOParticles; i++) {
-		//	fprintf(fp,"%f %f %f ",(float)Fwall[i*3],(float)Fwall[i*3+1],(float)Fwall[i*3+2]);
-		//}
-		//fprintf(fp,"\n        </DataArray>\n");
-//		fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
-//		for(int i=0; i<Particles->numRealAndIOParticles; i++) {
-//			fprintf(fp,"%f %f %f ",(float)forceWall[i*3],(float)forceWall[i*3+1],(float)forceWall[i*3+2]);
-//		}
-//		fprintf(fp,"\n        </DataArray>\n");
-//		fprintf(fp,"        <DataArray type='Float32' Name='DIV' format='ascii'>\n");
-//		for(int i=0; i<Particles->numRealAndIOParticles; i++) {	fprintf(fp,"%f ",(float)velDivergence[i]);}
-//		fprintf(fp,"\n        </DataArray>\n");
-//		fprintf(fp,"        <DataArray type='Float32' Name='Di' format='ascii'>\n");
-//		for(int i=0; i<Particles->numRealAndIOParticles; i++) {	fprintf(fp,"%f ",(float)diffusiveTerm[i]);}
-//		fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	fprintf(fp,"%f %f %f ",(float)Fwall[i*3],(float)Fwall[i*3+1],(float)Fwall[i*3+2]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	fprintf(fp,"%f %f %f ",(float)forceWall[i*3],(float)forceWall[i*3+1],(float)forceWall[i*3+2]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
+		fprintf(fp,"        <DataArray type='Float32' Name='DIV' format='ascii'>\n");
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
+			fprintf(fp,"%f ",(float)Particles->velDivergence[i]);
+		}
+		fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='Di' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	fprintf(fp,"%f ",(float)diffusiveTerm[i]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
 
 		if(PSystem->wallType == boundaryWallType::POLYGON)
 		{
 			fprintf(fp,"        <DataArray type='Int32' Name='nearMeshType' format='ascii'>\n");
-			for(int i=0; i<Particles->numRealAndIOParticles; i++)
+			for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 			{
+				int i = Particles->particleID[ip];
 				fprintf(fp,"%d ",Particles->nearMeshType[i]);
 			}
 			fprintf(fp,"\n        </DataArray>\n");
 		}
 
-		//fprintf(fp,"        <DataArray type='Float32' Name='numNeighborsSurfaceParticles' format='ascii'>\n");
-		//for(int i=0; i<Particles->numRealAndIOParticles; i++) {fprintf(fp,"%f ",(float)numNeighborsSurfaceParticles[i]);}
-		//fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='numNeighborsSurfaceParticles' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	fprintf(fp,"%f ",(float)numNeighborsSurfaceParticles[i]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
 		
 		if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0)
 		{
 			fprintf(fp,"        <DataArray type='Float32' Name='SignedDist' NumberOfComponents='1' format='ascii'>\n");
-			for(int i=0; i<Particles->numRealAndIOParticles; i++)
+			for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 			{
+				int i = Particles->particleID[ip];
 				fprintf(fp,"%f ",(float)Particles->signDist[i]);
 			}
 			fprintf(fp,"\n        </DataArray>\n");
@@ -1645,8 +1785,9 @@ void MpsInputOutput::writeVtuAscii(MpsParticleSystem *PSystem, MpsParticle *Part
 
 			// if(PSystem->mpsType == calcPressType::IMPLICIT_PND || PSystem->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
 			// 	fprintf(fp,"        <DataArray type='Float32' Name='Source' NumberOfComponents='1' format='ascii'>\n");
-			// 	for(int i=0; i<Particles->numRealAndIOParticles; i++)
+			// 	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 			// 	{
+			// 		int i = Particles->particleID[ip];
 			// 		if(Particles->particleType[i] == PSystem->fluid)
 			// 			fprintf(fp,"%f ",(float)Particles->sourceTerm(i));
 			// 		else
@@ -1663,21 +1804,21 @@ void MpsInputOutput::writeVtuAscii(MpsParticleSystem *PSystem, MpsParticle *Part
 	// Cells
 	fprintf(fp,"      <Cells>\n");
 	fprintf(fp,"        <DataArray type='Int32' Name='connectivity' format='ascii'>\n");
-	for(int i=0, ii = 0; i<Particles->numRealAndIOParticles; i++)
+	for(int ip=0, ii = 0; ip<Particles->numRealAndIOParticles; ip++)
 	{
 		fprintf(fp,"%d ",ii);
 		ii++;
 	}
 	fprintf(fp,"\n        </DataArray>\n");
 	fprintf(fp,"        <DataArray type='Int32' Name='offsets' format='ascii'>\n");
-	for(int i=0, ii=0; i<Particles->numRealAndIOParticles; i++)
+	for(int ip=0, ii=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
 		fprintf(fp,"%d ",ii+1);
 		ii++;
 	}
 	fprintf(fp,"\n        </DataArray>\n");
 	fprintf(fp,"        <DataArray type='UInt8' Name='types' format='ascii'>\n");
-	for(int i=0; i<Particles->numRealAndIOParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
 		fprintf(fp,"1 ");
 	}
@@ -1707,8 +1848,9 @@ void MpsInputOutput::writeVtuAsciiFreeSurface(MpsParticleSystem *PSystem, MpsPar
 	fp = fopen(output_filename, "w");
 
 	int nParticles = 0;
-	for(int i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 			nParticles++;
 	}
@@ -1722,8 +1864,9 @@ void MpsInputOutput::writeVtuAsciiFreeSurface(MpsParticleSystem *PSystem, MpsPar
 	// Points
 	fprintf(fp,"      <Points>\n");
 	fprintf(fp,"        <DataArray type='Float32' Name='Position' NumberOfComponents='3' format='ascii'>\n          ");
-	for(int i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 		{
 			fprintf(fp,"%lf %lf %lf ",Particles->pos[i*3],Particles->pos[i*3+1],Particles->pos[i*3+2]);
@@ -1735,25 +1878,33 @@ void MpsInputOutput::writeVtuAsciiFreeSurface(MpsParticleSystem *PSystem, MpsPar
 	// Point data
 	fprintf(fp,"      <PointData>\n");
 	fprintf(fp,"        <DataArray type='Float32' Name='Velocity' NumberOfComponents='3' format='ascii'>\n");
-	for(int i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 			fprintf(fp,"%f %f %f ",(float)Particles->vel[i*3],(float)Particles->vel[i*3+1],(float)Particles->vel[i*3+2]);
 	}
 	fprintf(fp,"\n        </DataArray>\n");
 	//fprintf(fp,"        <DataArray type='Float32' Name='preSmallsave' format='ascii'>\n");
-	//for(int i=0; i<Particles->numParticles; i++) {	fprintf(fp,"%f ",(float)(Particles->pressAverage[i]/PSystem->iterOutput));}
+	// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+	// {
+	// 	int i = Particles->particleID[ip];
+	// 	if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+	// 		fprintf(fp,"%f ",(float)(Particles->pressAverage[i]/PSystem->iterOutput));
+	//}
 	//fprintf(fp,"\n        </DataArray>\n");
 	fprintf(fp,"        <DataArray type='Float32' Name='pressure' format='ascii'>\n");
-	for(int i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 			fprintf(fp,"%f ",(float)Particles->press[i]);
 	}
 	fprintf(fp,"\n        </DataArray>\n");
 	fprintf(fp,"        <DataArray type='Int32' Name='BC' format='ascii'>\n");
-	for(int i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 			fprintf(fp,"%d ",Particles->particleBC[i]);
 	}
@@ -1762,15 +1913,17 @@ void MpsInputOutput::writeVtuAsciiFreeSurface(MpsParticleSystem *PSystem, MpsPar
 	if(outputPnd)
 	{
 		fprintf(fp,"        <DataArray type='Float32' Name='pnd' format='ascii'>\n");
-		for(int i=0; i<Particles->numParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 				fprintf(fp,"%f ",(float)Particles->pndi[i]);
 		}
 		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='pndSmall' format='ascii'>\n");
-		for(int i=0; i<Particles->numParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 				fprintf(fp,"%f ",(float)Particles->pndSmall[i]);
 		}
@@ -1780,8 +1933,9 @@ void MpsInputOutput::writeVtuAsciiFreeSurface(MpsParticleSystem *PSystem, MpsPar
 	if(outputNeigh)
 	{
 		fprintf(fp,"        <DataArray type='Int32' Name='nNeigh' format='ascii'>\n");
-		for(int i=0; i<Particles->numParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 				fprintf(fp,"%d ",Particles->numNeigh[i]);
 		}
@@ -1790,97 +1944,131 @@ void MpsInputOutput::writeVtuAsciiFreeSurface(MpsParticleSystem *PSystem, MpsPar
 
 	if(outputDeviation)
 	{
-//		fprintf(fp,"        <DataArray type='Float32' Name='devSquare' format='ascii'>\n");
-//		for(int i=0; i<Particles->numParticles; i++) {	fprintf(fp,"%f ",(float)npcdDeviation2[i]);}
-//		fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='devSquare' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+		// 		fprintf(fp,"%f ",(float)npcdDeviation2[i]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='npcdDeviation' NumberOfComponents='3' format='ascii'>\n");
-		for(int i=0; i<Particles->numParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 				fprintf(fp,"%f %f %f ",(float)Particles->npcdDeviation[i*3],(float)Particles->npcdDeviation[i*3+1],(float)Particles->npcdDeviation[i*3+2]);
 		}
 		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='polygonNormal' NumberOfComponents='3' format='ascii'>\n");
-		for(int i=0; i<Particles->numParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
-			fprintf(fp,"%f %f %f ",(float)Particles->polygonNormal[i*3],(float)Particles->polygonNormal[i*3+1],(float)Particles->polygonNormal[i*3+2]);
+			int i = Particles->particleID[ip];
+			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+				fprintf(fp,"%f %f %f ",(float)Particles->polygonNormal[i*3],(float)Particles->polygonNormal[i*3+1],(float)Particles->polygonNormal[i*3+2]);
 		}
 		fprintf(fp,"\n        </DataArray>\n");
-//		fprintf(fp,"        <DataArray type='Float32' Name='deviationDotPolygonNormal' format='ascii'>\n");
-//		for(int i=0; i<Particles->numParticles; i++) {	fprintf(fp,"%f ",(float)deviationDotPolygonNormal[i]);}
-//		fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='deviationDotPolygonNormal' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	fprintf(fp,"%f ",(float)deviationDotPolygonNormal[i]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
 	}
 
 	if(outputConcentration)
 	{
 		fprintf(fp,"        <DataArray type='Float32' Name='concentration' format='ascii'>\n");
-		for(int i=0; i<Particles->numParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 				fprintf(fp,"%f ",(float)Particles->concentration[i]);
 		}
 		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='GradCi' NumberOfComponents='3' format='ascii'>\n");
-		for(int i=0; i<Particles->numParticles; i++)
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 		{
+			int i = Particles->particleID[ip];
 			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 				fprintf(fp,"%f %f %f ",(float)Particles->gradConcentration[i*3],(float)Particles->gradConcentration[i*3+1],(float)Particles->gradConcentration[i*3+2]);
 		}
 		fprintf(fp,"\n        </DataArray>\n");
 	}
 	
-//	fprintf(fp,"        <DataArray type='Float32' Name='wallParticleForce1' NumberOfComponents='3' format='ascii'>\n");
-//	for(int i=0; i<Particles->numParticles; i++) {
-//		fprintf(fp,"%f %f %f ",(float)wallParticleForce1[i*3],(float)wallParticleForce1[i*3+1],(float)wallParticleForce1[i*3+2]);
-//	}
-//	fprintf(fp,"\n        </DataArray>\n");
+	// fprintf(fp,"        <DataArray type='Float32' Name='wallParticleForce1' NumberOfComponents='3' format='ascii'>\n");
+	// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+	// {
+	// 	int i = Particles->particleID[ip];
+	// 	if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+	// 		fprintf(fp,"%f %f %f ",(float)wallParticleForce1[i*3],(float)wallParticleForce1[i*3+1],(float)wallParticleForce1[i*3+2]);
+	// }
+	// fprintf(fp,"\n        </DataArray>\n");
 
-//	fprintf(fp,"        <DataArray type='Float32' Name='wallParticleForce2' NumberOfComponents='3' format='ascii'>\n");
-//	for(int i=0; i<Particles->numParticles; i++) {
-//		fprintf(fp,"%f %f %f ",(float)wallParticleForce2[i*3],(float)wallParticleForce2[i*3+1],(float)wallParticleForce2[i*3+2]);
-//	}
-//	fprintf(fp,"\n        </DataArray>\n");
+	// fprintf(fp,"        <DataArray type='Float32' Name='wallParticleForce2' NumberOfComponents='3' format='ascii'>\n");
+	// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+	// {
+	// 	int i = Particles->particleID[ip];
+	// 	if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+	// 		fprintf(fp,"%f %f %f ",(float)wallParticleForce2[i*3],(float)wallParticleForce2[i*3+1],(float)wallParticleForce2[i*3+2]);
+	// }
+	// fprintf(fp,"\n        </DataArray>\n");
 	
 	if(outputNonNewtonian)
 	{
 		fprintf(fp,"        <DataArray type='Float32' Name='RHO' format='ascii'>\n");
-			for(int i=0; i<Particles->numParticles; i++) {
-				if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
-					fprintf(fp,"%f ",(float)Particles->RHO[i]);
-			}
-			fprintf(fp,"\n        </DataArray>\n");
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
+			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+				fprintf(fp,"%f ",(float)Particles->RHO[i]);
+		}
+		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='ConcVol' format='ascii'>\n");
-			for(int i=0; i<Particles->numParticles; i++) {
-				if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
-					fprintf(fp,"%f ",(float)Particles->Cv[i]);
-			}
-			fprintf(fp,"\n        </DataArray>\n");
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
+			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+				fprintf(fp,"%f ",(float)Particles->Cv[i]);
+		}
+		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='MEU' format='ascii'>\n");
-			for(int i=0; i<Particles->numParticles; i++) {
-				if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
-					fprintf(fp,"%f ",(float)Particles->MEU[i]);
-			}
-			fprintf(fp,"\n        </DataArray>\n");
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
+			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+				fprintf(fp,"%f ",(float)Particles->MEU[i]);
+		}
+		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='MEUy' format='ascii'>\n");
-			for(int i=0; i<Particles->numParticles; i++) {
-				if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
-					fprintf(fp,"%f ",(float)Particles->MEU_Y[i]);
-			}
-			fprintf(fp,"\n        </DataArray>\n");
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
+			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+				fprintf(fp,"%f ",(float)Particles->MEU_Y[i]);
+		}
+		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='II' format='ascii'>\n");
-			for(int i=0; i<Particles->numParticles; i++) {
-				if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
-					fprintf(fp,"%f ",(float)Particles->II[i]);
-			}
-			fprintf(fp,"\n        </DataArray>\n");
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
+			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+				fprintf(fp,"%f ",(float)Particles->II[i]);
+		}
+		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Int32' Name='PTYPE' format='ascii'>\n");
-			for(int i=0; i<Particles->numParticles; i++) {
-				if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
-					fprintf(fp,"%d ",Particles->PTYPE[i]);
-			}
-			fprintf(fp,"\n        </DataArray>\n");
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
+			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+				fprintf(fp,"%d ",Particles->PTYPE[i]);
+		}
+		fprintf(fp,"\n        </DataArray>\n");
 		fprintf(fp,"        <DataArray type='Float32' Name='p_smooth' format='ascii'>\n");
-		for(int i=0; i<Particles->numParticles; i++) {
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		{
+			int i = Particles->particleID[ip];
 			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 				fprintf(fp,"%f ",(float)Particles->p_smooth[i]);
 		}
@@ -1890,58 +2078,84 @@ void MpsInputOutput::writeVtuAsciiFreeSurface(MpsParticleSystem *PSystem, MpsPar
 	if(outputAuxiliar)
 	{
 
-//		fprintf(fp,"        <DataArray type='Int32' Name='ParticleType' format='ascii'>\n");
-//		for(int i=0; i<Particles->numParticles; i++) {
-//			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
-//				fprintf(fp,"%d ",Particles->particleType[i]);
-//		}
-//		fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Int32' Name='ParticleType' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+		// 		fprintf(fp,"%d ",Particles->particleType[i]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='mirrorParticlePos' NumberOfComponents='3' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+		// 	fprintf(fp,"%f %f %f ",(float)mirrorParticlePos[i*3],(float)mirrorParticlePos[i*3+1],(float)mirrorParticlePos[i*3+2]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Int32' Name='NearWall' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+		// 		fprintf(fp,"%d ",particleNearWall[i]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
 
-//		fprintf(fp,"        <DataArray type='Float32' Name='mirrorParticlePos' NumberOfComponents='3' format='ascii'>\n");
-//		for(int i=0; i<Particles->numParticles; i++) {
-//			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
-//			fprintf(fp,"%f %f %f ",(float)mirrorParticlePos[i*3],(float)mirrorParticlePos[i*3+1],(float)mirrorParticlePos[i*3+2]);
-//		}
-//		fprintf(fp,"\n        </DataArray>\n");
-
-//		fprintf(fp,"        <DataArray type='Int32' Name='NearWall' format='ascii'>\n");
-//		for(int i=0; i<Particles->numParticles; i++) {
-//			if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
-//				fprintf(fp,"%d ",particleNearWall[i]);
-//		}
-//		fprintf(fp,"\n        </DataArray>\n");
-
-		//fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
-		//for(int i=0; i<Particles->numParticles; i++) {
-		//	fprintf(fp,"%f %f %f ",(float)Fwall[i*3],(float)Fwall[i*3+1],(float)Fwall[i*3+2]);
-		//}
-		//fprintf(fp,"\n        </DataArray>\n");
-//		fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
-//		for(int i=0; i<Particles->numParticles; i++) {
-//			fprintf(fp,"%f %f %f ",(float)forceWall[i*3],(float)forceWall[i*3+1],(float)forceWall[i*3+2]);
-//		}
-//		fprintf(fp,"\n        </DataArray>\n");
-//		fprintf(fp,"        <DataArray type='Float32' Name='DIV' format='ascii'>\n");
-//		for(int i=0; i<Particles->numParticles; i++) {	fprintf(fp,"%f ",(float)velDivergence[i]);}
-//		fprintf(fp,"\n        </DataArray>\n");
-//		fprintf(fp,"        <DataArray type='Float32' Name='Di' format='ascii'>\n");
-//		for(int i=0; i<Particles->numParticles; i++) {	fprintf(fp,"%f ",(float)diffusiveTerm[i]);}
-//		fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+		// 		fprintf(fp,"%f %f %f ",(float)Fwall[i*3],(float)Fwall[i*3+1],(float)Fwall[i*3+2]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='Fwall' NumberOfComponents='3' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+		// 		fprintf(fp,"%f %f %f ",(float)forceWall[i*3],(float)forceWall[i*3+1],(float)forceWall[i*3+2]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='DIV' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+		// 		fprintf(fp,"%f ",(float)velDivergence[i]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='Di' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+		// 		fprintf(fp,"%f ",(float)diffusiveTerm[i]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
 
 		if(PSystem->wallType == boundaryWallType::POLYGON)
 		{
 			fprintf(fp,"        <DataArray type='Int32' Name='nearMeshType' format='ascii'>\n");
-			for(int i=0; i<Particles->numParticles; i++)
+			for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 			{
+				int i = Particles->particleID[ip];
 				if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 					fprintf(fp,"%d ",Particles->nearMeshType[i]);
 			}
 			fprintf(fp,"\n        </DataArray>\n");
 		}
 
-		//fprintf(fp,"        <DataArray type='Float32' Name='numNeighborsSurfaceParticles' format='ascii'>\n");
-		//for(int i=0; i<Particles->numParticles; i++) {fprintf(fp,"%f ",(float)numNeighborsSurfaceParticles[i]);}
-		//fprintf(fp,"\n        </DataArray>\n");
+		// fprintf(fp,"        <DataArray type='Float32' Name='numNeighborsSurfaceParticles' format='ascii'>\n");
+		// for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+		// {
+		// 	int i = Particles->particleID[ip];
+		// 	if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
+		// 		fprintf(fp,"%f ",(float)numNeighborsSurfaceParticles[i]);
+		// }
+		// fprintf(fp,"\n        </DataArray>\n");
 	
 	}
 
@@ -1950,8 +2164,9 @@ void MpsInputOutput::writeVtuAsciiFreeSurface(MpsParticleSystem *PSystem, MpsPar
 	// Cells
 	fprintf(fp,"      <Cells>\n");
 	fprintf(fp,"        <DataArray type='Int32' Name='connectivity' format='ascii'>\n");
-	for(int i=0, ii = 0; i<Particles->numParticles; i++)
+	for(int ip=0, ii = 0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 		{
 			fprintf(fp,"%d ",ii);
@@ -1960,8 +2175,9 @@ void MpsInputOutput::writeVtuAsciiFreeSurface(MpsParticleSystem *PSystem, MpsPar
 	}
 	fprintf(fp,"\n        </DataArray>\n");
 	fprintf(fp,"        <DataArray type='Int32' Name='offsets' format='ascii'>\n");
-	for(int i=0, ii=0; i<Particles->numParticles; i++)
+	for(int ip=0, ii = 0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 		{
 			fprintf(fp,"%d ",ii+1);
@@ -1970,8 +2186,9 @@ void MpsInputOutput::writeVtuAsciiFreeSurface(MpsParticleSystem *PSystem, MpsPar
 	}
 	fprintf(fp,"\n        </DataArray>\n");
 	fprintf(fp,"        <DataArray type='UInt8' Name='types' format='ascii'>\n");
-	for(int i=0; i<Particles->numParticles; i++)
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
 	{
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->surface || Particles->particleType[i] == PSystem->wall)
 		{
 			fprintf(fp,"1 ");
@@ -1987,7 +2204,7 @@ void MpsInputOutput::writeVtuAsciiFreeSurface(MpsParticleSystem *PSystem, MpsPar
 }
 
 // Write header for vtu files
-void MpsInputOutput::writePvd(MpsParticleSystem *PSystem, MpsParticle *Particles)
+void MpsInputOutput::writePvd(MpsParticleSystem *PSystem)
 {
 	char pvd_filename[256];
 	char *output_folder_char = new char[vtuOutputFoldername.length()+1];
@@ -2093,7 +2310,9 @@ void MpsInputOutput::writePressSensors(MpsParticleSystem *PSystem, MpsParticle *
 	posP2[0] = 0.0; posP2[1] = 0.1; posP2[2] = 0.1;
 
 #pragma omp parallel for reduction(+: pndP1, pndP2, pndP3, pndP4, P1wij, P2wij, P3wij, P4wij)
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numRealAndIOParticles; ip++)
+	{
+		int i = Particles->particleID[ip];
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 		
 		/*
@@ -2341,7 +2560,7 @@ void MpsInputOutput::writePressSensors(MpsParticleSystem *PSystem, MpsParticle *
 #endif
 }
 
-void MpsInputOutput::writeHeaderTxtFiles(MpsParticleSystem *PSystem, MpsParticle *Particles) {
+void MpsInputOutput::writeHeaderTxtFiles() {
 
 	if(txtForce == true) {
 		char *forceTxtFilenameChar = new char[forceTxtFilename.length()+1];
@@ -2384,7 +2603,7 @@ void MpsInputOutput::writeHeaderTxtFiles(MpsParticleSystem *PSystem, MpsParticle
 }
 
 // Write vtk file with initial bucktes
-void MpsInputOutput::writeBuckets(MpsParticleSystem *PSystem, MpsParticle *Particles) {
+void MpsInputOutput::writeBuckets(MpsParticleSystem *PSystem) {
 
 	char output_filename[256];
 	char *output_folder_char = new char[vtuOutputFoldername.length()+1];
@@ -2405,10 +2624,10 @@ void MpsInputOutput::writeBuckets(MpsParticleSystem *PSystem, MpsParticle *Parti
 	if(PSystem->dim==3) {
 		nDimZ += 1;
 	}
-	double originX = PSystem->domainMinX;
-	double originY = PSystem->domainMinY;
-	double originZ = PSystem->domainMinZ;
-	int numCells = PSystem->numBucketsXYZ;
+	// double originX = PSystem->domainMinX;
+	// double originY = PSystem->domainMinY;
+	// double originZ = PSystem->domainMinZ;
+	// int numCells = PSystem->numBucketsXYZ;
 	
 	fprintf(fp,"# vtk DataFile Version 3.0\n");
 	fprintf(fp,"Initial Buckets\n");
@@ -2428,7 +2647,7 @@ void MpsInputOutput::writeBuckets(MpsParticleSystem *PSystem, MpsParticle *Parti
 }
 
 // Write vtk file with initial Inflow/Outflow plans
-void MpsInputOutput::writeInOutFlowPlan(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsInflowOutflow *inOutFlow) {
+void MpsInputOutput::writeInOutFlowPlan(MpsParticleSystem *PSystem, MpsInflowOutflow *inOutFlow) {
 
 	char output_filename[256];
 	char *output_folder_char = new char[vtuOutputFoldername.length()+1];

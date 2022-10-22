@@ -25,11 +25,13 @@ MpsPressure::~MpsPressure()
 void MpsPressure::allocateMemory(MpsParticle *Particles) {
 	Particles->pressurePPE = Eigen::VectorXd::Zero(Particles->numParticles);
 	Particles->sourceTerm = Eigen::VectorXd::Zero(Particles->numParticles);
+	// Particles->pressurePPE = Eigen::VectorXd::Zero(Particles->numParticlesZero);
+	// Particles->sourceTerm = Eigen::VectorXd::Zero(Particles->numParticlesZero);
 }
 
 
 // Select how to compute pressure
-void MpsPressure::calcPress(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets){
+void MpsPressure::calcPress(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets, MpsInflowOutflow *ioFlow){
 
 	if(PSystem->mpsType == calcPressType::EXPLICIT) {
 		calcPressEMPS(PSystem, Particles);
@@ -39,7 +41,13 @@ void MpsPressure::calcPress(MpsParticleSystem *PSystem, MpsParticle *Particles, 
 	}
 	else if(PSystem->mpsType == calcPressType::IMPLICIT_PND)
 	{
-		solvePressurePoissonPnd(PSystem, Particles, Buckets);
+		if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
+			solvePressurePoissonPndInOutflow(PSystem, Particles, Buckets);
+		}
+		else {
+			solvePressurePoissonPnd(PSystem, Particles, Buckets);
+		}
+
 	}
 	else if(PSystem->mpsType == calcPressType::IMPLICIT_PND_DIVU)
 	{
@@ -52,8 +60,24 @@ void MpsPressure::calcPress(MpsParticleSystem *PSystem, MpsParticle *Particles, 
 				calcWallNoSlipVelDivergence(PSystem, Particles, Buckets); // No-Slip condition
 			}
 		}
-		solvePressurePoissonPndDivU(PSystem, Particles, Buckets);
+		
+		if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
+			solvePressurePoissonPndDivUInOutflow(PSystem, Particles, Buckets, ioFlow);
+		}
+		else {
+			solvePressurePoissonPndDivU(PSystem, Particles, Buckets);
+		}
 	}
+
+	// Extrapolate pressure to wall and dummy particles
+	if(PSystem->wallType == boundaryWallType::PARTICLE) {
+		extrapolatePressParticlesWallDummy(PSystem, Particles, Buckets);
+	}
+	// if(PSystem->wallType == boundaryWallType::POLYGON) {
+	// 	// Pressure at inner particles near corners
+	// 	// Extrapolate pressure to inner particles near polygon walls (Not working !!)
+	// 	extrapolatePressParticlesNearPolygonWall(PSystem, Particles, Buckets);
+	// }
 
 }
 
@@ -63,7 +87,8 @@ void MpsPressure::calcPressEMPS(MpsParticleSystem *PSystem, MpsParticle *Particl
 // Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
 //#pragma omp parallel for schedule(dynamic,64)
 #pragma omp parallel for
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		double mi;
 		if(Particles->PTYPE[i] == 1) mi = PSystem->DNS_FL1;
 		else mi = PSystem->DNS_FL2;
@@ -112,7 +137,8 @@ void MpsPressure::calcPressWCMPS(MpsParticleSystem *PSystem, MpsParticle *Partic
 // Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
 //#pragma omp parallel for schedule(dynamic,64)
 #pragma omp parallel for
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		double mi;
 		if(Particles->PTYPE[i] == 1) mi = PSystem->DNS_FL1;
 		else mi = PSystem->DNS_FL2;
@@ -162,7 +188,7 @@ void MpsPressure::calcPressWCMPS(MpsParticleSystem *PSystem, MpsParticle *Partic
 #endif
 }
 
-// Solve linear system solver PPE (mpsType = calcPressType::IMPLICIT_PND)
+// Solve linear system solver PPE with PND deviation source term
 // Perform conjugate gradient method on symmetry matrix A to solve Ax=b
 // matA			symmetric (sparse) matrix
 // sourceTerm	vector
@@ -171,14 +197,318 @@ void MpsPressure::solvePressurePoissonPnd(MpsParticleSystem *PSystem, MpsParticl
 	using T = Eigen::Triplet<double>;
 	double lap_r = PSystem->reL*PSystem->invPartDist;
 	int n_size = (int)(pow(lap_r * 2, PSystem->dim)); // maximum number of neighbors
-	Eigen::SparseMatrix<double> matA(Particles->numParticles, Particles->numParticles); // declares a column-major sparse matrix type of double
-	Particles->sourceTerm.resize(Particles->numParticles); // Resizing a dynamic-size matrix
+	// Eigen::SparseMatrix<double> matA(Particles->numParticles, Particles->numParticles); // declares a column-major sparse matrix type of double
+	// Particles->sourceTerm.resize(Particles->numParticles); // Resizing a dynamic-size matrix
+	// Particles->sourceTerm.setZero(); // Right hand side-vector set to zero
+	// vector<T> coeffs(Particles->numParticles * n_size); // list of non-zeros coefficients
+	Eigen::SparseMatrix<double> matA(Particles->numParticlesZero, Particles->numParticlesZero); // declares a column-major sparse matrix type of double
+	Particles->sourceTerm.resize(Particles->numParticlesZero); // Resizing a dynamic-size matrix
 	Particles->sourceTerm.setZero(); // Right hand side-vector set to zero
-	vector<T> coeffs(Particles->numParticles * n_size); // list of non-zeros coefficients
+	vector<T> coeffs(Particles->numParticlesZero * n_size); // list of non-zeros coefficients
+	                                                    // 
+// Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
+//#pragma omp parallel for schedule(dynamic,64)
+	// for(int ip=0; ip<Particles->numParticles; ip++) {
+	for(int ip=0; ip<Particles->numParticlesZero; ip++) {
+		int i = Particles->particleID[ip];
+		if(Particles->particleBC[i] == PSystem->other || Particles->particleBC[i] == PSystem->surface) {
+			coeffs.push_back(T(i, i, 1.0));
+			continue;
+		}
+
+		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
+		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
+		double ni = Particles->pndSmall[i];
+		double sum = 0.0;
+
+		int ix, iy, iz;
+		Buckets->bucketCoordinates(ix, iy, iz, posXi, posYi, posZi, PSystem);
+		int minZ = (iz-1)*((int)(PSystem->dim-2.0)); int maxZ = (iz+1)*((int)(PSystem->dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
+		for(int jy=iy-1;jy<=iy+1;jy++) {
+		for(int jx=ix-1;jx<=ix+1;jx++) {
+			int jb = jz*PSystem->numBucketsXY + jy*PSystem->numBucketsX + jx;
+			int j = Particles->firstParticleInBucket[jb];
+			if(j == -1) continue;
+			double plx, ply, plz;
+			Particles->getPeriodicLengths(jb, plx, ply, plz, PSystem);
+			while(true) {
+				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
+				
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
+				Particles->sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2, plx, ply, plz);
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
+				Particles->sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2, plx, ply, plz);
+
+				// If j is inside the neighborhood of i and 
+				// is not at the same side of im (avoid real j in the virtual neihborhood)
+				if(dstij2 < PSystem->reL2 && (dstij2 < dstimj2 || PSystem->wallType == boundaryWallType::PARTICLE)) {
+				if(j != i) {
+					double dst = sqrt(dstij2);
+					double wL = Particles->weight(dst, PSystem->reL, PSystem->weightType);
+					// PSystem->coeffPPE = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero)
+					double mat_ij = wL*PSystem->coeffPPE;
+					if (Particles->particleType[j] == PSystem->dummyWall) {
+						// Approximate Pj - Pi = rho * grav * rij
+						double pgh = Particles->RHO[j]*(v0ij*PSystem->gravityX + v1ij*PSystem->gravityY + v2ij*PSystem->gravityZ)*wL;
+						Particles->sourceTerm(i) -= PSystem->coeffPPE*pgh;
+					}
+					else
+					{
+						sum -= mat_ij;
+						if (Particles->particleBC[j] == PSystem->inner) {
+							coeffs.push_back(T(i, j, mat_ij));
+						}
+					}
+				}}
+				
+				j = Particles->nextParticleInSameBucket[j];
+				if(j == -1) break;
+			}
+		}}}
+
+		double density;
+		if(Particles->PTYPE[i] == 1) density = PSystem->DNS_FL1;
+		else density = PSystem->DNS_FL2;
+
+		// Increase diagonal
+		sum -= PSystem->alphaCompressibility*density/(PSystem->timeStep*PSystem->timeStep);
+
+		//double Cdiag = 1.0;
+		//double beta = 0.9;
+		//double DI2 = Cdiag*beta*PSystem->coeffPPE*PSystem->relaxPND*pndWallContribution[i]*density;
+		//sum -= DI2;
+
+		coeffs.push_back(T(i, i, sum));
+
+		//PSystem->coeffPPESource = PSystem->relaxPND/(PSystem->timeStep*PSystem->timeStep*PSystem->pndSmallZero)
+		Particles->sourceTerm(i) += - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero);
+
+		// 2019 - Enhancement of stabilization of MPS to arbitrary geometries with a generic wall boundary condition
+		//double pndc = 0.0;
+		//if(ni > 0)
+		//	pndc = (ni - pndWallContribution[i])/ni;
+		//Particles->sourceTerm(i) += pndc*((1.0-PSystem->relaxPND)*(Particles->pndki[i] - ni) + PSystem->relaxPND*(PSystem->pndSmallZero - pndski[i]))*ddt/PSystem->pndSmallZero;
+		//Particles->sourceTerm(i) += - PSystem->relaxPND*ddt*(pndski[i] - PSystem->pndSmallZero)/PSystem->pndSmallZero;
+
+		//double riw[3], riwSqrt;
+		// Normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
+		//riw[0] = 0.5*(posXi - posMirrorXi); riw[1] = 0.5*(posYi - posMirrorYi); riw[2] = 0.5*(posZi - posMirrorZi);
+		//riwSqrt = sqrt(riw[0]*riw[0] + riw[1]*riw[1] + riw[2]*riw[2]);
+		//double ST1 = - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero);
+		//double ST2 = 0.0;
+		//if(riwSqrt < 0.5*partDist)
+		//	ST2 = - Cdiag*(1.0-beta)*2.0*partDist/PSystem->lambdaZero*(0.5*partDist - riwSqrt)/(PSystem->timeStep*PSystem->timeStep);
+		//Particles->sourceTerm(i) += ST1 + ST2;
+	}
+
+	// Finished setup matrix
+	matA.setFromTriplets(coeffs.begin(), coeffs.end());
+	// Assign pressure vector
+#pragma omp parallel for
+	for(int ip=0; ip<Particles->numParticlesZero; ip++) {
+		int i = Particles->particleID[ip];
+		Particles->pressurePPE(i) = Particles->press[i];
+	}
+	// Solve PPE
+	if(PSystem->solverType == solvPressType::CG)
+		solveConjugateGradient(matA, Particles);
+	else if (PSystem->solverType == solvPressType::BICGSTAB)
+		solveBiConjugateGradientStabilized(matA, Particles);
+	// Update pressure
+#pragma omp parallel for
+	for(int ip=0; ip<Particles->numParticlesZero; ip++) {
+		int i = Particles->particleID[ip];
+		Particles->press[i] = Particles->pressurePPE(i);
+	}
+	// Set zero to negative pressures
+	setZeroOnNegativePressure(Particles);
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	cout << __PRETTY_FUNCTION__ << endl;
+#endif
+}
+
+// Solve linear system solver PPE with PND deviation + divergence-free condition source term
+// Perform conjugate gradient method on symmetry matrix A to solve Ax=b
+// matA			symmetric (sparse) matrix
+// sourceTerm	vector
+void MpsPressure::solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
+
+	using T = Eigen::Triplet<double>;
+	double lap_r = PSystem->reL*PSystem->invPartDist;
+	int n_size = (int)(pow(lap_r * 2, PSystem->dim)); // maximum number of neighbors
+	// Eigen::SparseMatrix<double> matA(Particles->numParticles, Particles->numParticles); // declares a column-major sparse matrix type of double
+	// Particles->sourceTerm.resize(Particles->numParticles); // Resizing a dynamic-size matrix
+	// Particles->sourceTerm.setZero(); // Right hand side-vector set to zero
+	// vector<T> coeffs(Particles->numParticles * n_size); // list of non-zeros coefficients
+	Eigen::SparseMatrix<double> matA(Particles->numParticlesZero, Particles->numParticlesZero); // declares a column-major sparse matrix type of double
+	Particles->sourceTerm.resize(Particles->numParticlesZero); // Resizing a dynamic-size matrix
+	Particles->sourceTerm.setZero(); // Right hand side-vector set to zero
+	vector<T> coeffs(Particles->numParticlesZero * n_size); // list of non-zeros coefficients
 
 // Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
 //#pragma omp parallel for schedule(dynamic,64)
-	for(int i=0; i<Particles->numParticles; i++) {
+	// for(int ip=0; ip<Particles->numParticles; ip++) {
+	for(int ip=0; ip<Particles->numParticlesZero; ip++) {
+		int i = Particles->particleID[ip];
+		if(Particles->particleBC[i] == PSystem->other || Particles->particleBC[i] == PSystem->surface) {
+			coeffs.push_back(T(i, i, 1.0));
+			continue;
+		}
+
+		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
+		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
+		// double ni = Particles->pndSmall[i];
+		double sum = 0.0;
+
+		int ix, iy, iz;
+		Buckets->bucketCoordinates(ix, iy, iz, posXi, posYi, posZi, PSystem);
+		int minZ = (iz-1)*((int)(PSystem->dim-2.0)); int maxZ = (iz+1)*((int)(PSystem->dim-2.0));
+		for(int jz=minZ;jz<=maxZ;jz++) {
+		for(int jy=iy-1;jy<=iy+1;jy++) {
+		for(int jx=ix-1;jx<=ix+1;jx++) {
+			int jb = jz*PSystem->numBucketsXY + jy*PSystem->numBucketsX + jx;
+			int j = Particles->firstParticleInBucket[jb];
+			if(j == -1) continue;
+			double plx, ply, plz;
+			Particles->getPeriodicLengths(jb, plx, ply, plz, PSystem);
+			while(true) {
+				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
+				
+				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
+				Particles->sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2, plx, ply, plz);
+				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
+				Particles->sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2, plx, ply, plz);
+
+				// If j is inside the neighborhood of i and 
+				// is not at the same side of im (avoid real j in the virtual neihborhood)
+				if(dstij2 < PSystem->reL2 && (dstij2 < dstimj2 || PSystem->wallType == boundaryWallType::PARTICLE)) {
+				if(j != i) {
+					double dst = sqrt(dstij2);
+					double wL = Particles->weight(dst, PSystem->reL, PSystem->weightType);
+					// PSystem->coeffPPE = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero)
+					double mat_ij = wL*PSystem->coeffPPE;
+					if (Particles->particleType[j] == PSystem->dummyWall) {
+						double pgh = Particles->RHO[j]*(v0ij*PSystem->gravityX + v1ij*PSystem->gravityY + v2ij*PSystem->gravityZ)*wL;
+						Particles->sourceTerm(i) -= PSystem->coeffPPE*pgh;
+					}
+					else
+					{
+						sum -= mat_ij;
+						if (Particles->particleBC[j] == PSystem->inner) {
+							coeffs.push_back(T(i, j, mat_ij));
+						}
+					}
+				}}
+				
+				j = Particles->nextParticleInSameBucket[j];
+				if(j == -1) break;
+			}
+		}}}
+
+		double density;
+		if(Particles->PTYPE[i] == 1) density = PSystem->DNS_FL1;
+		else density = PSystem->DNS_FL2;
+
+		// Increase diagonal
+		sum -= PSystem->alphaCompressibility*density/(PSystem->timeStep*PSystem->timeStep);
+
+		//double Cdiag = 1.0;
+		//double beta = 0.9;
+		//double DI2 = Cdiag*beta*PSystem->coeffPPE*PSystem->relaxPND*pndWallContribution[i]*density;
+		//sum -= DI2;
+
+		coeffs.push_back(T(i, i, sum));
+
+		//PSystem->coeffPPESource = PSystem->relaxPND/(PSystem->timeStep*PSystem->timeStep*PSystem->pndSmallZero)
+		//Particles->sourceTerm(i) += - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
+		Particles->sourceTerm(i) += - PSystem->coeffPPESource*density*(Particles->pndki[i] - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
+		//Particles->sourceTerm(i) += - 4.0*density*(ni - PSystem->pndSmallZero)/(partDist*partDist*PSystem->pndSmallZero) 
+		//				+ 2.0*density*Particles->velDivergence[i]*PSystem->invPartDist;
+
+		// Sun et al., 2015. Modified MPS method for the 2D fluid structure interaction problem with free surface
+		////double dtPhysical = partDist/20.0;
+		//double dtPhysical = PSystem->timeStep;
+		//double a1 = fabs(ni - PSystem->pndSmallZero)/PSystem->pndSmallZero;
+		//if ((PSystem->pndSmallZero-ni)*Particles->velDivergence[i] > PSystem->epsilonZero)
+		//{
+		//	a1 += dtPhysical*fabs(Particles->velDivergence[i]);
+		//}
+		////double a2 = fabs((ni - PSystem->pndSmallZero)/PSystem->pndSmallZero);
+		//Particles->sourceTerm(i) += - a1*density/(dtPhysical*dtPhysical)*(ni - PSystem->pndSmallZero)/PSystem->pndSmallZero 
+		//	+ density*Particles->velDivergence[i]/dtPhysical;
+
+		// 2019 - Enhancement of stabilization of MPS to arbitrary geometries with a generic wall boundary condition
+		//double pndc = 0.0;
+		//if(ni > 0)
+		//	pndc = (ni - pndWallContribution[i])/ni;
+		//Particles->sourceTerm(i) += pndc*((1.0-PSystem->relaxPND)*(Particles->pndki[i] - ni) + PSystem->relaxPND*(PSystem->pndSmallZero - pndski[i]))*ddt/PSystem->pndSmallZero;
+		//Particles->sourceTerm(i) += - PSystem->relaxPND*ddt*(pndski[i] - PSystem->pndSmallZero)/PSystem->pndSmallZero;
+
+		//double riw[3], riwSqrt;
+		// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
+		//riw[0] = 0.5*(posXi - posMirrorXi); riw[1] = 0.5*(posYi - posMirrorYi); riw[2] = 0.5*(posZi - posMirrorZi);
+		//riwSqrt = sqrt(riw[0]*riw[0] + riw[1]*riw[1] + riw[2]*riw[2]);
+		//double ST1 = - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero);
+		//double ST2 = 0.0;
+		//if(riwSqrt < 0.5*partDist)
+		//	ST2 = - Cdiag*(1.0-beta)*2.0*partDist/PSystem->lambdaZero*(0.5*partDist - riwSqrt)/(PSystem->timeStep*PSystem->timeStep);
+		//Particles->sourceTerm(i) += ST1 + ST2;
+	}
+
+	// Finished setup matrix
+	matA.setFromTriplets(coeffs.begin(), coeffs.end());
+	// Assign pressure vector
+#pragma omp parallel for
+	for(int ip=0; ip<Particles->numParticlesZero; ip++) {
+		int i = Particles->particleID[ip];
+		Particles->pressurePPE(i) = Particles->press[i];
+	}
+	// Solve PPE
+	if(PSystem->solverType == solvPressType::CG)
+		solveConjugateGradient(matA, Particles);
+	else if (PSystem->solverType == solvPressType::BICGSTAB)
+		solveBiConjugateGradientStabilized(matA, Particles);
+	// Update pressure vector
+#pragma omp parallel for
+	for(int ip=0; ip<Particles->numParticlesZero; ip++) {
+		int i = Particles->particleID[ip];
+		Particles->press[i] = Particles->pressurePPE(i);
+	}
+	// Set zero to negative pressures
+	setZeroOnNegativePressure(Particles);
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	cout << __PRETTY_FUNCTION__ << endl;
+#endif
+}
+
+// Solve linear system solver PPE with PND deviation source term and considering Inflow/Ouftlow Boundary Condition
+// Perform a bi conjugate gradient stabilized solver for sparse square asymmetric matrix A to solve Ax=b
+// matA			asymmetric (sparse) matrix
+// sourceTerm	vector
+void MpsPressure::solvePressurePoissonPndInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
+
+	using T = Eigen::Triplet<double>;
+	double lap_r = PSystem->reL*PSystem->invPartDist;
+	int n_size = (int)(pow(lap_r * 2, PSystem->dim)); // maximum number of neighbors
+	// Eigen::SparseMatrix<double> matA(Particles->numParticles, Particles->numParticles); // declares a column-major sparse matrix type of double
+	// Particles->sourceTerm.resize(Particles->numParticles); // Resizing a dynamic-size matrix
+	// Particles->sourceTerm.setZero(); // Right hand side-vector set to zero
+	// vector<T> coeffs(Particles->numParticles * n_size); // list of non-zeros coefficients
+	Eigen::SparseMatrix<double> matA(Particles->numParticlesZero, Particles->numParticlesZero); // declares a column-major sparse matrix type of double
+	Particles->sourceTerm.resize(Particles->numParticlesZero); // Resizing a dynamic-size matrix
+	Particles->sourceTerm.setZero(); // Right hand side-vector set to zero
+	vector<T> coeffs(Particles->numParticlesZero * n_size); // list of non-zeros coefficients with their estimated number of coeffs
+	                                                    // 
+// Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
+//#pragma omp parallel for schedule(dynamic,64)
+	// for(int ip=0; ip<Particles->numParticles; ip++) {
+	for(int ip=0; ip<Particles->numParticlesZero; ip++) {
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->other || Particles->particleBC[i] == PSystem->surface) {
 			coeffs.push_back(T(i, i, 1.0));
 			continue;
@@ -237,7 +567,7 @@ void MpsPressure::solvePressurePoissonPnd(MpsParticleSystem *PSystem, MpsParticl
 
 						// Pio = Pw
 						Particles->sourceTerm(i) += - PSystem->coeffPPE * wL * Particles->press[j];
-						sum += -mat_ij;
+						sum -= mat_ij;
 
 						// Pio = 2*Pw - Pi
 						// Particles->sourceTerm(i) += - 2.0 * PSystem->coeffPPE * wL * Particles->press[j];
@@ -272,16 +602,14 @@ void MpsPressure::solvePressurePoissonPnd(MpsParticleSystem *PSystem, MpsParticl
 
 		coeffs.push_back(T(i, i, sum));
 
-		//PSystem->coeffPPESource = PSystem->relaxPND/(PSystem->timeStep*PSystem->timeStep*PSystem->pndSmallZero)
-////		Particles->sourceTerm(i) = - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero);
 		Particles->sourceTerm(i) += - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero);
 
 		// 2019 - Enhancement of stabilization of MPS to arbitrary geometries with a generic wall boundary condition
 		//double pndc = 0.0;
 		//if(ni > 0)
 		//	pndc = (ni - pndWallContribution[i])/ni;
-		//Particles->sourceTerm(i) = pndc*((1.0-PSystem->relaxPND)*(Particles->pndki[i] - ni) + PSystem->relaxPND*(PSystem->pndSmallZero - pndski[i]))*ddt/PSystem->pndSmallZero;
-		//Particles->sourceTerm(i) = - PSystem->relaxPND*ddt*(pndski[i] - PSystem->pndSmallZero)/PSystem->pndSmallZero;
+		//Particles->sourceTerm(i) += pndc*((1.0-PSystem->relaxPND)*(Particles->pndki[i] - ni) + PSystem->relaxPND*(PSystem->pndSmallZero - pndski[i]))*ddt/PSystem->pndSmallZero;
+		//Particles->sourceTerm(i) += - PSystem->relaxPND*ddt*(pndski[i] - PSystem->pndSmallZero)/PSystem->pndSmallZero;
 
 		//double riw[3], riwSqrt;
 		// Normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
@@ -291,16 +619,28 @@ void MpsPressure::solvePressurePoissonPnd(MpsParticleSystem *PSystem, MpsParticl
 		//double ST2 = 0.0;
 		//if(riwSqrt < 0.5*partDist)
 		//	ST2 = - Cdiag*(1.0-beta)*2.0*partDist/PSystem->lambdaZero*(0.5*partDist - riwSqrt)/(PSystem->timeStep*PSystem->timeStep);
-		//Particles->sourceTerm(i) = ST1 + ST2;
+		//Particles->sourceTerm(i) += ST1 + ST2;
 	}
 
 	// Finished setup matrix
 	matA.setFromTriplets(coeffs.begin(), coeffs.end());
+	// Assign pressure vector
+#pragma omp parallel for
+	for(int ip=0; ip<Particles->numParticlesZero; ip++) {
+		int i = Particles->particleID[ip];
+		Particles->pressurePPE(i) = Particles->press[i];
+	}
 	// Solve PPE
 	if(PSystem->solverType == solvPressType::CG)
 		solveConjugateGradient(matA, Particles);
 	else if (PSystem->solverType == solvPressType::BICGSTAB)
 		solveBiConjugateGradientStabilized(matA, Particles);
+	// Update pressure vector
+#pragma omp parallel for
+	for(int ip=0; ip<Particles->numParticlesZero; ip++) {
+		int i = Particles->particleID[ip];
+		Particles->press[i] = Particles->pressurePPE(i);
+	}
 	// Set zero to negative pressures
 	setZeroOnNegativePressure(Particles);
 
@@ -310,28 +650,68 @@ void MpsPressure::solvePressurePoissonPnd(MpsParticleSystem *PSystem, MpsParticl
 #endif
 }
 
-// Solve linear system solver PPE (mpsType = calcPressType::IMPLICIT_PND_DIVU)
-void MpsPressure::solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
+// Solve linear system solver PPE with PND deviation + divergence-free condition source term 
+// and considering Inflow/Ouftlow Boundary Condition
+// Perform a bi conjugate gradient stabilized solver for sparse square asymmetric matrix A to solve Ax=b
+// matA			asymmetric (sparse) matrix
+// sourceTerm	vector
+void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets, MpsInflowOutflow *ioFlow) {
+
+	bool wallContrib = false;
+
+	// Set ID of real particles in the PPE matrix
+	int numRealParticles = 0;
+// #pragma omp parallel for reduction(+:numRealParticles)
+	for(int ip=0, iPPE=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
+		if(Particles->particleBC[i] == PSystem->inner) {
+			Particles->ppeID[i] = iPPE;
+			iPPE++;
+			numRealParticles++;
+		}
+	}
 
 	using T = Eigen::Triplet<double>;
 	double lap_r = PSystem->reL*PSystem->invPartDist;
 	int n_size = (int)(pow(lap_r * 2, PSystem->dim)); // maximum number of neighbors
-	Eigen::SparseMatrix<double> matA(Particles->numParticles, Particles->numParticles); // declares a column-major sparse matrix type of double
-	Particles->sourceTerm.resize(Particles->numParticles); // Resizing a dynamic-size matrix
+	// Eigen::SparseMatrix<double> matA(Particles->numParticles, Particles->numParticles); // declares a column-major sparse matrix type of double
+	// Particles->sourceTerm.resize(Particles->numParticles); // Resizing a dynamic-size matrix
+	// Particles->sourceTerm.setZero(); // Right hand side-vector set to zero
+	// vector<T> coeffs(Particles->numParticles * n_size); // list of non-zeros coefficients with their estimated number of coeffs
+	// Eigen::SparseMatrix<double> matA(Particles->numParticlesZero, Particles->numParticlesZero); // declares a column-major sparse matrix type of double
+	// Particles->sourceTerm.resize(Particles->numParticlesZero); // Resizing a dynamic-size matrix
+	// Particles->sourceTerm.setZero(); // Right hand side-vector set to zero
+	// vector<T> coeffs(Particles->numParticlesZero * n_size); // list of non-zeros coefficients with their estimated number of coeffs
+	Eigen::SparseMatrix<double> matA(numRealParticles, numRealParticles); // declares a column-major sparse matrix type of double
+	Particles->sourceTerm.resize(numRealParticles); // Resizing a dynamic-size matrix
 	Particles->sourceTerm.setZero(); // Right hand side-vector set to zero
-	vector<T> coeffs(Particles->numParticles * n_size); // list of non-zeros coefficients
+	vector<T> coeffs(numRealParticles * n_size); // list of non-zeros coefficients with their estimated number of coeffs
 
 // Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
 //#pragma omp parallel for schedule(dynamic,64)
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+	// for(int ip=0; ip<Particles->numParticlesZero; ip++) {
+		int i = Particles->particleID[ip];
 		if(Particles->particleBC[i] == PSystem->other || Particles->particleBC[i] == PSystem->surface) {
-			coeffs.push_back(T(i, i, 1.0));
+			// coeffs.push_back(T(i, i, 1.0));
 			continue;
 		}
+		
+		int iPPE = Particles->ppeID[i];	// PPE matrix index
+
+		/// Off-diagonal sum
+		// vector<int> jAux;
+		vector<int> jPPEindex;
+		vector<double> jPPEvalue;
+		jPPEvalue.assign(n_size, 0.0);
+
 
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
-		double ni = Particles->pndSmall[i];
+		double ni = Particles->pndki[i];
+		// double ni = Particles->pndSmall[i];
+		// double ni = Particles->pndi[i];
+		
 		double sum = 0.0;
 
 		int ix, iy, iz;
@@ -353,19 +733,34 @@ void MpsPressure::solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsPar
 				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
 				Particles->sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2, plx, ply, plz);
 
+				/// Off-diagonal sum
+				int jPPE = -1;// = Particles->ppeID[j];	// PPE matrix index
+
+				// bool entrou = false;
+
 				// If j is inside the neighborhood of i and 
-				// is not at the same side of im (avoid real j in the virtual neihborhood)
+				// is not at the same side of im (avoid real j in the virtual neighborhood)
 				if(dstij2 < PSystem->reL2 && (dstij2 < dstimj2 || PSystem->wallType == boundaryWallType::PARTICLE)) {
 				if(j != i) {
 					double dst = sqrt(dstij2);
 					double wL = Particles->weight(dst, PSystem->reL, PSystem->weightType);
 					// PSystem->coeffPPE = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero)
-					double mat_ij = wL*PSystem->coeffPPE;
+					double mat_ij = wL * PSystem->coeffPPE;
+
+					if (Particles->particleBC[j] == PSystem->inner) {
+						jPPE = Particles->ppeID[j];	// PPE matrix index
+						jPPEindex.push_back(jPPE);
+						// jAux.push_back(j);
+					}
+
 					if (Particles->particleType[j] == PSystem->dummyWall) {
+
 						double pgh = Particles->RHO[j]*(v0ij*PSystem->gravityX + v1ij*PSystem->gravityY + v2ij*PSystem->gravityZ)*wL;
-						Particles->sourceTerm(i) -= PSystem->coeffPPE*pgh;
+						Particles->sourceTerm(iPPE) -= PSystem->coeffPPE*pgh;
+					
 					}
 					else if(Particles->particleType[j] == PSystem->inOutflowParticle) {
+
 						// Extrapolate pressure to ioFlowParticle
 						// double alp = 0.75;
 						// double normX = 1.0;
@@ -380,27 +775,169 @@ void MpsPressure::solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsPar
 						// sum += mat_ij * v0ij * normX / invDstiio;
 
 						// Pio = Pw
-						Particles->sourceTerm(i) += - PSystem->coeffPPE * wL * Particles->press[j];
-						sum += -mat_ij;
+						// Particles->sourceTerm(iPPE) += - PSystem->coeffPPE * wL * Particles->press[j];
+						// sum -= mat_ij;
 
 						// Pio = 2*Pw - Pi
 						// Particles->sourceTerm(i) += - 2.0 * PSystem->coeffPPE * wL * Particles->press[j];
-						/// sum += - 2.0 * mat_ij;
+						// sum += - 2.0 * mat_ij;
+						
+						// sum -= mat_ij;	// Add to diagonal
 
+						// int im = Particles->motherID[j];	// ID of the real (effective) particle that generates the IO particle
+						// // Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
+						// double c_jim = mat_ij * ( - Particles->signDist[j] ) / Particles->signDist[im];
+						// Particles->sourceTerm(i) += - mat_ij * Particles->press[j] * (Particles->signDist[im] - Particles->signDist[j]) / Particles->signDist[im];
+						
+						// if(i == im) {
+						// 	sum -= c_jim;	// Add to diagonal
+						// }
+						// else {
+						// 	coeffs.push_back(T(i, im, -c_jim)); // Assign off-diagonal
+						// }
+						
+						
+						int iofID = Particles->ioflowID[j];		// ID of the inOutflow Plane
+						double Pw = ioFlow[iofID].Pio.press;	// InOutFlow pressure
+
+						/// Off-diagonal disconsidered
+						/// Pio = Pw
+						Particles->sourceTerm(iPPE) += - mat_ij * Pw;
+						sum -= mat_ij;	// Add to diagonal
+
+
+						// /// Off-diagonal sum
+						// int im = Particles->motherID[j];	// ID of the real (effective) particle that generates the IO particle
+
+						// int imPPE = Particles->ppeID[im];	// PPE matrix index
+						
+						// // Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
+						// double c_jim = mat_ij * ( - Particles->signDist[j] ) / Particles->signDist[im];
+						// Particles->sourceTerm(iPPE) += - mat_ij * Pw * (Particles->signDist[im] - Particles->signDist[j]) / Particles->signDist[im];
+						
+						// if(iPPE == imPPE) {
+						// 	sum -= c_jim;	// Add to diagonal
+						// }
+						// else {
+						// 	// Check if off-diagonal of the Mother already exists as a Real (effective) neighbor particle
+						// 	auto it = find(jPPEindex.begin(), jPPEindex.end(), imPPE);
+						// 	if(it != jPPEindex.end()) {
+						// 		// Found the item
+						// 		int jIndex = it - jPPEindex.begin();
+						// 		jPPEvalue[jIndex] -= c_jim;
+						// 		// coeffs.at(iPPE, imPPE) += -c_jim;			// Add to off-diagonal
+						// 		// printf(" FOUND j:%d jPPE:%d imPPE:%d im:%d ip:%d i:%d iPPE:%d", j, jPPE, imPPE, im, ip, i, iPPE);
+						// 	}
+						// 	else {
+						// 	// Mother is not a Real (effective) neighbor particle
+						// 		coeffs.push_back(T(iPPE, imPPE, -c_jim));	// Assign off-diagonal
+						// 		// entrou = true;
+						// 	}
+						// }
 					}
-					else
-					{
-						sum -= mat_ij;
+					else {
+
+						sum -= mat_ij;	// Add to diagonal
+						
 						if (Particles->particleBC[j] == PSystem->inner) {
-							coeffs.push_back(T(i, j, mat_ij));
+
+							/// Off-diagonal disconsidered
+							// coeffs.push_back(T(iPPE, jPPE, mat_ij)); 	// Assign off-diagonal
+
+							/// Off-diagonal sum
+							int jIndex = jPPEindex.size() - 1;
+							jPPEvalue[jIndex] += mat_ij; 				// Add to off-diagonal
 						}
 					}
 				}}
+
+				if(wallContrib) {
+					// Mirror particle of i and j contribution
+					// If j is inside the neighborhood of i and im (intersection) and 
+					// is not at the same side of im (avoid real j in the virtual neihborhood)
+					if(dstij2 < PSystem->reL2 && dstimj2 < PSystem->reL2 && dstij2 < dstimj2) {
+					if(j != i) {
+						double dst = sqrt(dstimj2);
+						double wL = Particles->weight(dst, PSystem->reL, PSystem->weightType);
+						// PSystem->coeffPPE = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero)
+						double mat_ij = wL * PSystem->coeffPPE;
+
+						if(Particles->particleType[j] == PSystem->inOutflowParticle) {
+
+							int iofID = Particles->ioflowID[j];	// ID of the inOutflow Plane
+							double Pw = ioFlow[iofID].Pio.press;	// InOutFlow pressure
+
+							/// Off-diagonal sum
+							int im = Particles->motherID[j];	// ID of the real (effective) particle that generates the IO particle
+
+							int imPPE = Particles->ppeID[im];	// PPE matrix index
+							
+							// Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
+							double c_jim = mat_ij * ( - Particles->signDist[j] ) / Particles->signDist[im];
+							Particles->sourceTerm(iPPE) += - mat_ij * Pw * (Particles->signDist[im] - Particles->signDist[j]) / Particles->signDist[im];
+							
+							if(iPPE == imPPE) {
+								sum -= c_jim;	// Add to diagonal
+							}
+							else {
+								// Check if off-diagonal of the Mother already exists as a Real (effective) neighbor particle
+								auto it = find(jPPEindex.begin(), jPPEindex.end(), imPPE);
+								if(it != jPPEindex.end()) {
+									// Found the item
+									int jIndex = it - jPPEindex.begin();
+									jPPEvalue[jIndex] -= c_jim;
+									// coeffs.at(iPPE, imPPE) += -c_jim;			// Add to off-diagonal
+									// printf(" FOUND j:%d jPPE:%d imPPE:%d im:%d ip:%d i:%d iPPE:%d", j, jPPE, imPPE, im, ip, i, iPPE);
+								}
+								// else if(!entrou){
+								// 	// Mother is not a Real (effective) neighbor particle
+								// 	// printf("ENTROU AQUI\n");
+								// 	coeffs.push_back(T(iPPE, imPPE, -c_jim));	// Assign off-diagonal
+								// }
+							}
+						}
+						else {
+
+							sum -= mat_ij;	// Add to diagonal
+							
+							if (Particles->particleBC[j] == PSystem->inner) {
+
+								/// Off-diagonal disconsidered
+								// coeffs.push_back(T(iPPE, jPPE, mat_ij)); 	// Assign off-diagonal
+
+								/// Off-diagonal sum
+								int jIndex = jPPEindex.size() - 1;
+								jPPEvalue[jIndex] += mat_ij; 				// Add to off-diagonal
+							}
+						}
+					}}
+				}
 				
 				j = Particles->nextParticleInSameBucket[j];
 				if(j == -1) break;
 			}
 		}}}
+
+		if(wallContrib) {
+			// Add "i" contribution ("i" is a neighbor of "mirror i")
+			double v0imi, v1imi, v2imi, dstimi2;
+			Particles->sqrDistBetweenParticles(i, posMirrorXi, posMirrorYi, posMirrorZi, v0imi, v1imi, v2imi, dstimi2);
+			
+			if(dstimi2 < PSystem->reL2) {
+				double dst = sqrt(dstimi2);
+				double wL = Particles->weight(dst, PSystem->reL, PSystem->weightType);
+				// PSystem->coeffPPE = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero)
+				sum -= wL * PSystem->coeffPPE;	// Add to diagonal
+			}
+		}
+
+		/// Off-diagonal sum
+		if(jPPEindex.size() > 0) {
+			for(int ii = 0; ii < jPPEindex.size(); ii++) {
+				int jPPE = jPPEindex[ii];							// PPE matrix index
+				coeffs.push_back(T(iPPE, jPPE, jPPEvalue[ii])); 	// Assign off-diagonal
+			}
+		}
 
 		double density;
 		if(Particles->PTYPE[i] == 1) density = PSystem->DNS_FL1;
@@ -414,12 +951,14 @@ void MpsPressure::solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsPar
 		//double DI2 = Cdiag*beta*PSystem->coeffPPE*PSystem->relaxPND*pndWallContribution[i]*density;
 		//sum -= DI2;
 
-		coeffs.push_back(T(i, i, sum));
+		coeffs.push_back(T(iPPE, iPPE, sum));	// Assign diagonal
+		// coeffs.push_back(T(i, i, sum));	// Assign diagonal
 
 		//PSystem->coeffPPESource = PSystem->relaxPND/(PSystem->timeStep*PSystem->timeStep*PSystem->pndSmallZero)
-		//Particles->sourceTerm(i) = - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
-		Particles->sourceTerm(i) += - PSystem->coeffPPESource*density*(Particles->pndki[i] - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
-		//Particles->sourceTerm(i) = - 4.0*density*(ni - PSystem->pndSmallZero)/(partDist*partDist*PSystem->pndSmallZero) 
+		Particles->sourceTerm(iPPE) += - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
+	
+		// Particles->sourceTerm(i) += - PSystem->coeffPPESource*density*(Particles->pndki[i] - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
+		//Particles->sourceTerm(i) += - 4.0*density*(ni - PSystem->pndSmallZero)/(partDist*partDist*PSystem->pndSmallZero) 
 		//				+ 2.0*density*Particles->velDivergence[i]*PSystem->invPartDist;
 
 		// Sun et al., 2015. Modified MPS method for the 2D fluid structure interaction problem with free surface
@@ -431,15 +970,15 @@ void MpsPressure::solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsPar
 		//	a1 += dtPhysical*fabs(Particles->velDivergence[i]);
 		//}
 		////double a2 = fabs((ni - PSystem->pndSmallZero)/PSystem->pndSmallZero);
-		//Particles->sourceTerm(i) = - a1*density/(dtPhysical*dtPhysical)*(ni - PSystem->pndSmallZero)/PSystem->pndSmallZero 
+		//Particles->sourceTerm(i) += - a1*density/(dtPhysical*dtPhysical)*(ni - PSystem->pndSmallZero)/PSystem->pndSmallZero 
 		//	+ density*Particles->velDivergence[i]/dtPhysical;
 
 		// 2019 - Enhancement of stabilization of MPS to arbitrary geometries with a generic wall boundary condition
 		//double pndc = 0.0;
 		//if(ni > 0)
 		//	pndc = (ni - pndWallContribution[i])/ni;
-		//Particles->sourceTerm(i) = pndc*((1.0-PSystem->relaxPND)*(Particles->pndki[i] - ni) + PSystem->relaxPND*(PSystem->pndSmallZero - pndski[i]))*ddt/PSystem->pndSmallZero;
-		//Particles->sourceTerm(i) = - PSystem->relaxPND*ddt*(pndski[i] - PSystem->pndSmallZero)/PSystem->pndSmallZero;
+		//Particles->sourceTerm(i) += pndc*((1.0-PSystem->relaxPND)*(Particles->pndki[i] - ni) + PSystem->relaxPND*(PSystem->pndSmallZero - pndski[i]))*ddt/PSystem->pndSmallZero;
+		//Particles->sourceTerm(i) += - PSystem->relaxPND*ddt*(pndski[i] - PSystem->pndSmallZero)/PSystem->pndSmallZero;
 
 		//double riw[3], riwSqrt;
 		// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
@@ -449,16 +988,59 @@ void MpsPressure::solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsPar
 		//double ST2 = 0.0;
 		//if(riwSqrt < 0.5*partDist)
 		//	ST2 = - Cdiag*(1.0-beta)*2.0*partDist/PSystem->lambdaZero*(0.5*partDist - riwSqrt)/(PSystem->timeStep*PSystem->timeStep);
-		//Particles->sourceTerm(i) = ST1 + ST2;
+		//Particles->sourceTerm(i) += ST1 + ST2;
 	}
 
 	// Finished setup matrix
 	matA.setFromTriplets(coeffs.begin(), coeffs.end());
+
+	Particles->pressurePPE.resize(numRealParticles); // Resizing a dynamic-size matrix
+	Particles->pressurePPE.setZero(); // Right hand side-vector set to zero
+
+	// Assign pressure vector
+#pragma omp parallel for
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
+		if(Particles->particleBC[i] == PSystem->inner) {
+			int iPPE = Particles->ppeID[i];
+			Particles->pressurePPE(iPPE) = Particles->press[i];
+		}
+	}
+
 	// Solve PPE
 	if(PSystem->solverType == solvPressType::CG)
 		solveConjugateGradient(matA, Particles);
 	else if (PSystem->solverType == solvPressType::BICGSTAB)
 		solveBiConjugateGradientStabilized(matA, Particles);
+
+	// Update pressure vector
+#pragma omp parallel for
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
+		if(Particles->particleBC[i] == PSystem->inner) {
+			int iPPE = Particles->ppeID[i];
+			Particles->press[i] = Particles->pressurePPE(iPPE);
+		}
+	}
+
+	// Set pressure to IO particles
+//#pragma omp parallel for
+	for(int idIOp=Particles->numParticles; idIOp<Particles->numRealAndIOParticles; idIOp++) {
+		int idIO = Particles->particleID[idIOp];
+		
+		int iofID = Particles->ioflowID[idIO];	// ID of the inOutflow Plane
+		double Pw = ioFlow[iofID].Pio.press;	// InOutFlow pressure
+
+		// Pio = Pw
+		Particles->press[idIO] = Pw;
+		
+		// int im = Particles->motherID[idIO];		// ID of the real (effective) particle that generates the IO particle
+		// // Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
+		// Particles->press[idIO] = (Pw * (Particles->signDist[im] - Particles->signDist[idIO]) - Particles->press[im] * (- Particles->signDist[idIO]) ) / Particles->signDist[im];
+	}
+
+
+
 	// Set zero to negative pressures
 	setZeroOnNegativePressure(Particles);
 
@@ -479,23 +1061,31 @@ void MpsPressure::solveConjugateGradient(Eigen::SparseMatrix<double> p_mat, MpsP
 	}
 	//Particles->pressurePPE = cg.solve(Particles->sourceTerm);
 
-	// If the number of ghost particles is positive (in the current step), then the number
-	// of real (efective) particles chnaged, and consequently pressurePPE array should be updated
-	if(Particles->numGhostParticles > 0) {
-		// Resize vector of pressure
-		Particles->pressurePPE.resize(Particles->numParticles); // Resizing a dynamic-size vector
-#pragma omp parallel for
-		for(int i=0; i<Particles->numParticles; i++) {
-			Particles->pressurePPE(i) = Particles->press[i];
-		}
-	}
+// 	// If the number of ghost particles is positive (in the current step), then the number
+// 	// of real (efective) particles chnaged, and consequently pressurePPE array should be updated
+// 	if(Particles->numGhostParticles > 0) {
+// 		// Resize vector of pressure
+// 		Particles->pressurePPE.resize(Particles->numParticles); // Resizing a dynamic-size vector
+// #pragma omp parallel for
+// 		for(int ip=0; ip<Particles->numParticles; ip++) {
+// 			int i = Particles->particleID[ip];
+// 			Particles->pressurePPE(i) = Particles->press[i];
+// 		}
+// 	}
+
+// #pragma omp parallel for
+// 	for(int ip=0; ip<Particles->numParticlesZero; ip++) {
+// 		int i = Particles->particleID[ip];
+// 		Particles->pressurePPE(i) = Particles->press[i];
+// 	}
 
 	Particles->pressurePPE = cg.solveWithGuess(Particles->sourceTerm, Particles->pressurePPE);
 
-#pragma omp parallel for
-	for(int i=0; i<Particles->numParticles; i++) {
-		Particles->press[i] = Particles->pressurePPE(i);
-	}
+// #pragma omp parallel for
+// 	for(int ip=0; ip<Particles->numParticlesZero; ip++) {
+// 		int i = Particles->particleID[ip];
+// 		Particles->press[i] = Particles->pressurePPE(i);
+// 	}
 
 	if (cg.info() != Eigen::ComputationInfo::Success) {
 		cerr << "Error: Failed solving." << endl;
@@ -513,23 +1103,33 @@ void MpsPressure::solveBiConjugateGradientStabilized(Eigen::SparseMatrix<double>
 		cerr << "Error: Failed decompostion." << endl;
 	}
 
-	// If the number of ghost particles is positive (in the current step), then the number
-	// of real (efective) particles chnaged, and consequently pressurePPE array should be updated
-	if(Particles->numGhostParticles > 0) {
-		// Resize vector of pressure
-		Particles->pressurePPE.resize(Particles->numParticles); // Resizing a dynamic-size vector
-#pragma omp parallel for
-		for(int i=0; i<Particles->numParticles; i++) {
-			Particles->pressurePPE(i) = Particles->press[i];
-		}
-	}
+// 	// If the number of ghost particles is positive (in the current step), then the number
+// 	// of real (efective) particles chnaged, and consequently pressurePPE array should be updated
+// 	if(Particles->numGhostParticles > 0) {
+// 		// Resize vector of pressure
+// 		Particles->pressurePPE.resize(Particles->numParticles); // Resizing a dynamic-size vector
+// #pragma omp parallel for
+// 		for(int ip=0; ip<Particles->numParticles; ip++) {
+// 			int i = Particles->particleID[ip];
+// 			Particles->pressurePPE(i) = Particles->press[i];
+// 		}
+// 	}
+
+// #pragma omp parallel for
+// 	for(int ip=0; ip<Particles->numParticles; ip++) {
+// 	// for(int ip=0; ip<Particles->numParticlesZero; ip++) {
+// 		int i = Particles->particleID[ip];
+// 		Particles->pressurePPE(i) = Particles->press[i];
+// 	}
 
 	Particles->pressurePPE = bicg.solveWithGuess(Particles->sourceTerm, Particles->pressurePPE);
 
-#pragma omp parallel for
-	for(int i=0; i<Particles->numParticles; i++) {
-		Particles->press[i] = Particles->pressurePPE(i);
-	}
+// #pragma omp parallel for
+// 	for(int ip=0; ip<Particles->numParticles; ip++) {
+// 	// for(int ip=0; ip<Particles->numParticlesZero; ip++) {
+// 		int i = Particles->particleID[ip];
+// 		Particles->press[i] = Particles->pressurePPE(i);
+// 	}
 
 	if (bicg.info() != Eigen::ComputationInfo::Success) {
 		cerr << "Error: Failed solving." << endl;
@@ -541,15 +1141,20 @@ void MpsPressure::solveBiConjugateGradientStabilized(Eigen::SparseMatrix<double>
 // Set negative pressure to zero
 void MpsPressure::setZeroOnNegativePressure(MpsParticle *Particles){
 #pragma omp parallel for
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		if (Particles->press[i] < 0) Particles->press[i] = 0.0;
 	}
 }
 
 // Divergence of velocity
 void MpsPressure::calcVelDivergence(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
+
+	double dim_nSmall = PSystem->dim/PSystem->pndSmallZero;
+
 #pragma omp parallel for schedule(dynamic,64)
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		Particles->velDivergence[i] = 0.0;
 		if(Particles->particleType[i] == PSystem->fluid) {
 		double DivV = 0.0;
@@ -594,14 +1199,15 @@ void MpsPressure::calcVelDivergence(MpsParticleSystem *PSystem, MpsParticle *Par
 							
 							if(PSystem->gradientCorrection == false) {
 								if(ni > PSystem->epsilonZero) {
-									DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[j]/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
+									// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
+									DivV += dim_nSmall*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
 								}
 							}
 							else {
 								double v0ijC = (v0ij*MC[0] + v1ij*MC[1] + v2ij*MC[2]);
 								double v1ijC = (v0ij*MC[3] + v1ij*MC[4] + v2ij*MC[5]);
 								double v2ijC = (v0ij*MC[6] + v1ij*MC[7] + v2ij*MC[8]);
-								DivV += (PSystem->dim/PSystem->pndSmallZero)*(vijx*v0ijC+vijy*v1ijC+vijz*v2ijC)*wS/dstij2;
+								DivV += dim_nSmall*(vijx*v0ijC+vijy*v1ijC+vijz*v2ijC)*wS/dstij2;
 							}
 //						}
 					}
@@ -623,14 +1229,18 @@ void MpsPressure::calcVelDivergence(MpsParticleSystem *PSystem, MpsParticle *Par
 
 // Divergence of velocity (Polygon wall) - Free-slip
 void MpsPressure::calcWallSlipVelDivergence(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
+
+	double dim_nSmall = PSystem->dim/PSystem->pndSmallZero;
+
 	//int nPartNearMesh = partNearMesh.size();
 	//printf(" Mesh %d \n", nPartNearMesh);
 	// Loop only for particles near mesh
 #pragma omp parallel for schedule(dynamic,64)
 	//for(int im=0;im<nPartNearMesh;im++) {
 	//int i = partNearMesh[im];
-	for(int i=0; i<Particles->numParticles; i++) {
-//	if(Particles->particleType[i] == PSystem->fluid) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
+	// if(Particles->particleType[i] == PSystem->fluid) {
 		double ni = Particles->pndi[i];
 		if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true && ni > PSystem->epsilonZero) {
 			double DivV = 0.0;
@@ -693,7 +1303,9 @@ void MpsPressure::calcWallSlipVelDivergence(MpsParticleSystem *PSystem, MpsParti
 							double vijx = Particles->vel[j*3  ]-velMirrorXi;
 							double vijy = Particles->vel[j*3+1]-velMirrorYi;
 							double vijz = Particles->vel[j*3+2]-velMirrorZi;
-							DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[j]/ni)*(vijx*v0imj+vijy*v1imj+vijz*v2imj)*wS/dstimj2;
+
+							// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0imj+vijy*v1imj+vijz*v2imj)*wS/dstimj2;
+							DivV += dim_nSmall*(vijx*v0imj+vijy*v1imj+vijz*v2imj)*wS/dstimj2;
 						}
 					}
 					j = Particles->nextParticleInSameBucket[j];
@@ -711,7 +1323,9 @@ void MpsPressure::calcWallSlipVelDivergence(MpsParticleSystem *PSystem, MpsParti
 				double vijx = velXi-velMirrorXi;
 				double vijy = velYi-velMirrorYi;
 				double vijz = velZi-velMirrorZi;
-				DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[i]/ni)*(vijx*v0imi+vijy*v1imi+vijz*v2imi)*wS/dstimi2;
+
+				// DivV += dim_nSmall*(Particles->pndi[i]/ni)*(vijx*v0imi+vijy*v1imi+vijz*v2imi)*wS/dstimi2;
+				DivV += dim_nSmall*(vijx*v0imi+vijy*v1imi+vijz*v2imi)*wS/dstimi2;
 			}
 
 			Particles->velDivergence[i] += DivV;
@@ -727,24 +1341,32 @@ void MpsPressure::calcWallSlipVelDivergence(MpsParticleSystem *PSystem, MpsParti
 
 // Divergence of velocity (Polygon wall) - No-slip
 void MpsPressure::calcWallNoSlipVelDivergence(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
+
+	double dim_nSmall = PSystem->dim/PSystem->pndSmallZero;
+	
+	//  Inverse transformation matrix Rinv_i = - I
+	double Rinv_i[9];
+	Rinv_i[0] = -1.0; Rinv_i[1] =  0.0; Rinv_i[2] =  0.0;
+	Rinv_i[3] =  0.0; Rinv_i[4] = -1.0; Rinv_i[5] =  0.0;
+	Rinv_i[6] =  0.0; Rinv_i[7] =  0.0; Rinv_i[8] = -1.0;
 	//int nPartNearMesh = partNearMesh.size();
 	//printf(" Mesh %d \n", nPartNearMesh);
 	// Loop only for particles near mesh
 #pragma omp parallel for schedule(dynamic,64)
 	//for(int im=0;im<nPartNearMesh;im++) {
 	//int i = partNearMesh[im];
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		double ni = Particles->pndi[i];
-		//if(Particles->particleType[i] == PSystem->fluid && ni > PSystem->epsilonZero) {
+		// if(Particles->particleType[i] == PSystem->fluid && ni > PSystem->epsilonZero) {
 		if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true && ni > PSystem->epsilonZero) {
-	//	if(Particles->particleType[i] == PSystem->fluid) {
+		// if(Particles->particleType[i] == PSystem->fluid) {
 			double DivV = 0.0;
 			double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 			double velXi = Particles->vel[i*3  ];	double velYi = Particles->vel[i*3+1];	double velZi = Particles->vel[i*3+2];
 			double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
 
-			// Inverse matrix Rinv_i = - I
-			double Rinv_i[9], Rref_i[9], normaliw[3], normalMod2;
+			double Rref_i[9], normaliw[3], normalMod2;
 			// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
 			normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
 			normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
@@ -759,11 +1381,6 @@ void MpsPressure::calcWallNoSlipVelDivergence(MpsParticleSystem *PSystem, MpsPar
 				normaliw[1] = 0;
 				normaliw[2] = 0;
 			}
-
-			//  Inverse transformation matrix Rinv_i = - I
-			Rinv_i[0] = -1.0; Rinv_i[1] =  0.0; Rinv_i[2] =  0.0;
-			Rinv_i[3] =  0.0; Rinv_i[4] = -1.0; Rinv_i[5] =  0.0;
-			Rinv_i[6] =  0.0; Rinv_i[7] =  0.0; Rinv_i[8] = -1.0;
 
 			//  Transformation matrix Rref_i = I - 2.0*normal_iwall*normal_iwall
 			Rref_i[0] = 1.0 - 2.0*normaliw[0]*normaliw[0]; Rref_i[1] = 0.0 - 2.0*normaliw[0]*normaliw[1]; Rref_i[2] = 0.0 - 2.0*normaliw[0]*normaliw[2];
@@ -823,7 +1440,9 @@ void MpsPressure::calcWallNoSlipVelDivergence(MpsParticleSystem *PSystem, MpsPar
 							double v0m = (Rref_i[0]*v0imj + Rref_i[1]*v1imj + Rref_i[2]*v2imj);
 							double v1m = (Rref_i[3]*v0imj + Rref_i[4]*v1imj + Rref_i[5]*v2imj);
 							double v2m = (Rref_i[6]*v0imj + Rref_i[7]*v1imj + Rref_i[8]*v2imj);
-							DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[j]/ni)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimj2;
+							
+							// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimj2;
+							DivV += dim_nSmall*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimj2;
 						}
 					}
 					j = Particles->nextParticleInSameBucket[j];
@@ -845,7 +1464,9 @@ void MpsPressure::calcWallNoSlipVelDivergence(MpsParticleSystem *PSystem, MpsPar
 				double v0m = (Rref_i[0]*v0imi + Rref_i[1]*v1imi + Rref_i[2]*v2imi);
 				double v1m = (Rref_i[3]*v0imi + Rref_i[4]*v1imi + Rref_i[5]*v2imi);
 				double v2m = (Rref_i[6]*v0imi + Rref_i[7]*v1imi + Rref_i[8]*v2imi);
-				DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[i]/ni)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimi2;
+
+				// DivV += dim_nSmall*(Particles->pndi[i]/ni)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimi2;
+				DivV += dim_nSmall*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimi2;
 			}
 
 			Particles->velDivergence[i] += DivV;
@@ -862,7 +1483,8 @@ void MpsPressure::calcWallNoSlipVelDivergence(MpsParticleSystem *PSystem, MpsPar
 // Extrapolate pressure to wall and dummy particles
 void MpsPressure::extrapolatePressParticlesWallDummy(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 #pragma omp parallel for schedule(dynamic,64)
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		if(Particles->particleType[i] == PSystem->dummyWall || (PSystem->mpsType == calcPressType::WEAKLY && Particles->particleType[i] == PSystem->wall)) {
 			double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 			double ni = 0.0;
@@ -886,7 +1508,7 @@ void MpsPressure::extrapolatePressParticlesWallDummy(MpsParticleSystem *PSystem,
 					Particles->sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2, plx, ply, plz);
 
 					if(dstij2 < PSystem->reS2) {
-	//				if(j != i) {
+//					if(j != i) {
 						if(j != i && Particles->particleType[j] == PSystem->fluid) {
 							double dst = sqrt(dstij2);
 							double wS = Particles->weight(dst, PSystem->reS, PSystem->weightType);
@@ -922,7 +1544,8 @@ void MpsPressure::extrapolatePressParticlesNearPolygonWall(MpsParticleSystem *PS
 #pragma omp parallel for schedule(dynamic,64)
 	//for(int im=0;im<nPartNearMesh;im++) {
 	//int i = partNearMesh[im];
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 	//if(Particles->particleType[i] == PSystem->fluid && Particles->press[i] == 0 /*&& Particles->particleNearWall[i] == true*/) {
 		if(Particles->particleType[i] == PSystem->fluid && Particles->press[i] == 0 && Particles->particleNearWall[i] == true) {
 			double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
@@ -1000,7 +1623,8 @@ void MpsPressure::extrapolatePressParticlesNearPolygonWall(MpsParticleSystem *PS
 // Prediction of pressure gradient
 void MpsPressure::predictionPressGradient(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 #pragma omp parallel for schedule(dynamic,64)
-	for(int i=0; i<Particles->numParticles; i++){
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 //		if(Particles->particleType[i] == PSystem->fluid) {
 		double accX = 0.0;			double accY = 0.0;			double accZ = 0.0;
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
@@ -1107,7 +1731,8 @@ void MpsPressure::predictionWallPressGradient(MpsParticleSystem *PSystem, MpsPar
 #pragma omp parallel for schedule(dynamic,64)
 	//for(int im=0;im<nPartNearMesh;im++) {
 	//int i = partNearMesh[im];
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		//Particles->particleNearWall[i]=true; // Only to show particles near polygon
 		if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true) {
 			double accX = 0.0;			double accY = 0.0;			double accZ = 0.0;
@@ -1135,10 +1760,10 @@ void MpsPressure::predictionWallPressGradient(MpsParticleSystem *PSystem, MpsPar
 			Rref_i[3] = 0.0 - 2.0*normaliw[1]*normaliw[0]; Rref_i[4] = 1.0 - 2.0*normaliw[1]*normaliw[1]; Rref_i[5] = 0.0 - 2.0*normaliw[1]*normaliw[2];
 			Rref_i[6] = 0.0 - 2.0*normaliw[2]*normaliw[0]; Rref_i[7] = 0.0 - 2.0*normaliw[2]*normaliw[1]; Rref_i[8] = 1.0 - 2.0*normaliw[2]*normaliw[2];
 			// Taylor pressure Pj
-			double Rai[3];
-			Rai[0] = Rref_i[0]*Particles->accStar[i*3] + Rref_i[1]*Particles->accStar[i*3+1] + Rref_i[2]*Particles->accStar[i*3+2];
-			Rai[1] = Rref_i[3]*Particles->accStar[i*3] + Rref_i[4]*Particles->accStar[i*3+1] + Rref_i[5]*Particles->accStar[i*3+2];
-			Rai[2] = Rref_i[6]*Particles->accStar[i*3] + Rref_i[7]*Particles->accStar[i*3+1] + Rref_i[8]*Particles->accStar[i*3+2];
+			// double Rai[3];
+			// Rai[0] = Rref_i[0]*Particles->accStar[i*3] + Rref_i[1]*Particles->accStar[i*3+1] + Rref_i[2]*Particles->accStar[i*3+2];
+			// Rai[1] = Rref_i[3]*Particles->accStar[i*3] + Rref_i[4]*Particles->accStar[i*3+1] + Rref_i[5]*Particles->accStar[i*3+2];
+			// Rai[2] = Rref_i[6]*Particles->accStar[i*3] + Rref_i[7]*Particles->accStar[i*3+1] + Rref_i[8]*Particles->accStar[i*3+2];
 
 			int ix, iy, iz;
 			Buckets->bucketCoordinates(ix, iy, iz, posXi, posYi, posZi, PSystem);
@@ -1197,7 +1822,7 @@ void MpsPressure::predictionWallPressGradient(MpsParticleSystem *PSystem, MpsPar
 							
 							// Taylor pressure Pj
 							double Pj;
-		//					Pj = Pi + Particles->RHO[i]*(Rai[0]*v0 + Rai[1]*v1 + Rai[2]*v2);
+							// Pj = Pi + Particles->RHO[i]*(Rai[0]*v0 + Rai[1]*v1 + Rai[2]*v2);
 							Pj = Particles->press[j];
 
 							if(PSystem->gradientType == 0)
@@ -1228,7 +1853,7 @@ void MpsPressure::predictionWallPressGradient(MpsParticleSystem *PSystem, MpsPar
 
 				// Taylor pressure Pj
 				double Pj;
-	//			Pj = Pi + Particles->RHO[i]*(Rai[0]*v0 + Rai[1]*v1 + Rai[2]*v2);
+				// Pj = Pi + Particles->RHO[i]*(Rai[0]*v0 + Rai[1]*v1 + Rai[2]*v2);
 				Pj = Pi;
 
 				if(PSystem->gradientType == 0)
@@ -1253,7 +1878,7 @@ void MpsPressure::predictionWallPressGradient(MpsParticleSystem *PSystem, MpsPar
 				if(PSystem->repulsiveForceType == repForceType::HARADA)
 					repulsiveForceHarada(rpsForce, normaliw, normaliwSqrt, i, PSystem, Particles);
 				else if(PSystem->repulsiveForceType == repForceType::MITSUME)
-					repulsiveForceMitsume(rpsForce, normaliw, normaliwSqrt, i, PSystem, Particles);
+					repulsiveForceMitsume(rpsForce, normaliw, normaliwSqrt, PSystem, Particles);
 				else if(PSystem->repulsiveForceType == repForceType::LENNARD_JONES)
 					repulsiveForceLennardJones(rpsForce, normaliw, normaliwSqrt, velMax2, i, PSystem, Particles);
 				else
@@ -1262,17 +1887,17 @@ void MpsPressure::predictionWallPressGradient(MpsParticleSystem *PSystem, MpsPar
 			
 			// PSystem->coeffPressGrad is a negative cte (-PSystem->dim/noGrad)
 			// Original
-	//		Particles->acc[i*3  ] += ((1.0-PSystem->relaxPress)*(Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*PSystem->coeffPressGrad - rpsForce[0])*invDns[partType::FLUID];
-	//		Particles->acc[i*3+1] += ((1.0-PSystem->relaxPress)*(Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*PSystem->coeffPressGrad - rpsForce[1])*invDns[partType::FLUID];
-	//		Particles->acc[i*3+2] += ((1.0-PSystem->relaxPress)*(Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*PSystem->coeffPressGrad - rpsForce[2])*invDns[partType::FLUID];
+			// Particles->acc[i*3  ] += ((1.0-PSystem->relaxPress)*(Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*PSystem->coeffPressGrad - rpsForce[0])*invDns[partType::FLUID];
+			// Particles->acc[i*3+1] += ((1.0-PSystem->relaxPress)*(Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*PSystem->coeffPressGrad - rpsForce[1])*invDns[partType::FLUID];
+			// Particles->acc[i*3+2] += ((1.0-PSystem->relaxPress)*(Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*PSystem->coeffPressGrad - rpsForce[2])*invDns[partType::FLUID];
 			// Modified
 			Particles->acc[i*3  ] += ((1.0-PSystem->relaxPress)*(Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*PSystem->coeffPressGrad - rpsForce[0])/Particles->RHO[i];
 			Particles->acc[i*3+1] += ((1.0-PSystem->relaxPress)*(Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*PSystem->coeffPressGrad - rpsForce[1])/Particles->RHO[i];
 			Particles->acc[i*3+2] += ((1.0-PSystem->relaxPress)*(Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*PSystem->coeffPressGrad - rpsForce[2])/Particles->RHO[i];
 
-			//Fwall[i*3  ] =  (Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*invDns[partType::FLUID]*PSystem->coeffPressGrad - rpsForce[0]*invDns[partType::FLUID];
-			//Fwall[i*3+1] =  (Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*invDns[partType::FLUID]*PSystem->coeffPressGrad - rpsForce[1]*invDns[partType::FLUID];
-			//Fwall[i*3+2] =  (Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*invDns[partType::FLUID]*PSystem->coeffPressGrad - rpsForce[2]*invDns[partType::FLUID];
+			// Fwall[i*3  ] =  (Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*invDns[partType::FLUID]*PSystem->coeffPressGrad - rpsForce[0]*invDns[partType::FLUID];
+			// Fwall[i*3+1] =  (Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*invDns[partType::FLUID]*PSystem->coeffPressGrad - rpsForce[1]*invDns[partType::FLUID];
+			// Fwall[i*3+2] =  (Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*invDns[partType::FLUID]*PSystem->coeffPressGrad - rpsForce[2]*invDns[partType::FLUID];
 		}
 	}
 
@@ -1285,8 +1910,9 @@ void MpsPressure::predictionWallPressGradient(MpsParticleSystem *PSystem, MpsPar
 // Acceleration due to pressure gradient
 void MpsPressure::calcPressGradient(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 #pragma omp parallel for schedule(dynamic,64)
-	for(int i=0; i<Particles->numParticles; i++) {
-//	if(Particles->particleType[i] == PSystem->fluid) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
+// if(Particles->particleType[i] == PSystem->fluid) {
 		double accX = 0.0;			double accY = 0.0;			double accZ = 0.0;
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
@@ -1376,28 +2002,28 @@ void MpsPressure::calcPressGradient(MpsParticleSystem *PSystem, MpsParticle *Par
 		}}}
 		// PSystem->coeffPressGrad is a negative cte (-PSystem->dim/noGrad)
 		// Original
-//		Particles->acc[i*3  ]=PSystem->relaxPress*accX*invDns[partType::FLUID]*PSystem->coeffPressGrad;
-//		Particles->acc[i*3+1]=PSystem->relaxPress*accY*invDns[partType::FLUID]*PSystem->coeffPressGrad;
-//		Particles->acc[i*3+2]=PSystem->relaxPress*accZ*invDns[partType::FLUID]*PSystem->coeffPressGrad;
+		// Particles->acc[i*3  ]=PSystem->relaxPress*accX*invDns[partType::FLUID]*PSystem->coeffPressGrad;
+		// Particles->acc[i*3+1]=PSystem->relaxPress*accY*invDns[partType::FLUID]*PSystem->coeffPressGrad;
+		// Particles->acc[i*3+2]=PSystem->relaxPress*accZ*invDns[partType::FLUID]*PSystem->coeffPressGrad;
 		// Modified
 		Particles->acc[i*3  ]=PSystem->relaxPress*accX*PSystem->coeffPressGrad/Particles->RHO[i];
 		Particles->acc[i*3+1]=PSystem->relaxPress*accY*PSystem->coeffPressGrad/Particles->RHO[i];
 		Particles->acc[i*3+2]=PSystem->relaxPress*accZ*PSystem->coeffPressGrad/Particles->RHO[i];
-		/*if(PSystem->gradientCorrection == false) {
-			Particles->acc[i*3  ]=PSystem->relaxPress*accX*PSystem->coeffPressGrad/Particles->RHO[i];
-			Particles->acc[i*3+1]=PSystem->relaxPress*accY*PSystem->coeffPressGrad/Particles->RHO[i];
-			Particles->acc[i*3+2]=PSystem->relaxPress*accZ*PSystem->coeffPressGrad/Particles->RHO[i];
-		}
-		else {
-		//	if(Particles->correcMatrixRow1[1*3] > 1.0) {
-		//		printf("\n X %e %e %e ", Particles->correcMatrixRow1[i*3  ], Particles->correcMatrixRow1[i*3+1], Particles->correcMatrixRow1[i*3+2]);
-		//		printf("\n Y %e %e %e ", Particles->correcMatrixRow2[i*3  ], Particles->correcMatrixRow2[i*3+1], Particles->correcMatrixRow2[i*3+2]);
-		//		printf("\n Z %e %e %e \n", Particles->correcMatrixRow3[i*3  ], Particles->correcMatrixRow3[i*3+1], Particles->correcMatrixRow3[i*3+2]);
-			//}
-			Particles->acc[i*3  ]=(PSystem->relaxPress*PSystem->coeffPressGrad/Particles->RHO[i])*(accX*Particles->correcMatrixRow1[i*3] + accY*Particles->correcMatrixRow1[i*3+1] + accZ*Particles->correcMatrixRow1[i*3+2]);
-			Particles->acc[i*3+1]=(PSystem->relaxPress*PSystem->coeffPressGrad/Particles->RHO[i])*(accX*Particles->correcMatrixRow2[i*3] + accY*Particles->correcMatrixRow2[i*3+1] + accZ*Particles->correcMatrixRow2[i*3+2]);
-			Particles->acc[i*3+2]=(PSystem->relaxPress*PSystem->coeffPressGrad/Particles->RHO[i])*(accX*Particles->correcMatrixRow3[i*3] + accY*Particles->correcMatrixRow3[i*3+1] + accZ*Particles->correcMatrixRow3[i*3+2]);
-		}*/
+		// if(PSystem->gradientCorrection == false) {
+		// 	Particles->acc[i*3  ]=PSystem->relaxPress*accX*PSystem->coeffPressGrad/Particles->RHO[i];
+		// 	Particles->acc[i*3+1]=PSystem->relaxPress*accY*PSystem->coeffPressGrad/Particles->RHO[i];
+		// 	Particles->acc[i*3+2]=PSystem->relaxPress*accZ*PSystem->coeffPressGrad/Particles->RHO[i];
+		// }
+		// else {
+		// 	if(Particles->correcMatrixRow1[1*3] > 1.0) {
+		// 		printf("\n X %e %e %e ", Particles->correcMatrixRow1[i*3  ], Particles->correcMatrixRow1[i*3+1], Particles->correcMatrixRow1[i*3+2]);
+		// 		printf("\n Y %e %e %e ", Particles->correcMatrixRow2[i*3  ], Particles->correcMatrixRow2[i*3+1], Particles->correcMatrixRow2[i*3+2]);
+		// 		printf("\n Z %e %e %e \n", Particles->correcMatrixRow3[i*3  ], Particles->correcMatrixRow3[i*3+1], Particles->correcMatrixRow3[i*3+2]);
+		// 	}
+		// 	Particles->acc[i*3  ]=(PSystem->relaxPress*PSystem->coeffPressGrad/Particles->RHO[i])*(accX*Particles->correcMatrixRow1[i*3] + accY*Particles->correcMatrixRow1[i*3+1] + accZ*Particles->correcMatrixRow1[i*3+2]);
+		// 	Particles->acc[i*3+1]=(PSystem->relaxPress*PSystem->coeffPressGrad/Particles->RHO[i])*(accX*Particles->correcMatrixRow2[i*3] + accY*Particles->correcMatrixRow2[i*3+1] + accZ*Particles->correcMatrixRow2[i*3+2]);
+		// 	Particles->acc[i*3+2]=(PSystem->relaxPress*PSystem->coeffPressGrad/Particles->RHO[i])*(accX*Particles->correcMatrixRow3[i*3] + accY*Particles->correcMatrixRow3[i*3+1] + accZ*Particles->correcMatrixRow3[i*3+2]);
+		// }
 	}
 
 #ifdef SHOW_FUNCT_NAME_PART
@@ -1418,7 +2044,8 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 #pragma omp parallel for schedule(dynamic,64)
 	//for(int im=0;im<nPartNearMesh;im++) {
 	//int i = partNearMesh[im];
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 
 	//Particles->particleNearWall[i]=true; // Only to show particles near polygon
 	
@@ -1586,7 +2213,7 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 			if(PSystem->repulsiveForceType == repForceType::HARADA)
 				repulsiveForceHarada(rpsForce, normaliw, normaliwSqrt, i, PSystem, Particles);
 			else if(PSystem->repulsiveForceType == repForceType::MITSUME)
-				repulsiveForceMitsume(rpsForce, normaliw, normaliwSqrt, i, PSystem, Particles);
+				repulsiveForceMitsume(rpsForce, normaliw, normaliwSqrt, PSystem, Particles);
 			else if(PSystem->repulsiveForceType == repForceType::LENNARD_JONES)
 				repulsiveForceLennardJones(rpsForce, normaliw, normaliwSqrt, velMax2, i, PSystem, Particles);
 			else
@@ -1595,9 +2222,9 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 
 		// PSystem->coeffPressGrad is a negative cte (-PSystem->dim/noGrad)
 		// Original
-//		Particles->acc[i*3  ] += (PSystem->relaxPress*(Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*PSystem->coeffPressGrad - rpsForce[0])*invDns[partType::FLUID];
-//		Particles->acc[i*3+1] += (PSystem->relaxPress*(Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*PSystem->coeffPressGrad - rpsForce[1])*invDns[partType::FLUID];
-//		Particles->acc[i*3+2] += (PSystem->relaxPress*(Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*PSystem->coeffPressGrad - rpsForce[2])*invDns[partType::FLUID];
+		// Particles->acc[i*3  ] += (PSystem->relaxPress*(Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*PSystem->coeffPressGrad - rpsForce[0])*invDns[partType::FLUID];
+		// Particles->acc[i*3+1] += (PSystem->relaxPress*(Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*PSystem->coeffPressGrad - rpsForce[1])*invDns[partType::FLUID];
+		// Particles->acc[i*3+2] += (PSystem->relaxPress*(Rref_i[6]*accX + Rref_i[7]*accY + Rref_i[8]*accZ)*PSystem->coeffPressGrad - rpsForce[2])*invDns[partType::FLUID];
 		// Modified
 		Particles->acc[i*3  ] += (PSystem->relaxPress*(Rref_i[0]*accX + Rref_i[1]*accY + Rref_i[2]*accZ)*PSystem->coeffPressGrad - rpsForce[0])/Particles->RHO[i];
 		Particles->acc[i*3+1] += (PSystem->relaxPress*(Rref_i[3]*accX + Rref_i[4]*accY + Rref_i[5]*accZ)*PSystem->coeffPressGrad - rpsForce[1])/Particles->RHO[i];
@@ -1623,25 +2250,15 @@ void MpsPressure::repulsiveForceHarada(double *force, const double *normal, cons
 	force[0] = - wijRep*normal[0];
 	force[1] = - wijRep*normal[1];
 	force[2] = - wijRep*normal[2];
-
-#ifdef SHOW_FUNCT_NAME_PART
-	// print the function name (useful for investigating programs)
-	cout << __PRETTY_FUNCTION__ << endl;
-#endif
 }
 
 // Parallel analysis system for free-surface flow using MPS method with explicitly represented polygon wall boundary model
 // https://doi.org/10.1007/s40571-019-00269-6
-void MpsPressure::repulsiveForceMitsume(double *force, const double *normal, const double normalSqrt, const int i, MpsParticleSystem *PSystem, MpsParticle *Particles) {
+void MpsPressure::repulsiveForceMitsume(double *force, const double *normal, const double normalSqrt, MpsParticleSystem *PSystem, MpsParticle *Particles) {
 	double wijRep = PSystem->repForceCoefMitsume*Particles->weightGradient(normalSqrt, PSystem->reRepulsiveForce, PSystem->weightType);
 	force[0] = - wijRep*normal[0];
 	force[1] = - wijRep*normal[1];
 	force[2] = - wijRep*normal[2];
-
-#ifdef SHOW_FUNCT_NAME_PART
-	// print the function name (useful for investigating programs)
-	cout << __PRETTY_FUNCTION__ << endl;
-#endif
 }
 
 // Simulating Free Surface Flows with SPH
@@ -1654,11 +2271,6 @@ void MpsPressure::repulsiveForceLennardJones(double *force, const double *normal
 	force[0] = - wijRep*normal[0];
 	force[1] = - wijRep*normal[1];
 	force[2] = - wijRep*normal[2];
-
-#ifdef SHOW_FUNCT_NAME_PART
-	// print the function name (useful for investigating programs)
-	cout << __PRETTY_FUNCTION__ << endl;
-#endif
 }
 
 // SPH particle boundary forces for arbitrary boundaries 
@@ -1670,10 +2282,5 @@ void MpsPressure::repulsiveForceMonaghanKajtar(double *force, const double *norm
 	force[0] = - wijRep*normal[0];
 	force[1] = - wijRep*normal[1];
 	force[2] = - wijRep*normal[2];
-
-#ifdef SHOW_FUNCT_NAME_PART
-	// print the function name (useful for investigating programs)
-	cout << __PRETTY_FUNCTION__ << endl;
-#endif
 }
 

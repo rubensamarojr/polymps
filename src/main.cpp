@@ -119,7 +119,7 @@ int main( int argc, char** argv) {
 	// Creates MpsBoundaryCondition class
 	boundaryConditions = new MpsBoundaryCondition();
 	// Set Periodic Boundary Condition of the bucket
-	boundaryConditions->setBucketBC(particleSystem, particles, buckets);
+	boundaryConditions->setBucketBC(particleSystem, particles);
 	// Update particle ID's in buckets
 	buckets->updateParticlesID(particleSystem, particles);
 	// Set number of ghost particles to zero (in the current step)
@@ -191,17 +191,17 @@ int main( int argc, char** argv) {
 
 	boundaryConditions->updateParticleBC(particleSystem, particles, buckets);
 	// Computes pressure
-	particlePress->calcPress(particleSystem, particles, buckets);
+	particlePress->calcPress(particleSystem, particles, buckets, inflowOutflow);
 	// Writes header for vtu files
-	inputOutput->writePvd(particleSystem, particles);
+	inputOutput->writePvd(particleSystem);
 	// Deletes all files inside the simulation folder
 	inputOutput->deleteDirectoryFiles();
 	// Writes VTK file of buckets
-	inputOutput->writeBuckets(particleSystem, particles);
+	inputOutput->writeBuckets(particleSystem);
 
 	// Writes VTK file of initial Inflow/Outflow plans
 	if(particleSystem->inOutflowOn == true && particleSystem->numInOutflowPlane > 0) {
-		inputOutput->writeInOutFlowPlan(particleSystem, particles, inflowOutflow);
+		inputOutput->writeInOutFlowPlan(particleSystem, inflowOutflow);
 	}
 
 	printf("OK\n");
@@ -319,10 +319,12 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 
 
 		// Non newtonian calculation
+		///////////////// Non-Newtonian flow /////////////////
 		if(partSyst->fluidType == viscType::NON_NEWTONIAN) {
 			partVisc->calcVolumeFraction(partSyst, part, buck); ///< Volume of fraction if phase II in the mixture
 			partVisc->calcViscosityInteractionVal(partSyst, part, buck); ///< Viscosity interaction values for "real" fluid particles
 		}
+		
 		// Calculation of acceleration due laplacian of velocity and gravity
 		partVisc->calcViscosityGravity(partSyst, part, buck);
 
@@ -347,33 +349,36 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 		else {;
 			partColl->checkDynamicParticleCollisions(partSyst, part, buck);
 		}
+
 		// Contributions due polygon wall
 		if(partSyst->wallType == boundaryWallType::POLYGON) {
 			// Fluid particles: Calculation of PND due wall and number of neighboors
 			// Positions of wall and mirror particles
 			for(int me = 0; me < partSyst->numOfMeshs; me++) {
-				mesh[me].closestPointPNDBoundaryAABB(partSyst->reS2, partSyst->reL2, part->numParticles, partSyst->weightType, part->particleType, 
-					partSyst->fluid, me, meshType::FIXED, meshType::DEFORMABLE, meshType::FORCED, part->pos, part->particleAtWallPos, part->mirrorParticlePos, 
-					part->distParticleWall2, part->elementID, part->nearMeshType, part->polygonNormal);
-				// mesh[me].closestPointPNDBoundaryAABB(partSyst->reS2, partSyst->reL2, part->numParticles, partSyst->weightType, part->particleType, 
+				mesh[me].closestPointPNDBoundaryAABB(part->numParticlesZero, part->particleType, partSyst->fluid, me,
+					meshType::FIXED, meshType::DEFORMABLE, meshType::FORCED, part->pos, part->particleAtWallPos, part->mirrorParticlePos, 
+					part->distParticleWall2, part->particleID, part->elementID, part->nearMeshType, part->polygonNormal);
+				// mesh[me].closestPointPNDBoundaryAABB(partSyst->reS2, partSyst->reL2, part->numParticlesZero, partSyst->weightType, part->particleType, 
 				// 		partSyst->fluid, part->pos, part->particleAtWallPos, part->mirrorParticlePos, part->distParticleWall2, 
 				// 		part->pndWallContribution, part->numNeighWallContribution, elementID, partNearMesh);
 			}
 			partNearMesh.clear();
 			//for(int me = 0; me < partSyst->numOfMeshs; me++) {
-			//	mesh[me].updateParticlesNearPolygonMesh(partSyst->reS2, partSyst->reL2, part->numParticles, partSyst->weightType, part->particleType, 
+			//	mesh[me].updateParticlesNearPolygonMesh(partSyst->reS2, partSyst->reL2, part->numParticlesZero, partSyst->weightType, part->particleType, 
 			//	partSyst->fluid, part->distParticleWall2, part->pndWallContribution, part->numNeighWallContribution, partNearMesh);
 			//}
 			// Only call once since the distance riw2 have the values from all the meshes
-			mesh[0].updateParticlesNearPolygonMesh(partSyst->reS2, partSyst->reL2, part->numParticles, partSyst->weightType, part->particleType, partSyst->fluid, 
-				part->distParticleWall2, part->pndWallContribution, part->numNeighWallContribution, partNearMesh, part->particleNearWall);
+			mesh[0].updateParticlesNearPolygonMesh(partSyst->reS2, partSyst->reL2, part->numParticlesZero, part->particleType, partSyst->fluid, 
+				part->distParticleWall2, part->pndWallContribution, part->numNeighWallContribution, part->particleID, part->particleNearWall, partNearMesh);
 
 			partPndNeig->calcWallNPCD(partSyst, part, buck);	///< NPCD PND due to the polygon wall
 		}
+
 		// Compute correction matrix
 		if(partSyst->gradientCorrection == true) {
 			vectMatr->correctionMatrix(partSyst, part, buck);
 		}
+
 		// PND, number of neighbors and NPCD calculation
 		partPndNeig->calcPndnNeighNPCD(partSyst, part, buck);
 		// Diffusion term
@@ -415,26 +420,19 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 		boundCond->updateParticleBC(partSyst, part, buck);
 
 		// Pressure calculation
-		partPress->calcPress(partSyst, part, buck);
-
-		// Extrapolate pressure to wall and dummy particles
-		if(partSyst->wallType == boundaryWallType::PARTICLE) {
-			partPress->extrapolatePressParticlesWallDummy(partSyst, part, buck);
-		}
-		if(partSyst->wallType == boundaryWallType::POLYGON) {
-			// Pressure at inner particles near corners
-			// Extrapolate pressure to inner particles near polygon walls (Not working !!)
-			///partPress->extrapolatePressParticlesNearPolygonWall(partSyst, part, buck);
-		}
+		partPress->calcPress(partSyst, part, buck, inOutflow);
+		
 		// Compute correction matrix
 		if(partSyst->gradientCorrection == true) {
 			vectMatr->correctionMatrix(partSyst, part, buck);
 		}
+		
 		// Calculation of acceleration due pressure gradient
 		partPress->calcPressGradient(partSyst, part, buck);	///< Add acceleration due pressure gradient 
 		if(partSyst->wallType == boundaryWallType::POLYGON) {
 			partPress->calcWallPressGradient(partSyst, part, buck);	///< Add acceleration from pressure gradient due to the polygon wall
 		}
+
 		// Add acceleration due laplacian of viscosity on wall
 		///////////////// Non-Newtonian flow /////////////////
 		if(partSyst->fluidType == viscType::NON_NEWTONIAN) {
@@ -450,6 +448,7 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 				}
 			}
 		}
+
 		///////////////// Newtonian flow /////////////////////
 		if(partSyst->wallType == boundaryWallType::POLYGON) {
 			if(partSyst->slipCondition == slipBC::FREE_SLIP) {
@@ -459,19 +458,18 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 				partVisc->calcWallNoSlipViscosity(partSyst, part, buck); ///< No-Slip condition. Add acceleration due laplacian of viscosity on wall (Polygon wall)
 			}
 		}
+		
 		if(partSyst->forcedOn == true) {
 			// Update forced mesh
 			mesh[meshType::FORCED].updateForcedPolygonMesh(nodeFRWX, nodeFRWY, nodeFRWZ, partSyst->uniformVelWall, partSyst->timeStep, partSyst->timeCurrent);
 		}
 
 
-
-		// Here only for InOutflow plan of id = 0
-		if(partSyst->inOutflowOn == true && partSyst->numInOutflowPlane > 0) {
-			// Impose motion to particles
-			inOutflow[0].imposeMotionParticles(partSyst, part);
-		}
-
+		// // Here only for InOutflow plan of id = 0
+		// if(partSyst->inOutflowOn == true && partSyst->numInOutflowPlane > 0) {
+		// 	// Impose motion to particles
+		// 	inOutflow[0].imposeMotionParticles(partSyst, part);
+		// }
 
 
 		// Update velocity and positions
@@ -508,8 +506,9 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 		// else if(part->mpsType == calcPressType::WEAKLY) {
 		// 	part->calcPressWCMPSandParticleBC();
 		// }
-		// for(int i=0; i<part->numParticles; i++) {
-		// 	part->pressAverage[i] += part->press[i];
+		// for(int ip=0; ip<part->numParticlesZero; ip++) {
+		//	int ii = Particles->particleID[ip];
+		// 	part->pressAverage[ii] += part->press[ii];
 		// }
 		
 
@@ -584,7 +583,7 @@ void initMesh(MpsParticleSystem* partSyst, MpsParticle* part, PolygonMesh* mesh,
 	// 2nd: Deformable mesh file
 	// 3rd: Forced mesh file
 	for(int me = 0; me < partSyst->numOfMeshs; me++) {
-		mesh[me].initPolygonMesh(part->numParticles);
+		mesh[me].initPolygonMesh(part->numParticlesZero);
 		if(me == 0) {
 			mesh[me].readPolygonMeshFile(io->meshRigidFilename);
 		}
@@ -640,22 +639,21 @@ void initMesh(MpsParticleSystem* partSyst, MpsParticle* part, PolygonMesh* mesh,
 	if(partSyst->wallType == boundaryWallType::POLYGON) {
 		// Positions of wall and mirror particles
 		for(int me = 0; me < partSyst->numOfMeshs; me++) {
-			mesh[me].closestPointPNDBoundaryAABB(partSyst->reS2, partSyst->reL2, part->numParticles, partSyst->weightType, 
-				part->particleType, partSyst->fluid, me, meshType::FIXED, meshType::DEFORMABLE, 
-				meshType::FORCED, part->pos, part->particleAtWallPos, part->mirrorParticlePos, 
-				part->distParticleWall2, part->elementID, part->nearMeshType, part->polygonNormal);
+			mesh[me].closestPointPNDBoundaryAABB(part->numParticlesZero, part->particleType, partSyst->fluid, me, meshType::FIXED,
+				meshType::DEFORMABLE, meshType::FORCED, part->pos, part->particleAtWallPos, part->mirrorParticlePos,
+				part->distParticleWall2, part->particleID, part->elementID, part->nearMeshType, part->polygonNormal);
 			// mesh[me].closestPointPNDBoundaryAABB(reS2, reL2, nP, WGT_TYP, 
 			// Typ, FLD, GST, Pos, wallPos, mirrorPos, riw2, niw, numNeighw, elementID, partNearMesh);
 		}
 		partNearMesh.clear();
 		//for(int me = 0; me < partSyst->numOfMeshs; me++) {
-			// mesh[me].updateParticlesNearPolygonMesh(partSyst->reS2, partSyst->reL2, part->numParticles, partSyst->weightType, 
+			// mesh[me].updateParticlesNearPolygonMesh(partSyst->reS2, partSyst->reL2, part->numParticlesZero, partSyst->weightType, 
 					// Typ, FLD, GST, riw2, niw, numNeighw, partNearMesh);
 		// }
 		// Only call once since the distance riw2 have the values from all the meshes (Rigid, Deformable and Forced)
-		mesh[0].updateParticlesNearPolygonMesh(partSyst->reS2, partSyst->reL2, part->numParticles, partSyst->weightType, 
+		mesh[0].updateParticlesNearPolygonMesh(partSyst->reS2, partSyst->reL2, part->numParticlesZero,
 			part->particleType, partSyst->fluid, part->distParticleWall2, part->pndWallContribution,
-			part->numNeighWallContribution, partNearMesh, part->particleNearWall);
+			part->numNeighWallContribution, part->particleID, part->particleNearWall, partNearMesh);
 		
 		// NPCD PND due polygon wall
 		pndNeigh->calcWallNPCD(partSyst, part, buck);

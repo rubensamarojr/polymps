@@ -38,9 +38,8 @@ public:
 	 * @details    None or Periodic.
 	 * @param      PSystem    The particle system
 	 * @param      Particles  The particles data
-	 * @param      Buckets    The buckets data
 	 */
-	void setBucketBC(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+	void setBucketBC(MpsParticleSystem *PSystem, MpsParticle *Particles);
 
 	/**
 	 * @brief      Updates type of particle

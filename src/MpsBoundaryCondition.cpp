@@ -17,7 +17,7 @@ MpsBoundaryCondition::~MpsBoundaryCondition()
 }
 
 // Set Periodic Boundary Condition of the bucket
-void MpsBoundaryCondition::setBucketBC(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
+void MpsBoundaryCondition::setBucketBC(MpsParticleSystem *PSystem, MpsParticle *Particles) {
 	for(int iz=0; iz<PSystem->numBucketsZ; iz++) {
 		for(int iy=0; iy<PSystem->numBucketsY; iy++) {
 			for(int ix=0; ix<PSystem->numBucketsX; ix++) {
@@ -67,7 +67,8 @@ void MpsBoundaryCondition::updateParticleBC(MpsParticleSystem *PSystem, MpsParti
 // Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
 //#pragma omp parallel for schedule(dynamic,64)
 #pragma omp parallel for
-	for(int i=0; i<Particles->numParticles; i++) {
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 /*
 	double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 	double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];

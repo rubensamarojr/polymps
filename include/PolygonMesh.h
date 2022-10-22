@@ -11,6 +11,8 @@
 #ifndef EMPS_INCLUDE_POLYGONMESH_H_
 #define EMPS_INCLUDE_POLYGONMESH_H_
 
+// #define SHOW_FUNCT_NAME_POLY	///print the function name from any location inside a C++ function (useful for investigating programs)
+
 #pragma once
 #include <math.h>
 #include <iostream>
@@ -29,8 +31,6 @@
 #include <igl/remove_duplicate_vertices.h>
 #include <igl/writePLY.h>
 #include <igl/writeSTL.h>
-
-//#define SHOW_FUNCT_NAME_POLY	///print the function name from any location inside a C++ function (useful for investigating programs)
 
 // Polygon walls class
 
@@ -119,10 +119,7 @@ public:
 	 * @brief      Find closest point on the mesh from a particle and corrects the PND and number of neighboors
 	 * @details    For Triangle meshes, the AABB tree is used to accelerate point-mesh closest point queries given a 
 	 * mesh (V,F) and a query point P (Particle) find the closest point C in the triangle face or vertex
-	 * @param[in]  reS2        The squared small effective radius
-	 * @param[in]  reL2        The squared large effective radius
 	 * @param[in]  nP          Number of particles
-	 * @param[in]  wijType     The weight function type
 	 * @param      Typ         The array with particle type
 	 * @param[in]  fld         The fluid material identifier
 	 * @param[in]  msh_id      The mesh identifier
@@ -133,12 +130,13 @@ public:
 	 * @param      wallPos     The array with wall particles position
 	 * @param      mirrorPos   The array with mirrored particles position
 	 * @param      riw2        The array with squared distance of particle to polygon wall
+	 * @param      partID      The array with global and static particle ID
 	 * @param      elementID   The array with elements id
 	 * @param      meshID      The array with mesh id
 	 * @param      NormalWall  The array with normal at wall
 	 */
-	void closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int msh_id, int sta_id,
-		int fem_id, int frw_id, double *Pos, double *wallPos, double *mirrorPos, double *riw2, int *elementID, int *meshID, double *NormalWall);
+	void closestPointPNDBoundaryAABB(int nP, int *Typ, int fld, int msh_id, int sta_id, int fem_id, int frw_id,
+		double *Pos, double *wallPos, double *mirrorPos, double *riw2, int *partID, int *elementID, int *meshID, double *NormalWall);
 	//	double *wallPos, double *mirrorPos, double *riw2, double *niw, int *numNeighw, int *elementID, std::vector<int>& particlesNearMesh);
 	
 	/**
@@ -146,17 +144,17 @@ public:
 	 * @param[in]  reS2                    The squared small effective radius
 	 * @param[in]  reL2                    The squared large effective radius
 	 * @param[in]  nP                      The number of particles
-	 * @param[in]  wijType                 The weight function type
 	 * @param      Typ                     The array with particle type
 	 * @param[in]  fld                     The fluid material identifier
 	 * @param      riw2                    The array with squared distance of particle to polygon wall
 	 * @param      niw                     The array with value of weight function due to polygon wall
 	 * @param      numNeighw               The array with number of neighboors due to polygon wall
+	 * @param      partID                  The array with global and static particle ID
+	 * @param      Nw                      The array with auxiliar parameter only to show particles near to polygon wall
 	 * @param      meshParticlesNeighbors  The vector with particles near the polygon wall
-	 * @param      Nw                      Auxiliar parameter only to show particles near to polygon wall
 	 */
-	void updateParticlesNearPolygonMesh(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, double *riw2,
-		double *niw, int *numNeighw, std::vector<int>& meshParticlesNeighbors, bool *Nw);
+	void updateParticlesNearPolygonMesh(double reS2, double reL2, int nP, int *Typ, int fld, double *riw2,
+		double *niw, int *numNeighw, int *partID, bool *Nw, std::vector<int>& meshParticlesNeighbors);
 	
 	/**
 	 * @brief      Correction of velocity due the wall gradient of pressure

@@ -114,9 +114,8 @@ public:
 	/**
 	 * @brief      Write header for vtu files.
 	 * @param      PSystem    The particle system
-	 * @param      Particles  The particles data
 	 */
-	void writePvd(MpsParticleSystem *PSystem, MpsParticle *Particles);
+	void writePvd(MpsParticleSystem *PSystem);
 
 	/**
 	 * @brief      Writes buckets in .vtk file (Paraview).
@@ -125,12 +124,11 @@ public:
 	 * data assigned to it as a linked-list.
 	 * @see        <a href="https://doi.org/10.1007/s40571-015-0059-2" target="_blank">Performance improvements of differential operators code for MPS method on GPU</a>
 	 * @param      PSystem    The particle system
-	 * @param      Particles  The particles data
 	 */
-	void writeBuckets(MpsParticleSystem *PSystem, MpsParticle *Particles);
+	void writeBuckets(MpsParticleSystem *PSystem);
 
 
-	void writeInOutFlowPlan(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsInflowOutflow *inOutFlow);
+	void writeInOutFlowPlan(MpsParticleSystem *PSystem, MpsInflowOutflow *inOutFlow);
 
 
 	/**
@@ -151,11 +149,9 @@ public:
 
 	/**
 	 * @brief      Writes header in .txt files.
-	 * @param      PSystem    The particle system
-	 * @param      Particles  The particles data
 	 * @warning    Not working.
 	 */
-	void writeHeaderTxtFiles(MpsParticleSystem *PSystem, MpsParticle *Particles);
+	void writeHeaderTxtFiles();
 
 	/**
 	 * @brief      Convert String to Char Array

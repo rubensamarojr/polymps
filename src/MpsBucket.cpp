@@ -23,9 +23,9 @@ void MpsBucket::allocateMemory(MpsParticleSystem *PSystem, MpsParticle *Particle
 	PSystem->bucketSide = PSystem->reL*(1.0+PSystem->cflNumber);				// Length of one bucket side
 	PSystem->invBucketSide = 1.0/PSystem->bucketSide;
 
-	PSystem->numBucketsX = (int)((PSystem->domainMaxX - PSystem->domainMinX)*PSystem->invBucketSide) + 3;		// Number of buckets in the x direction in the analysis domain
-	PSystem->numBucketsY = (int)((PSystem->domainMaxY - PSystem->domainMinY)*PSystem->invBucketSide) + 3;		// Number of buckets in the y direction in the analysis domain
-	PSystem->numBucketsZ = (int)((PSystem->domainMaxZ - PSystem->domainMinZ)*PSystem->invBucketSide) + 3;		// Number of buckets in the z direction in the analysis domain
+	PSystem->numBucketsX = (int)((PSystem->domainMaxX - PSystem->domainMinX)*PSystem->invBucketSide) + 3;	// Number of buckets in the x direction in the analysis domain
+	PSystem->numBucketsY = (int)((PSystem->domainMaxY - PSystem->domainMinY)*PSystem->invBucketSide) + 3;	// Number of buckets in the y direction in the analysis domain
+	PSystem->numBucketsZ = (int)((PSystem->domainMaxZ - PSystem->domainMinZ)*PSystem->invBucketSide) + 3;	// Number of buckets in the z direction in the analysis domain
 	if((int)PSystem->dim == 2) {	PSystem->numBucketsZ = 1; }
 
 	Particles->bucketTypeBC = 	 		(int*)malloc(sizeof(int) * PSystem->numBC);			// Type of Domain Boundary Condition in Bucket
@@ -47,7 +47,7 @@ void MpsBucket::allocateMemory(MpsParticleSystem *PSystem, MpsParticle *Particle
 		PSystem->invBucketSide = 1.0/PSystem->bucketSide;
 	}
 	PSystem->numBucketsXY = PSystem->numBucketsX*PSystem->numBucketsY;
-	PSystem->numBucketsXYZ = PSystem->numBucketsX*PSystem->numBucketsY*PSystem->numBucketsZ;					// Number of buckets in analysis area
+	PSystem->numBucketsXYZ = PSystem->numBucketsX*PSystem->numBucketsY*PSystem->numBucketsZ;		// Number of buckets in analysis area
 	
 	std::cout << std::endl << "DomainMIN: " << PSystem->domainMinX << " " << PSystem->domainMinY << " " << PSystem->domainMinZ;
 	std::cout << std::endl << "DomainMAX: " << PSystem->domainMaxX << " " << PSystem->domainMaxY << " " << PSystem->domainMaxZ;
@@ -60,11 +60,10 @@ void MpsBucket::allocateMemory(MpsParticleSystem *PSystem, MpsParticle *Particle
 	std::cout << std::endl << "PeriodicL: " << PSystem->periodicLength[0] << " " << PSystem->periodicLength[1] << " " << PSystem->periodicLength[2];
 	std::cout << std::endl;
 
-	Particles->firstParticleInBucket = 	(int*)malloc(sizeof(int) * PSystem->numBucketsXYZ);	// First particle number stored in the bucket
-	Particles->lastParticleInBucket = 	(int*)malloc(sizeof(int) * PSystem->numBucketsXYZ);	// Last particle number stored in the bucket
+	Particles->firstParticleInBucket = 	(int*)malloc(sizeof(int) * PSystem->numBucketsXYZ);	// First particle ID stored in the bucket
+	Particles->lastParticleInBucket = 	(int*)malloc(sizeof(int) * PSystem->numBucketsXYZ);	// Last particle ID stored in the bucket
 	
-	// Particles->nextParticleInSameBucket  = (int*)malloc(sizeof(int) * Particles->numParticles);	// Next particle number in the same bucket
-	Particles->nextParticleInSameBucket  = (int*)malloc(sizeof(int) * Particles->numParticlesMemory);	// Next particle number in the same bucket
+	Particles->nextParticleInSameBucket  = (int*)malloc(sizeof(int) * Particles->numParticlesMemory);	// Next particle ID in the same bucket
 	
 	Particles->bucketPeriodicBC =	 	(int*)malloc(sizeof(int) * PSystem->numBucketsXYZ);	// Periodic Boundary Condition of the bucket
 }
@@ -73,9 +72,11 @@ void MpsBucket::allocateMemory(MpsParticleSystem *PSystem, MpsParticle *Particle
 // Compute domain limits
 void MpsBucket::calcDomainLimits(MpsParticleSystem *PSystem, MpsParticle *Particles)
 {
-	double **limDom;
-	limDom = new double *[3];
-	for(int i=0; i<3; i++) limDom[i] = new double[3];
+	// double **limDom = nullptr;
+	// limDom = new double *[3];
+	// for(int i=0; i<3; i++)
+	// 	limDom[i] = new double[3];
+	double limDom[3][3];
 
 	// limitTypeBC = 0: Border particle positions
 	// limitTypeBC = 1: Domain limits min and max
@@ -86,7 +87,8 @@ void MpsBucket::calcDomainLimits(MpsParticleSystem *PSystem, MpsParticle *Partic
 		limDom[1][0] = limDom[1][1] = Particles->pos[0*3+1];
 		limDom[2][0] = limDom[2][1] = Particles->pos[0*3+2];
 		
-		for(int i=0; i<Particles->numParticles; i++) {
+		for(int ip=0; ip<Particles->numParticles; ip++) {
+			int i = Particles->particleID[ip];
 			double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 			limDom[0][0] = min(limDom[0][0], posXi);
 			limDom[0][1] = max(limDom[0][1], posXi);
@@ -302,16 +304,16 @@ void MpsBucket::calcDomainLimits(MpsParticleSystem *PSystem, MpsParticle *Partic
 void MpsBucket::updateParticlesID(MpsParticleSystem *PSystem, MpsParticle *Particles) {
 	if((int)PSystem->dim == 2) {
 #pragma omp parallel for
-		for(int i=0; i<PSystem->numBucketsXY; i++) {	
-			Particles->firstParticleInBucket[i] = -1;
-			Particles->lastParticleInBucket[i] = -1;
+		for(int ib=0; ib<PSystem->numBucketsXY; ib++) {	
+			Particles->firstParticleInBucket[ib] = -1;
+			Particles->lastParticleInBucket[ib] = -1;
 		}
 #pragma omp parallel for
-		for(int i=0; i<Particles->numParticlesZero; i++) {	
-			Particles->nextParticleInSameBucket[i] = -1;
+		for(int ip=0; ip<Particles->numParticlesZero; ip++) {	
+			Particles->nextParticleInSameBucket[ip] = -1;
 		}
-		// for(int i=0; i<Particles->numParticles; i++) {
-		for(int i=0; i<Particles->numRealAndIOParticles; i++) {
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++) {
+			int i = Particles->particleID[ip];
 			if(Particles->particleType[i] == PSystem->ghost) continue;
 			int ix = (int)((Particles->pos[i*3  ] - PSystem->domainMinX)*PSystem->invBucketSide + PSystem->epsilonZero);
 			int iy = (int)((Particles->pos[i*3+1] - PSystem->domainMinY)*PSystem->invBucketSide + PSystem->epsilonZero);
@@ -324,16 +326,16 @@ void MpsBucket::updateParticlesID(MpsParticleSystem *PSystem, MpsParticle *Parti
 	}
 	else {
 #pragma omp parallel for
-		for(int i=0; i<PSystem->numBucketsXYZ; i++) {
-			Particles->firstParticleInBucket[i] = -1;
-			Particles->lastParticleInBucket[i] = -1;
+		for(int ib=0; ib<PSystem->numBucketsXYZ; ib++) {
+			Particles->firstParticleInBucket[ib] = -1;
+			Particles->lastParticleInBucket[ib] = -1;
 		}
 #pragma omp parallel for
-		for(int i=0; i<Particles->numParticlesZero; i++) {
-			Particles->nextParticleInSameBucket[i] = -1;
+		for(int ip=0; ip<Particles->numParticlesZero; ip++) {
+			Particles->nextParticleInSameBucket[ip] = -1;
 		}
-		// for(int i=0; i<Particles->numParticles; i++) {
-		for(int i=0; i<Particles->numRealAndIOParticles; i++) {
+		for(int ip=0; ip<Particles->numRealAndIOParticles; ip++) {
+			int i = Particles->particleID[ip];
 			if(Particles->particleType[i] == PSystem->ghost) continue;
 			int ix = (int)((Particles->pos[i*3  ] - PSystem->domainMinX)*PSystem->invBucketSide);
 			int iy = (int)((Particles->pos[i*3+1] - PSystem->domainMinY)*PSystem->invBucketSide);

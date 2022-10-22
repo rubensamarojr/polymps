@@ -181,6 +181,7 @@ public:
 	///////////// INPUTS - ARRAYS /////////////
 	// Scalars
 	int    *particleType;	///< Particle type
+	int    *particleID;		///< Global and static particle ID. The particle carries its ID value over all simulation
 	double *press;			///< Particle pressure
 	double *pressAverage;	///< Time averaged particle pressure
 	// Vectors
@@ -199,6 +200,9 @@ public:
 	double *signDist;			///< Signed distance between particle and inOutflow plane
 	bool *isInIORegion;			///< True if the particle is in the inOutflow region
 	bool realParticleCreated;	///< Flag that indicates that at least one real particle was created
+	int *motherID;				///< ID of the real (effective) particle that generates the IO particle
+	int *ppeID;					///< ID of the inner Particles PPE solver
+	int *ioflowID;				///< ID of the inOutflow Plane near the IO particle
 
 	// Polygons
 	// Scalars
