@@ -42,8 +42,8 @@ public:
 		double a, b, c, d;	///< Normalized plane equation components ax + by + cz − d = 0
 		double normal[3];	///< Normalized normal vector
 		int ID;				///< Plane ID
-		double press;		///< Plane inOuflow cte press
-		double velocity[3];	///< Plane inOuflow cte velocity vector
+		double press;		///< Plane inOutflow cte press
+		double velocity[3];	///< Plane inOutflow cte velocity vector
 	};
 	/**
 	 * Plane of the iNFLOW/oUTFLOW plane (interface)

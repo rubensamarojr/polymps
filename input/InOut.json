@@ -13,7 +13,7 @@
 			"freeSurfWall":	false,	"_comment": "VTU files with only free-surface and wall particles (true or false)",
 			"_comment": "Additional outputs in .vtu files (true or false)",
 			"pnd":				true,
-			"neigh":			false,
+			"neigh":			true,
 			"deviation":		false,
 			"concentration":	false,
 			"auxiliar":			true,
@@ -28,17 +28,17 @@
 	"pathNames": {
 		"_comment": "Paths of input and output files/folders",
 		"particle_grid_file":	"input/grid/3D_square_tube_mps.grid",
-		"mesh_rigid_file": 		"input/stl/square-tube-hollow.stl",
+		"mesh_rigid_file": 		"input/stl/square-tube-small-Body-hollow.stl",
 		"mesh_deformable_file": "input/stl/elastic_beam_16.stl", 		"_comment": "NOT WORKING !!",
 		"mesh_forced_file": 	"input/stl/tank_liao_forced_gate.stl", 	"_comment": "NOT WORKING !!",
-		"vtu_output_folder":	"output/InOut",
+		"vtu_output_folder":	"output/InOut_Box",
 		"forceTxt_file":		"output/dambreak01_force.txt", 			"_comment": "NOT WORKING !!",
 		"pressTxt_file":		"output/dambreak01_press.txt", 			"_comment": "NOT WORKING !!"
 	},
 	"domain": {
 		"_comment": "Geometry dimension limits of the analysis domain (m)",
 		"min": {
-			"x":	-0.2,
+			"x":	-0.3,
 			"y":	-0.3,
 			"z":	0.0
 		},
@@ -63,7 +63,7 @@
 			"planes":[
 				{
 					"id":	0,
-					"type_bc":	 0,			"_comment": "0: Velocity; 1: Pressure",
+					"type_bc":	 1,			"_comment": "0: Velocity; 1: Pressure",
 					"seed_point":{
 						"_comment": "Point p on the plane (interface)",
 						"x":	0.0,
@@ -82,14 +82,14 @@
 						"y":	0.0,
 						"z":	0.0
 					},
-					"pressure": 0.0,	"_comment": "Cte pressure (Pa)"
+					"pressure": 2.0,	"_comment": "Cte pressure (Pa)"
 				},
 				{
 					"id":	1,
 					"type_bc":	 1,			"_comment": "0: Velocity; 1: Pressure",
 					"seed_point": {
 						"_comment": "Point p on the plane (interface)",
-						"x":	1.0,
+						"x":	0.15,
 						"y":	0.0,
 						"z":	0.3
 					},
@@ -105,7 +105,7 @@
 						"y":	0.0,
 						"z":	0.0
 					},
-					"pressure": 0.0,	"_comment": "Cte pressure (Pa)"
+					"pressure": 1.0,	"_comment": "Cte pressure (Pa)"
 				}
 			]
 		}
@@ -162,9 +162,9 @@
 		"_comment": "Numerical parameters",
 		"dimension": 		3,			"_comment": "Dimension (2 or 3)",
 		"particle_dist": 	0.01,		"_comment": "Average particle distance (m)",
-		"time_step": 		0.0025,	"_comment": "Time step (s)",
-		"final_time": 		1.0,		"_comment": "Time of simulation (s)",
-		"iter_output": 		1,		"_comment": "Number of iterations to determine the output interval",
+		"time_step": 		0.0001,	"_comment": "Time step (s)",
+		"final_time": 		100.0,		"_comment": "Time of simulation (s)",
+		"iter_output": 		1000,		"_comment": "Number of iterations to determine the output interval",
 		"CFL_number":	 	0.2,		"_comment": "Courant (CFL) condition number (0.2 is recomendable)",
 		"_comment": "Weight function",
 		"_comment": "0: wij = re/rij - 1",
@@ -172,7 +172,7 @@
 		"_comment": "2: wij = re/rij - rij/re",
 		"_comment": "3: wij = (1-rij/re)^3",
 		"_comment": "4: wij = (1-rij/re)^2",
-		"weight_type":		0,
+		"weight_type":		4,
 		"slip_condition":	0,		"_comment": "No-slip = 0; Free-slip = 1",
 		"effective_radius": {
 			"_comment": "Influence radius",
@@ -183,7 +183,7 @@
 		},
 		"gradient": {
 			"_comment": "Pressure gradient",
-			"type":			3,		"_comment": "0: Pj - Pmin; 1: Pj + Pi; 2: Pj + Pi - 2*Pmin; 3: ni*Pj/nj + nj*Pi/ni",
+			"type":			0,		"_comment": "0: Pj - Pmin; 1: Pj + Pi; 2: Pj + Pi - 2*Pmin; 3: ni*Pj/nj + nj*Pi/ni",
 			"correction":	false,	"_comment": "Corrected pressure gradient (true or false)",
 			"relax_fact": 	1.0,	"_comment": "Relaxation factor (<= 1.0)"
 		},
@@ -192,29 +192,29 @@
 		"_comment": "1:Weakly compressible",
 		"_comment": "2:Incompressible PND (Change below pnd type to 0)",
 		"_comment": "3:Incompressible PND + DivU (Change below pnd type to 0)",
-		"mps_type":			1,
+		"mps_type":			3,
 		"explicit_mps": {
 			"_comment": "Explicit or Weakly compressible MPS",
 			"equation_state": {
 				"_comment": "Recomendable values: Sound of speed ~10*sqrt(g*H) (m/s) and gamma = 7.0",
-				"speed_sound":	0.00,
+				"speed_sound":	1.00,
 				"gamma":		7.0
 			}
 		},
 		"semi_implicit_mps": {
 			"_comment": "Incompressible MPS",
-			"solver_type": 0,			"_comment": "0: CG; 1:BICGSTAB",
+			"solver_type": 1,			"_comment": "0: CG; 1:BICGSTAB",
 			"weak_compressibility": {
 				"_comment": "Increase diagonal of matrix to accelerate iteration convergence. However, increases compressiblity",
-				"alpha":		0.000001
+				"alpha":		0.0000001
 			},
 			"source_term": {
-				"relax_pnd": 	0.01,	"_comment": "Relax coeff < 1.0. It allows some compressiblity"
+				"relax_pnd": 	0.0,	"_comment": "Relax coeff < 1.0. It allows some compressiblity"
 			}
 		},
 		"particle_shifting": {
-			"type": 		0,			"_comment": "0: OFF; 1: DW*Uij; 2: GradCi",
-			"DRI": 			0.01,		"_comment": "Type 1: Adjusted velocity paramater (DW*Uij) DRI <= 0.01",
+			"type": 		1,			"_comment": "0: OFF; 1: DW*Uij; 2: GradCi",
+			"DRI": 			0.005,		"_comment": "Type 1: Adjusted velocity paramater (DW*Uij) DRI <= 0.01",
 			"coef_A":		2.0,		"_comment": "Type 2: Dimensionless number 1-6 (GradCi) coef_A = 2.0 provides a good compromise",
 			"mach_number":	0.1,		"_comment": "Type 2: Mach number Ma~0.1 (GradCi)",
 			"adj_vel_A":	0.9,		"_comment": "Type 3: a = 0.9 (NOT IMPLEMENTED !!!)"
@@ -222,7 +222,7 @@
 		"pnd": {
 			"_comment": "Particle number density",
 			"_comment": "IMPORTANT !!: Use 0 to incompressible MPS and 2 to Explicit or Weakly compressible MPS",
-			"type":				2,		"_comment": "0: ni = Soma(wij); 1: ni = soma(PNDj)*wij/soma(wij); 2: ni = Div(u)i + Diffusive term",
+			"type":				0,		"_comment": "0: ni = Soma(wij); 1: ni = soma(PNDj)*wij/soma(wij); 2: ni = Div(u)i + Diffusive term",
 			"diffusive_coeff": 	0.35
 		},
 		"wall_repulsive_force": {
@@ -238,9 +238,9 @@
 			"eps_re":		0.01
 		},
 		"free_surface_threshold": {
-			"type": 	1,		"_comment": "0: PND + Neigh, 1: PND + NPCD, 2: PND + Neigh + Normal + ARC",
-			"pnd": 		0.98,	"_comment": "2D: 0.97; 3D: 0.98",
-			"neigh":	0.85,	"_comment": "0.85",
+			"type": 	0,		"_comment": "0: PND + Neigh, 1: PND + NPCD, 2: PND + Neigh + Normal + ARC",
+			"pnd": 		0.5,	"_comment": "2D: 0.97; 3D: 0.98",
+			"neigh":	0.5,	"_comment": "0.85",
 			"NPCD": 	0.2,	"_comment": "NPCD >= 0.2",
 			"ARC":		45.0,	"_comment": "ARC >= 30",
 			"normal":	0.2,	"_comment": "Normal >= 0.1"
@@ -248,7 +248,7 @@
 		"particle_collision": {
 			"type": 			0,		"_comment": "0: PC, 1: DPC",
 			"ratio": 			0.2,	"_comment": "Collision ratio (0.2 is recomendable)",
-			"dist_limit_ratio": 0.85,	"_comment": "Coefficient of distance which does not allow any further access between particles (0.7-0.9)",
+			"dist_limit_ratio": 0.8,	"_comment": "Coefficient of distance which does not allow any further access between particles (0.7-0.9)",
 			"lambda":			0.2,	"_comment": "Non-dimensional coefficient used to adjust background pressure (0.1-0.2)"
 		},
 		"particle_type": {
