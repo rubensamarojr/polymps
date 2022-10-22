@@ -254,13 +254,13 @@ void PolygonMesh::initWijnNeigh(int dim, int wijType, double lo, double reL, dou
 					double rij = sqrt(rij2);
 					if(wijType == 0)
 						n0 += reS/rij - 1.0;
-					if(wijType == 1)
+					else if(wijType == 1)
 						n0 += reS/rij + rij/reS - 2.0;
-					if(wijType == 2)
+					else if(wijType == 2)
 						n0 += reS/rij - rij/reS;
-					if(wijType == 3)
+					else if(wijType == 3)
 						n0 += pow(1.0-rij/reS,3.0);
-					if(wijType == 4)
+					else if(wijType == 4)
 						n0 += pow(1.0-rij/reS,2.0);
 					else
 						n0 += reS/rij - 1.0;
@@ -313,13 +313,13 @@ void PolygonMesh::initWijnNeigh(int dim, int wijType, double lo, double reL, dou
 					double rij = sqrt(rij2);
 					if(wijType == 0)
 						n0 += reS/rij - 1.0;
-					if(wijType == 1)
+					else if(wijType == 1)
 						n0 += reS/rij + rij/reS - 2.0;
-					if(wijType == 2)
+					else if(wijType == 2)
 						n0 += reS/rij - rij/reS;
-					if(wijType == 3)
+					else if(wijType == 3)
 						n0 += pow(1.0-rij/reS,3.0);
-					if(wijType == 4)
+					else if(wijType == 4)
 						n0 += pow(1.0-rij/reS,2.0);
 					else
 						n0 += reS/rij - 1.0;
