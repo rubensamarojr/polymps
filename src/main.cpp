@@ -105,10 +105,22 @@ int main( int argc, char** argv) {
 	// Creates MpsInputOutput class
 	inputOutput = new MpsInputOutput();
 	// Reads, allocates memory and sets initial values for particles data
-	inputOutput->readInputFile(particleSystem, particles);
+	try {
+		inputOutput->readInputFile(particleSystem, particles);
+	}
+	catch (std::invalid_argument& e) {
+		std::cerr << e.what() << std::endl;
+		return -1;
+	}
 	
 	// Write header of output txt files (force and pressure)
-	//inputOutput->writeHeaderTxtFiles(particles); (NOT WORKING !!!)
+	// try {
+	// 	inputOutput->writeHeaderTxtFiles(particles); // NOT WORKING !!!
+	// }
+	// catch (std::invalid_argument& e) {
+	// 	std::cerr << e.what() << std::endl;
+	// 	return -1;
+	// }
 	
 	// Setting parameters
 	particles->setParameters(particleSystem);
@@ -201,7 +213,13 @@ int main( int argc, char** argv) {
 
 	// Writes VTK file of initial Inflow/Outflow plans
 	if(particleSystem->inOutflowOn == true && particleSystem->numInOutflowPlane > 0) {
-		inputOutput->writeInOutFlowPlan(particleSystem, inflowOutflow);
+		try {
+			inputOutput->writeInOutFlowPlan(particleSystem, inflowOutflow);
+		}
+		catch (std::invalid_argument& e) {
+			std::cerr << e.what() << std::endl;
+			return -1;
+		}
 	}
 
 	printf("OK\n");
@@ -493,6 +511,7 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 			if(partSyst->wallType == boundaryWallType::POLYGON) {
 				partShift->calcWallConcAndConcGradient(partSyst, part, buck);
 			}
+			partShift->updatePosition(partSyst, part);
 		}
 		// Wall and dummy velocity
 		if(partSyst->wallType == boundaryWallType::PARTICLE) {

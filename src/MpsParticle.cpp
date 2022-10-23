@@ -178,6 +178,7 @@ void MpsParticle::setParameters(MpsParticleSystem *PSystem) {
 	PSystem->coeffPressWCMPS = PSystem->soundSpeed*PSystem->soundSpeed;							///< Coefficient used to calculate pressure WC-MPS
 	PSystem->coeffShifting1 = PSystem->dri*PSystem->partDist/PSystem->pndSmallZero;				///< Coefficient used to adjust velocity type 1
 	PSystem->coeffShifting2 = PSystem->coefA*PSystem->partDist*PSystem->partDist*PSystem->cflNumber*PSystem->machNumber;	///< Coefficient used to adjust velocity type 2
+	PSystem->maxDr = PSystem->partDist*PSystem->maxDr;											///< MaxDr * partDist limit to the action of the position shifted
 	PSystem->coeffPPE = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero);			///< Coefficient used to PPE
 	PSystem->coeffPPESource = PSystem->relaxPND/(PSystem->timeStep*PSystem->timeStep*PSystem->pndSmallZero);	///< Coefficient used to PPE source term
 	Dns[partType::FLUID]=PSystem->densityFluid;			Dns[partType::WALL]=PSystem->densityWall;

@@ -92,6 +92,13 @@ public:
 	void calcWallConcAndConcGradient(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
 	
 	/**
+	 * @brief      Adjustment of particle position based on the Gradient of concentration
+	 * @param      PSystem    The particle system
+	 * @param      Particles  The particles data
+	 */
+	void updatePosition(MpsParticleSystem *PSystem, MpsParticle *Particles);
+
+	/**
 	 * @brief      Calculates normal vector on the fluid particle.
 	 * @details    Normalized gradient of concentration.
 	 * @param      Particles  The particles data

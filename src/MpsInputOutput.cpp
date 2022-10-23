@@ -476,8 +476,10 @@ void MpsInputOutput::readInputFile(MpsParticleSystem *PSystem, MpsParticle *Part
 
 				PSystem->shiftingType = jnumericalShift.value("type", 2);
 				PSystem->dri = 			jnumericalShift.value("DRI", 0.01);
+				PSystem->maxDu =		jnumericalShift.value("maxDu", 1.0);
 				PSystem->coefA = 		jnumericalShift.value("coef_A", 2.0);
 				PSystem->machNumber = 	jnumericalShift.value("mach_number", 0.1);
+				PSystem->maxDr =		jnumericalShift.value("maxDr", 0.05);
 				PSystem->VEL_A = 		jnumericalShift.value("adj_vel_A", 0.1);
 			}
 			catch (json::out_of_range& e) {
@@ -585,7 +587,7 @@ void MpsInputOutput::readInputFile(MpsParticleSystem *PSystem, MpsParticle *Part
 				<< "byte position of error: " << e.byte << '\n'
 				<< "For more information, see https://json.nlohmann.me/home/exceptions" << endl;
 		
-		throw std::exception();
+		throw invalid_argument("readInputFile Error: Json input file error.");
 	}
 
 	PSystem->numPartTypes = 3;
@@ -598,15 +600,13 @@ void MpsInputOutput::readInputFile(MpsParticleSystem *PSystem, MpsParticle *Part
 
 	// Error message
 	if(PSystem->partDist*PSystem->partDist <= PSystem->epsilonZero) {
-		printf("\nError: Operations using squared particle distance lower than the machine double precision."
-			" Use a model with a higher particle distance.\n");
-		throw std::exception();
+		throw invalid_argument("readInputFile Operations using squared particle distance lower than the machine double precision."
+			" Use a model with a higher particle distance.");
 	}
 
 	if(PSystem->mpsType == calcPressType::IMPLICIT_PND || PSystem->mpsType == calcPressType::IMPLICIT_PND_DIVU) {
 		if(PSystem->pndType == calcPNDType::DIFFUSIVE || PSystem->pndType == calcPNDType::MEAN_SUM_WIJ) {
-			printf("\nError: Please, set 'pnd-type to 0' in the json file for incompressible MPS\n");
-			throw std::exception();
+			throw invalid_argument("readInputFile Error: Please, set 'pnd-type to 0' in the json file for incompressible MPS.");
 		}
 	}
 
@@ -715,10 +715,13 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 	// grid_file_char now contains a c-string copy of grid_file
 
 	fp = fopen(grid_file_char, "r");
-	if(fp == NULL) perror ("Error opening grid file");
-
+	
 	delete[] grid_file_char;
 	grid_file_char = NULL;
+
+	if(fp == NULL) {
+		throw invalid_argument("readMpsParticleFile Error opening grid file.");
+	}
 
 	int zeroZero;
 	fscanf(fp,"%d",&zeroZero);
@@ -2499,10 +2502,13 @@ void MpsInputOutput::writePressSensors(MpsParticleSystem *PSystem, MpsParticle *
 
 	// Open the File to write
 	pressTxtFile = fopen(pressTxtFilenameChar, "a");
-	if(pressTxtFile == NULL) perror ("Error opening press txt file");
-
+	
 	delete[] pressTxtFilenameChar;
 	pressTxtFilenameChar = NULL;
+	
+	if(pressTxtFile == NULL) {
+		throw invalid_argument("writePressSensors Error opening press txt file.");
+	}
 	
 	// // dam 1610
 	// fprintf(pressTxtFile,"\n%lf\t%lf\t%lf\t%lf\t%lf",PSystem->timeCurrent, P1,P2,P3,P4);
@@ -2569,13 +2575,16 @@ void MpsInputOutput::writeHeaderTxtFiles() {
 		
 		// Open the File to write
 		forceTxtFile = fopen(forceTxtFilenameChar, "w");
-		if(forceTxtFile == NULL) perror ("Error opening force txt file");
-		fprintf(forceTxtFile,"Time(s)\tForce(N) X\tY\tZ");
-		// Close force file
-		fclose(forceTxtFile);
 
 		delete[] forceTxtFilenameChar;
 		forceTxtFilenameChar = NULL;
+
+		if(forceTxtFile == NULL) {
+			throw invalid_argument("writeHeaderTxtFiles Error opening force txt file.");
+		}
+		fprintf(forceTxtFile,"Time(s)\tForce(N) X\tY\tZ");
+		// Close force file
+		fclose(forceTxtFile);
 	}
 
 	if(txtPress == true) {
@@ -2585,7 +2594,13 @@ void MpsInputOutput::writeHeaderTxtFiles() {
 
 		// Open the File to write
 		pressTxtFile = fopen(pressTxtFilenameChar, "w");
-		if(pressTxtFile == NULL) perror ("Error opening press txt file");
+
+		delete[] pressTxtFilenameChar;
+		pressTxtFilenameChar = NULL;
+
+		if(pressTxtFile == NULL) {
+			throw invalid_argument("writeHeaderTxtFiles Error opening press txt file.");
+		}
 
 		// dam 1610
 		// fprintf(pressTxtFile,"Time(s)\tP1(Pa)\tP2(Pa)\tP3(Pa)\tP4(Pa)\tPm1(Pa)\tPm2(Pa)\tPm3(Pa)\tPm4(Pa)");
@@ -2595,9 +2610,6 @@ void MpsInputOutput::writeHeaderTxtFiles() {
 
 		// Close press file
 		fclose(pressTxtFile);
-
-		delete[] pressTxtFilenameChar;
-		pressTxtFilenameChar = NULL;
 	}
 	
 }
@@ -2723,7 +2735,7 @@ void MpsInputOutput::writeInOutFlowPlan(MpsParticleSystem *PSystem, MpsInflowOut
 		}
 		else {
 			printf("\nError: Please, Normal vector of Inflow/Outflow plan id: %d cannot be zero\n", i);
-			throw std::exception();
+			throw invalid_argument("writeInOutFlowPlan Normal vector is zero.");
 		}
 	}
 

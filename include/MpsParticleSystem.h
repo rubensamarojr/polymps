@@ -216,8 +216,10 @@ public:
 	double relaxPND;		///< Relaxation coefficent for pressure source term PND
 	double shiftingType;	///< Adjusted velocity: No = 0; DW*Uij = 1; GradCi = 2
 	double dri;				///< Adjusted velocity paramater (DW*Uij) dri <= 0.01
+	double maxDu;			///< For robustness purpose, maxDu is used as a limit to the action of the shifting, modifying the velocity
 	double coefA;			///< Dimensionless number 1-6 (GradCi) coefA = 2.0 provide a good compromise
 	double machNumber;		///< Mach number 0.1 (GradCi)
+	double maxDr;			///< For robustness purpose, maxDr * partDist is used as a limit to the action of the shifting, modifying the position
 	double VEL_A;			///< Adjusted velocity paramater (3) a = 0.9 (NOT IMPLEMENTED !!!)
 	int pndType;			///< PND = Soma(wij) = 0; PND = soma(PNDj)*wij/soma(wij) = 1; PND = Diffusive term = 2
 	double diffusiveCoef;	///< Diffusive term coefficient

@@ -75,23 +75,38 @@ void MpsShifting::calcShifting(MpsParticleSystem *PSystem, MpsParticle *Particle
 			// }
 			// if(pndSmall[i] > pndThreshold*PSystem->pndSmallZero || numNeigh[i] > PSystem->neighThreshold*PSystem->numNeighZero)
 			if(Particles->particleBC[i] == PSystem->inner) {
-				Particles->vel[i*3  ] -= PSystem->coeffShifting1*duXi;
-				Particles->vel[i*3+1] -= PSystem->coeffShifting1*duYi;
-				Particles->vel[i*3+2] -= PSystem->coeffShifting1*duZi;
+				double du_x = PSystem->coeffShifting1 * duXi;
+				double du_y = PSystem->coeffShifting1 * duYi;
+				double du_z = PSystem->coeffShifting1 * duZi;
+				double duMod2 = du_x * du_x + du_y * du_y + du_z * du_z;
+
+				if (duMod2 > PSystem->epsilonZero) {
+					double duMod = sqrt(duMod2);
+					double duMin = min(duMod, PSystem->maxDu);
+					Particles->vel[i*3  ] -= duMin*du_x/duMod;
+					Particles->vel[i*3+1] -= duMin*du_y/duMod;
+					Particles->vel[i*3+2] -= duMin*du_z/duMod;
+				}
 			}
 			// else {
-			// 	double Inn[9], duAux[3];
+			// 	double Inn[9];
 			// 	// I - nxn
 			// 	Inn[0] = 1.0 - Particles->normal[i*3  ]*Particles->normal[i*3  ]; Inn[1] = 0.0 - Particles->normal[i*3  ]*Particles->normal[i*3+1]; Inn[2] = 0.0 - Particles->normal[i*3  ]*Particles->normal[i*3+2];
 			// 	Inn[3] = 0.0 - Particles->normal[i*3+1]*Particles->normal[i*3  ]; Inn[4] = 1.0 - Particles->normal[i*3+1]*Particles->normal[i*3+1]; Inn[5] = 0.0 - Particles->normal[i*3+1]*Particles->normal[i*3+2];
 			// 	Inn[6] = 0.0 - Particles->normal[i*3+2]*Particles->normal[i*3  ]; Inn[7] = 0.0 - Particles->normal[i*3+2]*Particles->normal[i*3+1]; Inn[8] = 1.0 - Particles->normal[i*3+2]*Particles->normal[i*3+2];
 			// 	// (I - nxn)dr
-			// 	duAux[0] = Inn[0]*duXi + Inn[1]*duYi + Inn[2]*duZi;
-			// 	duAux[1] = Inn[3]*duXi + Inn[4]*duYi + Inn[5]*duZi;
-			// 	duAux[2] = Inn[6]*duXi + Inn[7]*duYi + Inn[8]*duZi;
-			// 	Particles->vel[i*3  ] -= PSystem->coeffShifting1*duAux[0];
-			// 	Particles->vel[i*3+1] -= PSystem->coeffShifting1*duAux[1];
-			// 	Particles->vel[i*3+2] -= PSystem->coeffShifting1*duAux[2];
+			// 	double du_x = PSystem->coeffShifting1 * (Inn[0]*duXi + Inn[1]*duYi + Inn[2]*duZi);
+			// 	double du_y = PSystem->coeffShifting1 * (Inn[3]*duXi + Inn[4]*duYi + Inn[5]*duZi);
+			// 	double du_z = PSystem->coeffShifting1 * (Inn[6]*duXi + Inn[7]*duYi + Inn[8]*duZi);
+			// 	double duMod2 = du_x * du_x + du_y * du_y + du_z * du_z;
+
+			// 	if (duMod2 > PSystem->epsilonZero) {
+			// 		double duMod = sqrt(duMod2);
+			// 		double duMin = min(duMod, PSystem->maxDu);
+			// 		Particles->vel[i*3  ] -= duMin*du_x/duMod;
+			// 		Particles->vel[i*3+1] -= duMin*du_y/duMod;
+			// 		Particles->vel[i*3+2] -= duMin*du_z/duMod;
+			// 	}
 			// }
 		}
 	}
@@ -151,24 +166,24 @@ void MpsShifting::calcNormalParticles(MpsParticleSystem *PSystem, MpsParticle *P
 		Particles->normal[i*3+1] = - dr_iy/PSystem->pndSmallZero;
 		Particles->normal[i*3+2] = - dr_iz/PSystem->pndSmallZero;
 		
-		/*
-		if(PSystem->wallType == boundaryWallType::PARTICLE)
-		{
-			// Normalize
-			double norm2 = dr_ix*dr_ix + dr_iy*dr_iy + dr_iz*dr_iz;
-			if(norm2 > 0.0) {
-				double norm = sqrt(norm2);
-				Particles->normal[i*3  ] /= norm;
-				Particles->normal[i*3+1] /= norm;
-				Particles->normal[i*3+2] /= norm;
-			}
-			else {
-				Particles->normal[i*3  ] = 0.0;
-				Particles->normal[i*3+1] = 0.0;
-				Particles->normal[i*3+2] = 0.0;
-			}
-		}
-		*/
+		
+		// if(PSystem->wallType == boundaryWallType::PARTICLE)
+		// {
+		// 	// Normalize
+		// 	double norm2 = dr_ix*dr_ix + dr_iy*dr_iy + dr_iz*dr_iz;
+		// 	if(norm2 > 0.0) {
+		// 		double norm = sqrt(norm2);
+		// 		Particles->normal[i*3  ] /= norm;
+		// 		Particles->normal[i*3+1] /= norm;
+		// 		Particles->normal[i*3+2] /= norm;
+		// 	}
+		// 	else {
+		// 		Particles->normal[i*3  ] = 0.0;
+		// 		Particles->normal[i*3+1] = 0.0;
+		// 		Particles->normal[i*3+2] = 0.0;
+		// 	}
+		// }
+		
 	}
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)
@@ -283,37 +298,49 @@ void MpsShifting::calcWallShifting(MpsParticleSystem *PSystem, MpsParticle *Part
 				duZi += dw*(velZi-velMirrorZi);
 			}
 		
-	//		if(PSystem->wallType == boundaryWallType::POLYGON) {
-	//			if(Particles->pndi[i] > pndThreshold*PSystem->pndSmallZero)
-	//		}
-	//		else if(PSystem->wallType == boundaryWallType::PARTICLE) 
-	//			if(Particles->pndi[i] > pndThreshold*PSystem->pndSmallZero || numNeigh[i] > PSystem->neighThreshold*PSystem->numNeighZero)
-	//		}
-	//		if(pndSmall[i] > pndThreshold*PSystem->pndSmallZero || numNeigh[i] > PSystem->neighThreshold*PSystem->numNeighZero)
+			// if(PSystem->wallType == boundaryWallType::POLYGON) {
+			// 	if(Particles->pndi[i] > pndThreshold*PSystem->pndSmallZero)
+			// }
+			// else if(PSystem->wallType == boundaryWallType::PARTICLE) 
+			// 	if(Particles->pndi[i] > pndThreshold*PSystem->pndSmallZero || numNeigh[i] > PSystem->neighThreshold*PSystem->numNeighZero)
+			// }
+			// if(pndSmall[i] > pndThreshold*PSystem->pndSmallZero || numNeigh[i] > PSystem->neighThreshold*PSystem->numNeighZero)
 			if(Particles->particleBC[i] == PSystem->inner) {
-				double dux = Rinv_i[0]*duXi + Rinv_i[1]*duYi + Rinv_i[2]*duZi;
-				double duy = Rinv_i[3]*duXi + Rinv_i[4]*duYi + Rinv_i[5]*duZi;
-				double duz = Rinv_i[6]*duXi + Rinv_i[7]*duYi + Rinv_i[8]*duZi;
-				Particles->vel[i*3  ] -= PSystem->coeffShifting1*dux;
-				Particles->vel[i*3+1] -= PSystem->coeffShifting1*duy;
-				Particles->vel[i*3+2] -= PSystem->coeffShifting1*duz;
+				double du_x = PSystem->coeffShifting1 * (Rinv_i[0]*duXi + Rinv_i[1]*duYi + Rinv_i[2]*duZi);
+				double du_y = PSystem->coeffShifting1 * (Rinv_i[3]*duXi + Rinv_i[4]*duYi + Rinv_i[5]*duZi);
+				double du_z = PSystem->coeffShifting1 * (Rinv_i[6]*duXi + Rinv_i[7]*duYi + Rinv_i[8]*duZi);
+				double duMod2 = du_x * du_x + du_y * du_y + du_z * du_z;
+
+				if (duMod2 > PSystem->epsilonZero) {
+					double duMod = sqrt(duMod2);
+					double duMin = min(duMod, PSystem->maxDu);
+					Particles->vel[i*3  ] -= duMin*du_x/duMod;
+					Particles->vel[i*3+1] -= duMin*du_y/duMod;
+					Particles->vel[i*3+2] -= duMin*du_z/duMod;
+				}
 			}
 			// else {
-			// 	double Inn[9], duAux[3];
+			// 	double Inn[9];
 			// 	// I - nxn
 			// 	Inn[0] = 1.0 - Particles->normal[i*3  ]*Particles->normal[i*3  ]; Inn[1] = 0.0 - Particles->normal[i*3  ]*Particles->normal[i*3+1]; Inn[2] = 0.0 - Particles->normal[i*3  ]*Particles->normal[i*3+2];
 			// 	Inn[3] = 0.0 - Particles->normal[i*3+1]*Particles->normal[i*3  ]; Inn[4] = 1.0 - Particles->normal[i*3+1]*Particles->normal[i*3+1]; Inn[5] = 0.0 - Particles->normal[i*3+1]*Particles->normal[i*3+2];
 			// 	Inn[6] = 0.0 - Particles->normal[i*3+2]*Particles->normal[i*3  ]; Inn[7] = 0.0 - Particles->normal[i*3+2]*Particles->normal[i*3+1]; Inn[8] = 1.0 - Particles->normal[i*3+2]*Particles->normal[i*3+2];
 			// 	double dux = Rinv_i[0]*duXi + Rinv_i[1]*duYi + Rinv_i[2]*duZi;
-			//	double duy = Rinv_i[3]*duXi + Rinv_i[4]*duYi + Rinv_i[5]*duZi;
-			//	double duz = Rinv_i[6]*duXi + Rinv_i[7]*duYi + Rinv_i[8]*duZi;
+			// 	double duy = Rinv_i[3]*duXi + Rinv_i[4]*duYi + Rinv_i[5]*duZi;
+			// 	double duz = Rinv_i[6]*duXi + Rinv_i[7]*duYi + Rinv_i[8]*duZi;
 			// 	// (I - nxn)dr
-			// 	duAux[0] = Inn[0]*dux + Inn[1]*duy + Inn[2]*duz;
-			// 	duAux[1] = Inn[3]*dux + Inn[4]*duy + Inn[5]*duz;
-			// 	duAux[2] = Inn[6]*dux + Inn[7]*duy + Inn[8]*duz;
-			// 	Particles->vel[i*3  ] -= PSystem->coeffShifting1*duAux[0];
-			// 	Particles->vel[i*3+1] -= PSystem->coeffShifting1*duAux[1];
-			// 	Particles->vel[i*3+2] -= PSystem->coeffShifting1*duAux[2];
+			// 	double du_x = PSystem->coeffShifting1 * (Inn[0]*dux + Inn[1]*duy + Inn[2]*duz);
+			// 	double du_y = PSystem->coeffShifting1 * (Inn[3]*dux + Inn[4]*duy + Inn[5]*duz);
+			// 	double du_z = PSystem->coeffShifting1 * (Inn[6]*dux + Inn[7]*duy + Inn[8]*duz);
+			// 	double duMod2 = du_x * du_x + du_y * du_y + du_z * du_z;
+
+			// 	if (duMod2 > PSystem->epsilonZero) {
+			// 		double duMod = sqrt(duMod2);
+			// 		double duMin = min(duMod, PSystem->maxDu);
+			// 		Particles->vel[i*3  ] -= duMin*du_x/duMod;
+			// 		Particles->vel[i*3+1] -= duMin*du_y/duMod;
+			// 		Particles->vel[i*3+2] -= duMin*du_z/duMod;
+			// 	}
 			// }
 		}
 	}
@@ -536,12 +563,14 @@ void MpsShifting::calcConcAndConcGradient(MpsParticleSystem *PSystem, MpsParticl
 			// 	if(Particles->pndi[i] > pndThreshold*PSystem->pndSmallZero || numNeigh[i] > PSystem->neighThreshold*PSystem->numNeighZero)
 			// }
 			// if(pndSmall[i] > pndThreshold*PSystem->pndSmallZero || numNeigh[i] > PSystem->neighThreshold*PSystem->numNeighZero)
-			if(Particles->particleBC[i] == PSystem->inner) {
-				// PSystem->coeffShifting2 = PSystem->coefA*PSystem->partDist*PSystem->partDist*PSystem->cflNumber*PSystem->machNumber;	// Coefficient used to adjust velocity
-				Particles->pos[i*3  ] -= PSystem->coeffShifting2*Particles->gradConcentration[3*i  ];
-				Particles->pos[i*3+1] -= PSystem->coeffShifting2*Particles->gradConcentration[3*i+1];
-				Particles->pos[i*3+2] -= PSystem->coeffShifting2*Particles->gradConcentration[3*i+2];
-			}
+			
+			// if(Particles->particleBC[i] == PSystem->inner) {
+			// 	// PSystem->coeffShifting2 = PSystem->coefA*PSystem->partDist*PSystem->partDist*PSystem->cflNumber*PSystem->machNumber;	// Coefficient used to adjust velocity
+			// 	Particles->pos[i*3  ] -= PSystem->coeffShifting2*Particles->gradConcentration[3*i  ];
+			// 	Particles->pos[i*3+1] -= PSystem->coeffShifting2*Particles->gradConcentration[3*i+1];
+			// 	Particles->pos[i*3+2] -= PSystem->coeffShifting2*Particles->gradConcentration[3*i+2];
+			// }
+			
 			// else
 			// {
 			// 	double Inn[9], drAux[3];
@@ -685,12 +714,12 @@ void MpsShifting::calcWallConcAndConcGradient(MpsParticleSystem *PSystem, MpsPar
 			Particles->gradConcentration[i*3+1] += gradCiWallY;
 			Particles->gradConcentration[i*3+2] += gradCiWallZ;
 
-			if(Particles->particleBC[i] == PSystem->inner) {
-				// PSystem->coeffShifting2 = PSystem->coefA*PSystem->partDist*PSystem->partDist*PSystem->cflNumber*PSystem->machNumber;	// Coefficient used to adjust velocity
-				Particles->pos[i*3  ] -= PSystem->coeffShifting2*gradCiWallX;
-				Particles->pos[i*3+1] -= PSystem->coeffShifting2*gradCiWallY;
-				Particles->pos[i*3+2] -= PSystem->coeffShifting2*gradCiWallZ;
-			}
+			// if(Particles->particleBC[i] == PSystem->inner) {
+			// 	// PSystem->coeffShifting2 = PSystem->coefA*PSystem->partDist*PSystem->partDist*PSystem->cflNumber*PSystem->machNumber;	// Coefficient used to adjust velocity
+			// 	Particles->pos[i*3  ] -= PSystem->coeffShifting2*gradCiWallX;
+			// 	Particles->pos[i*3+1] -= PSystem->coeffShifting2*gradCiWallY;
+			// 	Particles->pos[i*3+2] -= PSystem->coeffShifting2*gradCiWallZ;
+			// }
 		}
 	}
 
@@ -698,6 +727,29 @@ void MpsShifting::calcWallConcAndConcGradient(MpsParticleSystem *PSystem, MpsPar
 	// print the function name (useful for investigating programs)
 	cout << __PRETTY_FUNCTION__ << endl;
 #endif
+}
+
+// Adjustment of particle position based on the Gradient of concentration
+void MpsShifting::updatePosition(MpsParticleSystem *PSystem, MpsParticle *Particles) {
+#pragma omp parallel for
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
+		if(Particles->particleBC[i] == PSystem->inner) {
+			// PSystem->coeffShifting2 = PSystem->coefA*PSystem->partDist*PSystem->partDist*PSystem->cflNumber*PSystem->machNumber;	// Coefficient used to adjust velocity
+			double dr_x = PSystem->coeffShifting2 * Particles->gradConcentration[3*i  ];
+			double dr_y = PSystem->coeffShifting2 * Particles->gradConcentration[3*i+1];
+			double dr_z = PSystem->coeffShifting2 * Particles->gradConcentration[3*i+2];
+			double drMod2 = dr_x * dr_x + dr_y * dr_y + dr_z * dr_z;
+
+			if (drMod2 > PSystem->epsilonZero) {
+				double drMod = sqrt(drMod2);
+				double drMin = min(drMod, PSystem->maxDr);
+				Particles->pos[i*3  ] -= drMin*dr_x/drMod;
+				Particles->pos[i*3+1] -= drMin*dr_y/drMod;
+				Particles->pos[i*3+2] -= drMin*dr_z/drMod;
+			}
+		}
+	}
 }
 
 // Normal vector on the fluid
