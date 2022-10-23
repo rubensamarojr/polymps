@@ -52,7 +52,7 @@ void MpsParticleVelPos::updateVelocityPosition1st(MpsParticleSystem *PSystem, Mp
 // Update velocity and positions
 void MpsParticleVelPos::updateVelocityPosition2nd(MpsParticleSystem *PSystem, MpsParticle *Particles) {
 	PSystem->velMax = 0.0;						// Maximum flow velocity
-	double auxiliar[5] = {1.2, -3.3, 4.3, -0.3, 5.6};
+	// double auxiliar[5] = {1.2, -3.3, 4.3, -0.3, 5.6};
 
 	// https://stackoverflow.com/questions/39989473/use-openmp-in-c11-to-find-the-maximum-of-the-calculated-values
 #pragma omp parallel
@@ -105,7 +105,6 @@ void MpsParticleVelPos::updateVelocityParticlesWallDummy(MpsParticleSystem *PSys
 	for(int i=0; i<Particles->numParticles; i++) {
 	if(Particles->particleType[i] == PSystem->dummyWall) {
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
-		double velXi = Particles->vel[i*3  ];	double velYi = Particles->vel[i*3+1];	double velZi = Particles->vel[i*3+2];
 		double duXi = 0.0;	double duYi = 0.0;	double duZi = 0.0;
 		double ni = 0.0;
 		

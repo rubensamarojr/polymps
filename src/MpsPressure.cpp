@@ -306,7 +306,7 @@ void MpsPressure::solvePressurePoissonPndDivU(MpsParticleSystem *PSystem, MpsPar
 
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
-		double ni = Particles->pndSmall[i];
+		// double ni = Particles->pndSmall[i];
 		double sum = 0.0;
 
 		int ix, iy, iz;
@@ -1126,7 +1126,7 @@ void MpsPressure::predictionWallPressGradient(MpsParticleSystem *PSystem, MpsPar
 							
 							// Taylor pressure Pj
 							double Pj;
-		//					Pj = Pi + Particles->RHO[i]*(Rai[0]*v0 + Rai[1]*v1 + Rai[2]*v2);
+							// Pj = Pi + Particles->RHO[i]*(Rai[0]*v0 + Rai[1]*v1 + Rai[2]*v2);
 							Pj = Particles->press[j];
 
 							if(PSystem->gradientType == 0)
@@ -1157,7 +1157,7 @@ void MpsPressure::predictionWallPressGradient(MpsParticleSystem *PSystem, MpsPar
 
 				// Taylor pressure Pj
 				double Pj;
-	//			Pj = Pi + Particles->RHO[i]*(Rai[0]*v0 + Rai[1]*v1 + Rai[2]*v2);
+				// Pj = Pi + Particles->RHO[i]*(Rai[0]*v0 + Rai[1]*v1 + Rai[2]*v2);
 				Pj = Pi;
 
 				if(PSystem->gradientType == 0)
@@ -1454,7 +1454,8 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 					double wS = Particles->weightGradient(dst, PSystem->reS, PSystem->weightType);
 
 					// Taylor pressure Pj
-					double Pj = Pi + Particles->RHO[i]*(Rai[0]*v0imj + Rai[1]*v1imj + Rai[2]*v2imj);
+					double Pj;
+					// Pj = Pi + Particles->RHO[i]*(Rai[0]*v0imj + Rai[1]*v1imj + Rai[2]*v2imj);
 					Pj = Particles->press[j];
 
 					// if(i == 16107)
@@ -1487,8 +1488,9 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 			double wS = Particles->weightGradient(dst, PSystem->reS, PSystem->weightType);
 
 			// Taylor pressure Pj
-			double Pj = Pi + Particles->RHO[i]*(Rai[0]*v0imi + Rai[1]*v1imi + Rai[2]*v2imi);
-			Pj = Particles->press[i];
+			double Pj;
+			// Pj = Pi + Particles->RHO[i]*(Rai[0]*v0imi + Rai[1]*v1imi + Rai[2]*v2imi);
+			Pj = Pi;
 
 			//if(i == 16107)
 			//	printf("\ni:%5d timeCurrent: %lf / Pj: %lf / Pi: %lf / Zj: %lf / Zi: %lf", i, PSystem->timeCurrent, Pj, Pi, posZi, posMirrorZi);

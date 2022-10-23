@@ -435,7 +435,6 @@ void MpsShifting::calcConcAndConcGradient(MpsParticleSystem *PSystem, MpsParticl
 	for(int i=0; i<Particles->numParticles; i++) {
 		Particles->concentration[i] = 0.0;
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
-		double velXi = Particles->vel[i*3  ];	double velYi = Particles->vel[i*3+1];	double velZi = Particles->vel[i*3+2];
 		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
 		
 		int ix, iy, iz;
@@ -481,9 +480,7 @@ void MpsShifting::calcConcAndConcGradient(MpsParticleSystem *PSystem, MpsParticl
 	if(Particles->particleType[i] == PSystem->fluid) {
 		Particles->gradConcentration[i*3  ] = 0.0;	Particles->gradConcentration[i*3+1] = 0.0;	Particles->gradConcentration[i*3+2] = 0.0;
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
-		double velXi = Particles->vel[i*3  ];	double velYi = Particles->vel[i*3+1];	double velZi = Particles->vel[i*3+2];
 		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
-		double duXi = 0.0;	double duYi = 0.0;	double duZi = 0.0;
 		double conc_i = Particles->concentration[i];
 		
 		int ix, iy, iz;
@@ -581,7 +578,7 @@ void MpsShifting::calcConcAndConcGradient(MpsParticleSystem *PSystem, MpsParticl
 void MpsShifting::calcWallConcAndConcGradient(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 	// Gradient of concentration due Polygon wall
 	//int nPartNearMesh = partNearMesh.size();
-	double VolumeForce = pow(PSystem->partDist,PSystem->dim);
+	// double VolumeForce = pow(PSystem->partDist,PSystem->dim);
 	//printf(" Mesh %d \n", nPartNearMesh);
 	// Loop only for particles near mesh
 #pragma omp parallel for schedule(dynamic,64)
@@ -591,11 +588,9 @@ void MpsShifting::calcWallConcAndConcGradient(MpsParticleSystem *PSystem, MpsPar
 	//if(Particles->particleType[i] == PSystem->fluid) {
 	if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true) {
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
-		double velXi = Particles->vel[i*3  ];	double velYi = Particles->vel[i*3+1];	double velZi = Particles->vel[i*3+2];
 		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
 		double drX = 0.0;			double drY = 0.0;			double drZ = 0.0;
 		double gradCiWallX = 0.0;			double gradCiWallY = 0.0;			double gradCiWallZ = 0.0;
-		double ni = Particles->pndi[i];
 		double conc_i = Particles->concentration[i];
 
 		// Wall gradient Mitsume`s model

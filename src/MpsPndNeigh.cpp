@@ -333,12 +333,13 @@ void MpsPndNeigh::calcPndnNeighNPCD(MpsParticleSystem *PSystem, MpsParticle *Par
 // Calculates PND based on continuity equation including a diffusive term. Contribution of the neighboring particles.
 void MpsPndNeigh::calcPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 	// PSystem->coeffViscMultiphase = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero);
-	double C1 = PSystem->diffusiveCoef*PSystem->timeStep*PSystem->soundSpeed*PSystem->soundSpeed*PSystem->coeffViscMultiphase/(PSystem->pndLargeZero);
-	double C2 = PSystem->diffusiveCoef*PSystem->partDist*PSystem->soundSpeed*PSystem->coeffViscMultiphase/(PSystem->pndLargeZero);
+	// double C1 = PSystem->diffusiveCoef*PSystem->timeStep*PSystem->soundSpeed*PSystem->soundSpeed*PSystem->coeffViscMultiphase/(PSystem->pndLargeZero);
+	// double C2 = PSystem->diffusiveCoef*PSystem->partDist*PSystem->soundSpeed*PSystem->coeffViscMultiphase/(PSystem->pndLargeZero);
 #pragma omp parallel for schedule(dynamic,64)
 	for(int i=0; i<Particles->numParticles; i++) {
 //	if(Particles->particleType[i] == PSystem->fluid) {
-		double Di = 0.0; double DivV = 0.0; double flagDi = 1.0; double pndAux = 0.0;
+		double Di = 0.0; double DivV = 0.0; double flagDi = 1.0; 
+		// double pndAux = 0.0;
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 		double velXi = Particles->vel[i*3  ];	double velYi = Particles->vel[i*3+1];	double velZi = Particles->vel[i*3+2];
 		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
@@ -377,7 +378,7 @@ void MpsPndNeigh::calcPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsParticle *
 	//				if(j != i && Particles->particleType[j] == PSystem->fluid) {
 						double dst = sqrt(dstij2);
 						double wL = Particles->weight(dst, PSystem->reL, PSystem->weightType);
-						double nj = Particles->pndi[j];
+						// double nj = Particles->pndi[j];
 						if(Particles->particleType[i] == PSystem->fluid && Particles->particleType[j] == PSystem->fluid) {
 						//if(Particles->particleType[i] == PSystem->inner) {
 	//					if(Particles->particleType[i] == PSystem->fluid && Particles->particleType[j] == PSystem->fluid && Particles->particleBC[i] == PSystem->inner) {

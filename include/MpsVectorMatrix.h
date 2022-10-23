@@ -76,14 +76,14 @@ public:
 	
 	/**
 	 * @brief      Transform a 3D triangle to xy plane
-	 * @param      V1       Vertex 1
-	 * @param      V2       Vertex 2
-	 * @param      V3       Vertex 3
+	 * @param[in]  V1       Vertex 1
+	 * @param[in]  V2       Vertex 2
+	 * @param[in]  V3       Vertex 3
 	 * @param      RM       The rotation matrix
 	 * @param      PSystem    The physical system
 	 * @see        See <a href="https://math.stackexchange.com/questions/856666/how-can-i-transform-a-3d-triangle-to-xy-plane" target="_blank">https://math.stackexchange.com/questions/856666/how-can-i-transform-a-3d-triangle-to-xy-plane</a>
 	 */
-	void transformMatrix(double *V1, double *V2, double *V3, double *RM, const double epsZero);
+	void transformMatrix(const double *V1, const double *V2, const double *V3, double *RM, const double epsZero);
 	
 	/**
 	 * @brief      Transform 3D -> 2D

@@ -89,7 +89,7 @@ void MpsInputOutput::readInputFile(MpsParticleSystem *PSystem, MpsParticle *Part
 	while (readOK == false)
 	{
 		printf("Enter the name of the MPS input file:\n");
-		scanf("%s", json_file_char);
+		scanf("%999s", json_file_char);
 		printf("\n");
 
 		// char *json_file_char = new char[json_file.length()+1];
@@ -648,7 +648,13 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 	// grid_file_char now contains a c-string copy of grid_file
 
 	fp = fopen(grid_file_char, "r");
-	if(fp == NULL) perror ("Error opening grid file");
+	if(fp == NULL) {
+		perror ("Error opening grid file");
+		throw std::exception();
+	}
+
+	delete[] grid_file_char;
+	grid_file_char = NULL;
 
 	int zeroZero;
 	fscanf(fp,"%d",&zeroZero);
@@ -1942,12 +1948,11 @@ void MpsInputOutput::writePressSensors(MpsParticleSystem *PSystem, MpsParticle *
 
 	// Sensor limits
 	// Dam 1610
-	/*
-	xPrs1Min = 1.61 - 2.0*PSystem->partDist; xPrs1Max = 1.61 + PSystem->partDist;
-	yPrs1Min = 0.075 - 2.0*PSystem->partDist; yPrs1Max = 0.075 + 2.0*PSystem->partDist;
-	zPrs1min = 0.003 - PSystem->partDist; zPrs2min = 0.015 - PSystem->partDist; zPrs3min = 0.030 - PSystem->partDist; zPrs4min = 0.080 - PSystem->partDist;
-	zPrs1max = 0.003 + PSystem->partDist; zPrs2max = 0.015 + PSystem->partDist; zPrs3max = 0.030 + PSystem->partDist; zPrs4max = 0.080 + PSystem->partDist;
-*/
+	// xPrs1Min = 1.61 - 2.0*PSystem->partDist; xPrs1Max = 1.61 + PSystem->partDist;
+	// yPrs1Min = 0.075 - 2.0*PSystem->partDist; yPrs1Max = 0.075 + 2.0*PSystem->partDist;
+	// zPrs1min = 0.003 - PSystem->partDist; zPrs2min = 0.015 - PSystem->partDist; zPrs3min = 0.030 - PSystem->partDist; zPrs4min = 0.080 - PSystem->partDist;
+	// zPrs1max = 0.003 + PSystem->partDist; zPrs2max = 0.015 + PSystem->partDist; zPrs3max = 0.030 + PSystem->partDist; zPrs4max = 0.080 + PSystem->partDist;
+
 	// Hydrostatic
 	xPrs1Min = 0.1 - 2.0*PSystem->partDist; xPrs1Max = 0.1 + PSystem->partDist; xPrs2Min = 0.0 - 2.0*PSystem->partDist; xPrs2Max = 0.0 + PSystem->partDist;
 	yPrs1Min = 0.1 - 2.0*PSystem->partDist; yPrs1Max = 0.1 + 2.0*PSystem->partDist; yPrs2Min = 0.1 - 2.0*PSystem->partDist; yPrs2Max = 0.1 + 2.0*PSystem->partDist;
@@ -1956,12 +1961,11 @@ void MpsInputOutput::writePressSensors(MpsParticleSystem *PSystem, MpsParticle *
 
 	// Sensor positions
 	// Dam 1610
-	/*
-	posP1[0] = 1.61; posP1[1] = 0.075; posP1[2] = 0.003;
-	posP2[0] = 1.61; posP2[1] = 0.075; posP2[2] = 0.015;
-	posP3[0] = 1.61; posP3[1] = 0.075; posP3[2] = 0.030;
-	posP4[0] = 1.61; posP4[1] = 0.075; posP4[2] = 0.080;
-*/
+	// posP1[0] = 1.61; posP1[1] = 0.075; posP1[2] = 0.003;
+	// posP2[0] = 1.61; posP2[1] = 0.075; posP2[2] = 0.015;
+	// posP3[0] = 1.61; posP3[1] = 0.075; posP3[2] = 0.030;
+	// posP4[0] = 1.61; posP4[1] = 0.075; posP4[2] = 0.080;
+
 	// Hydrostatic
 	posP1[0] = 0.1; posP1[1] = 0.1; posP1[2] = 0.0;
 	posP2[0] = 0.0; posP2[1] = 0.1; posP2[2] = 0.1;
@@ -1970,121 +1974,120 @@ void MpsInputOutput::writePressSensors(MpsParticleSystem *PSystem, MpsParticle *
 	for(int i=0; i<Particles->numParticles; i++) {
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 		
-		/*
-		// Pressure at a specific particle close to the sensor
-		// Dam 1610
-		if(posXi >= xPrs1Min && posXi <= xPrs1Max && posYi >= yPrs1Min && posYi <= yPrs1Max) {
-			// Sensor 1
-			if(posZi >= zPrs1min && posZi <= zPrs1max) {
-				if(Particles->press[i] > 0.0) {
-					double v0 = posP1[0] - posXi;
-					double v1 = posP1[1] - posYi;
-					double v2 = posP1[2] - posZi;
-					double dst2 = v0*v0+v1*v1+v2*v2;
-					// Closest fluid particle
-					if(dst2 < riP1) {
-						P1 = Particles->press[i];
-						riP1 = dst2;
-					}
-				}
-			}
-			// Sensor 2
-			if(posZi >= zPrs2min && posZi <= zPrs2max) {
-				if(Particles->press[i] > 0.0) {
-					double v0 = posP2[0] - posXi;
-					double v1 = posP2[1] - posYi;
-					double v2 = posP2[2] - posZi;
-					double dst2 = v0*v0+v1*v1+v2*v2;
-					// Closest fluid particle
-					if(dst2 < riP2) {
-						P2 = Particles->press[i];
-						riP2 = dst2;
-					}
-				}
-			}
-			// Sensor 3
-			if(posZi >= zPrs3min && posZi <= zPrs3max) {
-				if(Particles->press[i] > 0.0) {
-					double v0 = posP3[0] - posXi;
-					double v1 = posP3[1] - posYi;
-					double v2 = posP3[2] - posZi;
-					double dst2 = v0*v0+v1*v1+v2*v2;
-					// Closest fluid particle
-					if(dst2 < riP3) {
-						P3 = Particles->press[i];
-						riP3 = dst2;
-					}
-				}
-			}
-			// Sensor 4
-			if(posZi >= zPrs4min && posZi <= zPrs4max) {
-				if(Particles->press[i] > 0.0) {
-					double v0 = posP4[0] - posXi;
-					double v1 = posP4[1] - posYi;
-					double v2 = posP4[2] - posZi;
-					double dst2 = v0*v0+v1*v1+v2*v2;
-					// Closest fluid particle
-					if(dst2 < riP4) {
-						P4 = Particles->press[i];
-						riP4 = dst2;
-					}
-				}
-			}
-		}
+		// // Pressure at a specific particle close to the sensor
+		// // Dam 1610
+		// if(posXi >= xPrs1Min && posXi <= xPrs1Max && posYi >= yPrs1Min && posYi <= yPrs1Max) {
+		// 	// Sensor 1
+		// 	if(posZi >= zPrs1min && posZi <= zPrs1max) {
+		// 		if(Particles->press[i] > 0.0) {
+		// 			double v0 = posP1[0] - posXi;
+		// 			double v1 = posP1[1] - posYi;
+		// 			double v2 = posP1[2] - posZi;
+		// 			double dst2 = v0*v0+v1*v1+v2*v2;
+		// 			// Closest fluid particle
+		// 			if(dst2 < riP1) {
+		// 				P1 = Particles->press[i];
+		// 				riP1 = dst2;
+		// 			}
+		// 		}
+		// 	}
+		// 	// Sensor 2
+		// 	if(posZi >= zPrs2min && posZi <= zPrs2max) {
+		// 		if(Particles->press[i] > 0.0) {
+		// 			double v0 = posP2[0] - posXi;
+		// 			double v1 = posP2[1] - posYi;
+		// 			double v2 = posP2[2] - posZi;
+		// 			double dst2 = v0*v0+v1*v1+v2*v2;
+		// 			// Closest fluid particle
+		// 			if(dst2 < riP2) {
+		// 				P2 = Particles->press[i];
+		// 				riP2 = dst2;
+		// 			}
+		// 		}
+		// 	}
+		// 	// Sensor 3
+		// 	if(posZi >= zPrs3min && posZi <= zPrs3max) {
+		// 		if(Particles->press[i] > 0.0) {
+		// 			double v0 = posP3[0] - posXi;
+		// 			double v1 = posP3[1] - posYi;
+		// 			double v2 = posP3[2] - posZi;
+		// 			double dst2 = v0*v0+v1*v1+v2*v2;
+		// 			// Closest fluid particle
+		// 			if(dst2 < riP3) {
+		// 				P3 = Particles->press[i];
+		// 				riP3 = dst2;
+		// 			}
+		// 		}
+		// 	}
+		// 	// Sensor 4
+		// 	if(posZi >= zPrs4min && posZi <= zPrs4max) {
+		// 		if(Particles->press[i] > 0.0) {
+		// 			double v0 = posP4[0] - posXi;
+		// 			double v1 = posP4[1] - posYi;
+		// 			double v2 = posP4[2] - posZi;
+		// 			double dst2 = v0*v0+v1*v1+v2*v2;
+		// 			// Closest fluid particle
+		// 			if(dst2 < riP4) {
+		// 				P4 = Particles->press[i];
+		// 				riP4 = dst2;
+		// 			}
+		// 		}
+		// 	}
+		// }
 
-		// Weighted average pressure
-		double v0 = posP1[0] - posXi;
-		double v1 = posP1[1] - posYi;
-		double v2 = posP1[2] - posZi;
-		double dst2 = v0*v0+v1*v1+v2*v2;
-		if(dst2 < PSystem->reS2) {
-			double dst = sqrt(dst2);
-			double wS = Particles->weight(dst, PSystem->reS, PSystem->weightType);
-			if(Particles->press[i] > 0.0){
-				pndP1 += wS;
-				P1wij += Particles->press[i]*wS;
-			}
-		}
+		// // Weighted average pressure
+		// double v0 = posP1[0] - posXi;
+		// double v1 = posP1[1] - posYi;
+		// double v2 = posP1[2] - posZi;
+		// double dst2 = v0*v0+v1*v1+v2*v2;
+		// if(dst2 < PSystem->reS2) {
+		// 	double dst = sqrt(dst2);
+		// 	double wS = Particles->weight(dst, PSystem->reS, PSystem->weightType);
+		// 	if(Particles->press[i] > 0.0){
+		// 		pndP1 += wS;
+		// 		P1wij += Particles->press[i]*wS;
+		// 	}
+		// }
 		
-		v0 = posP2[0] - posXi;
-		v1 = posP2[1] - posYi;
-		v2 = posP2[2] - posZi;
-		dst2 = v0*v0+v1*v1+v2*v2;
-		if(dst2 < PSystem->reS2) {
-			double dst = sqrt(dst2);
-			double wS = Particles->weight(dst, PSystem->reS, PSystem->weightType);
-			if(Particles->press[i] > 0.0){
-				pndP2 += wS;
-				P2wij += Particles->press[i]*wS;
-			}
-		}
+		// v0 = posP2[0] - posXi;
+		// v1 = posP2[1] - posYi;
+		// v2 = posP2[2] - posZi;
+		// dst2 = v0*v0+v1*v1+v2*v2;
+		// if(dst2 < PSystem->reS2) {
+		// 	double dst = sqrt(dst2);
+		// 	double wS = Particles->weight(dst, PSystem->reS, PSystem->weightType);
+		// 	if(Particles->press[i] > 0.0){
+		// 		pndP2 += wS;
+		// 		P2wij += Particles->press[i]*wS;
+		// 	}
+		// }
 		
-		v0 = posP3[0] - posXi;
-		v1 = posP3[1] - posYi;
-		v2 = posP3[2] - posZi;
-		dst2 = v0*v0+v1*v1+v2*v2;
-		if(dst2 < PSystem->reS2) {
-			double dst = sqrt(dst2);
-			double wS = Particles->weight(dst, PSystem->reS, PSystem->weightType);
-			if(Particles->press[i] > 0.0){
-				pndP3 += wS;
-				P3wij += Particles->press[i]*wS;
-			}
-		}
+		// v0 = posP3[0] - posXi;
+		// v1 = posP3[1] - posYi;
+		// v2 = posP3[2] - posZi;
+		// dst2 = v0*v0+v1*v1+v2*v2;
+		// if(dst2 < PSystem->reS2) {
+		// 	double dst = sqrt(dst2);
+		// 	double wS = Particles->weight(dst, PSystem->reS, PSystem->weightType);
+		// 	if(Particles->press[i] > 0.0){
+		// 		pndP3 += wS;
+		// 		P3wij += Particles->press[i]*wS;
+		// 	}
+		// }
 		
-		v0 = posP4[0] - posXi;
-		v1 = posP4[1] - posYi;
-		v2 = posP4[2] - posZi;
-		dst2 = v0*v0+v1*v1+v2*v2;
-		if(dst2 < PSystem->reS2) {
-			double dst = sqrt(dst2);
-			double wS = Particles->weight(dst, PSystem->reS, PSystem->weightType);
-			if(Particles->press[i] > 0.0){
-				pndP4 += wS;
-				P4wij += Particles->press[i]*wS;
-			}
-		}
-		*/
+		// v0 = posP4[0] - posXi;
+		// v1 = posP4[1] - posYi;
+		// v2 = posP4[2] - posZi;
+		// dst2 = v0*v0+v1*v1+v2*v2;
+		// if(dst2 < PSystem->reS2) {
+		// 	double dst = sqrt(dst2);
+		// 	double wS = Particles->weight(dst, PSystem->reS, PSystem->weightType);
+		// 	if(Particles->press[i] > 0.0){
+		// 		pndP4 += wS;
+		// 		P4wij += Particles->press[i]*wS;
+		// 	}
+		// }
+		
 		// Pressure at a specific particle close to the sensor
 		// Hydrostatic
 		if((posXi >= xPrs1Min && posXi <= xPrs1Max && posYi >= yPrs1Min && posYi <= yPrs1Max) || (posXi >= xPrs2Min && posXi <= xPrs2Max && posYi >= yPrs2Min && posYi <= yPrs2Max)) {
@@ -2154,39 +2157,42 @@ void MpsInputOutput::writePressSensors(MpsParticleSystem *PSystem, MpsParticle *
 
 	// Open the File to write
 	pressTxtFile = fopen(pressTxtFilenameChar, "a");
-	if(pressTxtFile == NULL) perror ("Error opening press txt file");
+	if(pressTxtFile == NULL) {
+		perror ("Error opening press txt file");
+		throw std::exception();
+	}
 
 	delete[] pressTxtFilenameChar;
 	pressTxtFilenameChar = NULL;
-	/*
-	// dam 1610
-	fprintf(pressTxtFile,"\n%lf\t%lf\t%lf\t%lf\t%lf",PSystem->timeCurrent, P1,P2,P3,P4);
-	double Pmean;
 	
-	if(pndP1 > 0.0)
-		Pmean = P1wij/pndP1;
-	else
-		Pmean = 0.0;
-	fprintf(pressTxtFile,"\t%lf",Pmean);
+	// // dam 1610
+	// fprintf(pressTxtFile,"\n%lf\t%lf\t%lf\t%lf\t%lf",PSystem->timeCurrent, P1,P2,P3,P4);
+	// double Pmean;
 	
-	if(pndP2 > 0.0)
-		Pmean = P2wij/pndP2;
-	else
-		Pmean = 0.0;
-	fprintf(pressTxtFile,"\t%lf",Pmean);
+	// if(pndP1 > 0.0)
+	// 	Pmean = P1wij/pndP1;
+	// else
+	// 	Pmean = 0.0;
+	// fprintf(pressTxtFile,"\t%lf",Pmean);
 	
-	if(pndP3 > 0.0)
-		Pmean = P3wij/pndP3;
-	else
-		Pmean = 0.0;
-	fprintf(pressTxtFile,"\t%lf",Pmean);
+	// if(pndP2 > 0.0)
+	// 	Pmean = P2wij/pndP2;
+	// else
+	// 	Pmean = 0.0;
+	// fprintf(pressTxtFile,"\t%lf",Pmean);
 	
-	if(pndP4 > 0.0)
-		Pmean = P4wij/pndP4;
-	else
-		Pmean = 0.0;
-	fprintf(pressTxtFile,"\t%lf",Pmean);
-	*/
+	// if(pndP3 > 0.0)
+	// 	Pmean = P3wij/pndP3;
+	// else
+	// 	Pmean = 0.0;
+	// fprintf(pressTxtFile,"\t%lf",Pmean);
+	
+	// if(pndP4 > 0.0)
+	// 	Pmean = P4wij/pndP4;
+	// else
+	// 	Pmean = 0.0;
+	// fprintf(pressTxtFile,"\t%lf",Pmean);
+	
 
 	// Hydrostatic
 	fprintf(pressTxtFile,"\n%lf\t%lf\t%lf",PSystem->timeCurrent, P1,P2);
@@ -2224,7 +2230,10 @@ void MpsInputOutput::writeHeaderTxtFiles(MpsParticleSystem *PSystem, MpsParticle
 		
 		// Open the File to write
 		forceTxtFile = fopen(forceTxtFilenameChar, "w");
-		if(forceTxtFile == NULL) perror ("Error opening force txt file");
+		if(forceTxtFile == NULL) {
+			perror ("Error opening force txt file");
+			throw std::exception();
+		}
 		fprintf(forceTxtFile,"Time(s)\tForce(N) X\tY\tZ");
 		// Close force file
 		fclose(forceTxtFile);
@@ -2240,7 +2249,10 @@ void MpsInputOutput::writeHeaderTxtFiles(MpsParticleSystem *PSystem, MpsParticle
 
 		// Open the File to write
 		pressTxtFile = fopen(pressTxtFilenameChar, "w");
-		if(pressTxtFile == NULL) perror ("Error opening press txt file");
+		if(pressTxtFile == NULL) {
+			perror ("Error opening press txt file");
+			throw std::exception();
+		}
 
 		// dam 1610
 		// fprintf(pressTxtFile,"Time(s)\tP1(Pa)\tP2(Pa)\tP3(Pa)\tP4(Pa)\tPm1(Pa)\tPm2(Pa)\tPm3(Pa)\tPm4(Pa)");
@@ -2279,10 +2291,6 @@ void MpsInputOutput::writeBuckets(MpsParticleSystem *PSystem, MpsParticle *Parti
 	if(PSystem->dim==3) {
 		nDimZ += 1;
 	}
-	double originX = PSystem->domainMinX;
-	double originY = PSystem->domainMinY;
-	double originZ = PSystem->domainMinZ;
-	int numCells = PSystem->numBucketsXYZ;
 	
 	fprintf(fp,"# vtk DataFile Version 3.0\n");
 	fprintf(fp,"Initial Buckets\n");

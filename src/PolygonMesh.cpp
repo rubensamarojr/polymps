@@ -49,6 +49,11 @@ void PolygonMesh::readPolygonMeshFile(const std::string& path) {
 	}
 	// Load a mesh
 	bool success = igl::readSTL(filename, meshVertices, meshFaces, meshNormals);
+	if(success == false)
+	{
+		fprintf(stderr,"IOError: STL mesh %s could not be read\n", path.c_str());
+		return;
+	}
 
 	// Find the bounding box
 	Eigen::Vector3d m = meshVertices.colwise().minCoeff();
@@ -136,7 +141,7 @@ void PolygonMesh::writePolygonMeshFile(const int mesh_ID, const std::string& pat
 }
 
 // Update node positions based on Finite Element Method computation - NOT WORKING !!!
-void PolygonMesh::updatePolygonMesh(double *nodeX, double *nodeY, double *nodeZ, double *nodeDX, double *nodeDY, double *nodeDZ) {
+void PolygonMesh::updatePolygonMesh(double *nodeX, double *nodeY, double *nodeZ, const double *nodeDX, const double *nodeDY, const double *nodeDZ) {
 	// Update node positions
 	int nNodes = NV.rows();
 #pragma omp parallel for
@@ -287,7 +292,6 @@ void PolygonMesh::initWijnNeigh(int dim, int wijType, double lo, double reL, dou
 			riw = sqrt((X0-xi)*(X0-xi) + (Y0-yi)*(Y0-yi) + (Z0-zi)*(Z0-zi));
 			// Ratio rij/re
 			riw_re = riw/reS;
-			riw_re = riw/reS;
 			xDataPND.push_back(riw_re);
 			riw_re = riw/reL;
 			xDataNeigh.push_back(riw_re);
@@ -344,9 +348,9 @@ void PolygonMesh::initWijnNeigh(int dim, int wijType, double lo, double reL, dou
 	}
 
 	// Auxiliary print
-	int printData = 0;
+	bool printData = false;
 	
-	if(printData == 1){
+	if(printData){
 		std::cout << " xDataPND" << std::endl;
 		for(int i=0;i<xDataPND.size();i++)
 			std::cout << xDataPND[i] << ", ";
@@ -423,7 +427,7 @@ int PolygonMesh::interpolateNumNeighWall(double re, double x, bool extrapolate)
 // Find closest point on the mesh from a particle and corrects the PND and number of neighboors
 // Libigl
 void PolygonMesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, int msh_id, int sta_id, 
-	int fem_id, int frw_id, double *Pos, double *wallPos, double *mirrorPos, double *riw2, int *elementID, int *meshID, double *NormalWall) {
+	int fem_id, int frw_id, const double *Pos, double *wallPos, double *mirrorPos, double *riw2, int *elementID, int *meshID, double *NormalWall) {
 //  double *Pos, double *wallPos, double *mirrorPos, double *riw2, double *niw, int *numNeighw, int *elementID, std::vector<int>& particlesNearMesh) {
 
 	// MPS -> libigl
@@ -555,7 +559,7 @@ void PolygonMesh::closestPointPNDBoundaryAABB(double reS2, double reL2, int nP, 
 }
 
 // Update vector with ID of particles near the mesh
-void PolygonMesh::updateParticlesNearPolygonMesh(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, double *riw2,
+void PolygonMesh::updateParticlesNearPolygonMesh(double reS2, double reL2, int nP, int wijType, int *Typ, int fld, const double *riw2,
 	double *niw, int *numNeighw, std::vector<int>& particlesNearMesh, bool *Nw) {
 
 	particlesNearMesh.clear();
@@ -570,7 +574,7 @@ void PolygonMesh::updateParticlesNearPolygonMesh(double reS2, double reL2, int n
 		for(int i=0;i<nP;i++) {
 			niw[i] = 0.0;
 			numNeighw[i] = 0;
-		//      if(Typ[i] == fld) {
+		    // if(Typ[i] == fld) {
 			double x2 = riw2[i];
 			if (x2 < reL2) {
 				Nw[i]=true; // Only to show particles near polygon
@@ -590,38 +594,38 @@ void PolygonMesh::updateParticlesNearPolygonMesh(double reS2, double reL2, int n
 				// Number of neighboors due wall (numNeighWall)
 				numNeighw[i] = interpolateNumNeighWall(reL, x, true);
 
-				/*
-				if (dim == 2) {
-					// Mesh surface tangent of wall particle
-					if (x <= 0.1403*re)
-						numNeighw[i] += 8;
-					else if (x <= 0.3466*re)
-						numNeighw[i] += 6;
-					else if (x <= 0.6*re)
-						numNeighw[i] += 4;
-					else if (x <= 1.3466*re)
-						numNeighw[i] += 3;
-					else if (x <= 1.6*re)
-						numNeighw[i] += 1;
-				}
-				else {
-					// Mesh surface tangent of wall particle
-					if (x <= 0.0524*re)
-						numNeighw[i] += 22;
-					else if (x <= 0.1403*re)
-						numNeighw[i] += 18;
-					else if (x <= 0.3466*re)
-						numNeighw[i] += 14;
-					else if (x <= 0.6*re)
-						numNeighw[i] += 10;
-					else if (x <= 1.0524*re)
-						numNeighw[i] += 9;
-					else if (x <= 1.3466*re)
-						numNeighw[i] += 5;
-					else if (x <= 1.6*re)
-						numNeighw[i] += 1;
-				}
-				*/
+				
+				// if (dim == 2) {
+				// 	// Mesh surface tangent of wall particle
+				// 	if (x <= 0.1403*re)
+				// 		numNeighw[i] += 8;
+				// 	else if (x <= 0.3466*re)
+				// 		numNeighw[i] += 6;
+				// 	else if (x <= 0.6*re)
+				// 		numNeighw[i] += 4;
+				// 	else if (x <= 1.3466*re)
+				// 		numNeighw[i] += 3;
+				// 	else if (x <= 1.6*re)
+				// 		numNeighw[i] += 1;
+				// }
+				// else {
+				// 	// Mesh surface tangent of wall particle
+				// 	if (x <= 0.0524*re)
+				// 		numNeighw[i] += 22;
+				// 	else if (x <= 0.1403*re)
+				// 		numNeighw[i] += 18;
+				// 	else if (x <= 0.3466*re)
+				// 		numNeighw[i] += 14;
+				// 	else if (x <= 0.6*re)
+				// 		numNeighw[i] += 10;
+				// 	else if (x <= 1.0524*re)
+				// 		numNeighw[i] += 9;
+				// 	else if (x <= 1.3466*re)
+				// 		numNeighw[i] += 5;
+				// 	else if (x <= 1.6*re)
+				// 		numNeighw[i] += 1;
+				// }
+				
 			}
 		}
 #pragma omp critical
