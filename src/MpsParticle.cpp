@@ -390,7 +390,7 @@ void MpsParticle::moveGhostToLastPosArray(MpsParticleSystem *PSystem) {
 			}
 		}
 	}
-	else if (PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
+	else if (PSystem->numInOutflowPlane > 0) {
 		// Reverse for loop
 		// https://stackoverflow.com/questions/275994/whats-the-best-way-to-do-a-backwards-loop-in-c-c-c
 		for (int ip = numParticles; ip --> 0; )

@@ -127,7 +127,7 @@ void MpsParticleCollision::checkDynamicParticleCollisions(MpsParticleSystem *PSy
 	
 	double Wij5 = 0.5*0.5*0.5*0.5*3.0;
 	//double Wij5 = 0.5*0.5;
-	double pmax = 0.0;
+	double global_pmax = 0.0;
 	double gravityMod = sqrt(PSystem->gravityX*PSystem->gravityX + PSystem->gravityY*PSystem->gravityY + PSystem->gravityZ*PSystem->gravityZ);
 	
 	// Compute maximum pressure on the walls
@@ -143,8 +143,8 @@ void MpsParticleCollision::checkDynamicParticleCollisions(MpsParticleSystem *PSy
 	}
 #pragma omp critical
 	{
-		if (local_pmax > pmax)
-			pmax = local_pmax;
+		if (local_pmax > global_pmax)
+			global_pmax = local_pmax;
 	}
 }
 	// Compute collision and repulsive terms and the dynamic coefficients
@@ -199,7 +199,7 @@ void MpsParticleCollision::checkDynamicParticleCollisions(MpsParticleSystem *PSy
 							
 							// inter-particle distance
 							double Wij = 0.0;
-							if(dst > PSystem->epsilonZero && dst < PSystem->partDist)
+							if(dst > PSystem->epsilonZero)
 							{
 								double w1 = 1.0 - dst*PSystem->invPartDist;
 								double w2 = 4.0*dst*PSystem->invPartDist + 1.0;
@@ -212,7 +212,7 @@ void MpsParticleCollision::checkDynamicParticleCollisions(MpsParticleSystem *PSy
 							{
 								kappa = 1.0;
 							}
-							else if(dst >= 0.5*PSystem->partDist && dst < PSystem->partDist)
+							else
 							{
 								kappa = chi;
 							}

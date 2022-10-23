@@ -167,7 +167,7 @@ int MpsVectorMatrix::inverseMatrix(double &M11, double &M12, double &M13, double
 
 // 3D triangle to xy plane
 // https://math.stackexchange.com/questions/856666/how-can-i-transform-a-3d-triangle-to-xy-plane
-void MpsVectorMatrix::transformMatrix(double *V1, double *V2, double *V3, double *RM, const double epsZero) {
+void MpsVectorMatrix::transformMatrix(const double *V1, const double *V2, const double *V3, double *RM, const double epsZero) {
 	// double A[3];
 	double B[3],C[3],U[3],V[3],W[3];
 	// Translate the vertex "V1" to origin 0,0,0

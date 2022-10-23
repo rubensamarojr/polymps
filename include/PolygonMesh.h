@@ -126,17 +126,17 @@ public:
 	 * @param[in]  sta_id      The static mesh identifier
 	 * @param[in]  fem_id      The deformable mesh identifier
 	 * @param[in]  frw_id      The forced mesh identifier
-	 * @param      Pos         The array with particles position
+	 * @param[in]  Pos         The array with particles position
 	 * @param      wallPos     The array with wall particles position
 	 * @param      mirrorPos   The array with mirrored particles position
 	 * @param      riw2        The array with squared distance of particle to polygon wall
-	 * @param      partID      The array with global and static particle ID
+	 * @param[in]  partID      The array with global and static particle ID
 	 * @param      elementID   The array with elements id
 	 * @param      meshID      The array with mesh id
 	 * @param      NormalWall  The array with normal at wall
 	 */
 	void closestPointPNDBoundaryAABB(int nP, int *Typ, int fld, int msh_id, int sta_id, int fem_id, int frw_id,
-		double *Pos, double *wallPos, double *mirrorPos, double *riw2, int *partID, int *elementID, int *meshID, double *NormalWall);
+		const double *Pos, double *wallPos, double *mirrorPos, double *riw2, const int *partID, int *elementID, int *meshID, double *NormalWall);
 	//	double *wallPos, double *mirrorPos, double *riw2, double *niw, int *numNeighw, int *elementID, std::vector<int>& particlesNearMesh);
 	
 	/**
@@ -146,15 +146,15 @@ public:
 	 * @param[in]  nP                      The number of particles
 	 * @param      Typ                     The array with particle type
 	 * @param[in]  fld                     The fluid material identifier
-	 * @param      riw2                    The array with squared distance of particle to polygon wall
+	 * @param[in]  riw2                    The array with squared distance of particle to polygon wall
 	 * @param      niw                     The array with value of weight function due to polygon wall
 	 * @param      numNeighw               The array with number of neighboors due to polygon wall
-	 * @param      partID                  The array with global and static particle ID
+	 * @param[in]  partID                  The array with global and static particle ID
 	 * @param      Nw                      The array with auxiliar parameter only to show particles near to polygon wall
 	 * @param      meshParticlesNeighbors  The vector with particles near the polygon wall
 	 */
-	void updateParticlesNearPolygonMesh(double reS2, double reL2, int nP, int *Typ, int fld, double *riw2,
-		double *niw, int *numNeighw, int *partID, bool *Nw, std::vector<int>& meshParticlesNeighbors);
+	void updateParticlesNearPolygonMesh(double reS2, double reL2, int nP, int *Typ, int fld, const double *riw2,
+		double *niw, int *numNeighw, const int *partID, bool *Nw, std::vector<int>& meshParticlesNeighbors);
 	
 	/**
 	 * @brief      Correction of velocity due the wall gradient of pressure
@@ -190,11 +190,11 @@ public:
 	 * @param      nodeX   The node vertex x
 	 * @param      nodeY   The node vertex y
 	 * @param      nodeZ   The node vertex z
-	 * @param      nodeDX  The node displacement dx
-	 * @param      nodeDY  The node displacement dy
-	 * @param      nodeDZ  The node displacement dz
+	 * @param[in]  nodeDX  The node displacement dx
+	 * @param[in]  nodeDY  The node displacement dy
+	 * @param[in]  nodeDZ  The node displacement dz
 	 */
-	void updatePolygonMesh(double *nodeX, double *nodeY, double *nodeZ, double *nodeDX, double *nodeDY, double *nodeDZ);
+	void updatePolygonMesh(double *nodeX, double *nodeY, double *nodeZ, const double *nodeDX, const double *nodeDY, const double *nodeDZ);
 	
 	/**
 	 * @brief      Updates forced rigid wall

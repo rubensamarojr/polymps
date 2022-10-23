@@ -141,7 +141,7 @@ void PolygonMesh::writePolygonMeshFile(const int mesh_ID, const std::string& pat
 }
 
 // Update node positions based on Finite Element Method computation - NOT WORKING !!!
-void PolygonMesh::updatePolygonMesh(double *nodeX, double *nodeY, double *nodeZ, double *nodeDX, double *nodeDY, double *nodeDZ) {
+void PolygonMesh::updatePolygonMesh(double *nodeX, double *nodeY, double *nodeZ, const double *nodeDX, const double *nodeDY, const double *nodeDZ) {
 	// Update node positions
 	int nNodes = NV.rows();
 #pragma omp parallel for
@@ -292,7 +292,6 @@ void PolygonMesh::initWijnNeigh(int dim, int wijType, double lo, double reL, dou
 			riw = sqrt((X0-xi)*(X0-xi) + (Y0-yi)*(Y0-yi) + (Z0-zi)*(Z0-zi));
 			// Ratio rij/re
 			riw_re = riw/reS;
-			riw_re = riw/reS;
 			xDataPND.push_back(riw_re);
 			riw_re = riw/reL;
 			xDataNeigh.push_back(riw_re);
@@ -349,9 +348,9 @@ void PolygonMesh::initWijnNeigh(int dim, int wijType, double lo, double reL, dou
 	}
 
 	// Auxiliary print
-	int printData = 0;
+	bool printData = false;
 	
-	if(printData == 1){
+	if(printData){
 		std::cout << " xDataPND" << std::endl;
 		for(size_t i=0;i<xDataPND.size();i++)
 			std::cout << xDataPND[i] << ", ";
@@ -428,7 +427,7 @@ int PolygonMesh::interpolateNumNeighWall(double re, double x, bool extrapolate)
 // Find closest point on the mesh from a particle and corrects the PND and number of neighboors
 // Libigl
 void PolygonMesh::closestPointPNDBoundaryAABB(int nP, int *Typ, int fld, int msh_id, int sta_id, int fem_id, int frw_id,
-	double *Pos, double *wallPos, double *mirrorPos, double *riw2, int *partID, int *elementID, int *meshID, double *NormalWall) {
+	const double *Pos, double *wallPos, double *mirrorPos, double *riw2, const int *partID, int *elementID, int *meshID, double *NormalWall) {
 //  double *Pos, double *wallPos, double *mirrorPos, double *riw2, double *niw, int *numNeighw, int *elementID, std::vector<int>& particlesNearMesh) {
 
 	temporary_position.resize(nP,3);
@@ -564,8 +563,8 @@ void PolygonMesh::closestPointPNDBoundaryAABB(int nP, int *Typ, int fld, int msh
 }
 
 // Update vector with ID of particles near the mesh
-void PolygonMesh::updateParticlesNearPolygonMesh(double reS2, double reL2, int nP, int *Typ, int fld, double *riw2,
-	double *niw, int *numNeighw, int *partID, bool *Nw, std::vector<int>& particlesNearMesh) {
+void PolygonMesh::updateParticlesNearPolygonMesh(double reS2, double reL2, int nP, int *Typ, int fld, const double *riw2,
+	double *niw, int *numNeighw, const int *partID, bool *Nw, std::vector<int>& particlesNearMesh) {
 
 	particlesNearMesh.clear();
 

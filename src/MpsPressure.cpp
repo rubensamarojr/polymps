@@ -2152,7 +2152,8 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 					double wS = Particles->weightGradient(dst, PSystem->reS, PSystem->weightType);
 
 					// Taylor pressure Pj
-					double Pj = Pi + Particles->RHO[i]*(Rai[0]*v0imj + Rai[1]*v1imj + Rai[2]*v2imj);
+					double Pj;
+					// Pj = Pi + Particles->RHO[i]*(Rai[0]*v0imj + Rai[1]*v1imj + Rai[2]*v2imj);
 					Pj = Particles->press[j];
 
 					// if(i == 16107)
@@ -2185,8 +2186,9 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 			double wS = Particles->weightGradient(dst, PSystem->reS, PSystem->weightType);
 
 			// Taylor pressure Pj
-			double Pj = Pi + Particles->RHO[i]*(Rai[0]*v0imi + Rai[1]*v1imi + Rai[2]*v2imi);
-			Pj = Particles->press[i];
+			double Pj;
+			// Pj = Pi + Particles->RHO[i]*(Rai[0]*v0imi + Rai[1]*v1imi + Rai[2]*v2imi);
+			Pj = Pi;
 
 			//if(i == 16107)
 			//	printf("\ni:%5d timeCurrent: %lf / Pj: %lf / Pi: %lf / Zj: %lf / Zi: %lf", i, PSystem->timeCurrent, Pj, Pi, posZi, posMirrorZi);

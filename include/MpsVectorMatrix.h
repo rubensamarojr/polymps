@@ -68,7 +68,8 @@ public:
 	 * @param      M31      Element 31
 	 * @param      M32      Element 32
 	 * @param      M33      Element 33
-	 * @param      PSystem    The physical system
+	 * @param[in]  dimension  The dimension
+	 * @param[in]  epsZero    The near zero value
 	 * @return     The value of the inverse of matrix
 	 */
 	int inverseMatrix(double &M11, double &M12, double &M13, double &M21, double &M22, double &M23, 
@@ -76,14 +77,14 @@ public:
 	
 	/**
 	 * @brief      Transform a 3D triangle to xy plane
-	 * @param      V1       Vertex 1
-	 * @param      V2       Vertex 2
-	 * @param      V3       Vertex 3
+	 * @param[in]  V1       Vertex 1
+	 * @param[in]  V2       Vertex 2
+	 * @param[in]  V3       Vertex 3
 	 * @param      RM       The rotation matrix
-	 * @param      PSystem    The physical system
+	 * @param[in]  epsZero  The near zero value
 	 * @see        See <a href="https://math.stackexchange.com/questions/856666/how-can-i-transform-a-3d-triangle-to-xy-plane" target="_blank">https://math.stackexchange.com/questions/856666/how-can-i-transform-a-3d-triangle-to-xy-plane</a>
 	 */
-	void transformMatrix(double *V1, double *V2, double *V3, double *RM, const double epsZero);
+	void transformMatrix(const double *V1, const double *V2, const double *V3, double *RM, const double epsZero);
 	
 	/**
 	 * @brief      Transform 3D -> 2D

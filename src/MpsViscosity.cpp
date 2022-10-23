@@ -495,7 +495,7 @@ void MpsViscosity::calcViscosityInteractionVal(MpsParticleSystem *PSystem, MpsPa
 					phi = (Particles->Cv[i] - 0.25)*PSystem->PHI_1/(1.0 - 0.25);
 					phi2 = (Particles->Cv[i] - 0.25)*PSystem->PHI_2/(1.0 - 0.25);
 					if(Particles->Cv[i] <= 0.25) { phi = PSystem->epsilonZero; phi2 = PSystem->epsilonZero; } // phi close to zero
-					if(Particles->PTYPE[i] <= 0) phi = PSystem->PHI_BED; // ghost
+					// if(Particles->PTYPE[i] <= 0) phi = PSystem->PHI_BED; // ghost
 
 					// normal stress calculation (mechanical pressure)
 					Particles->p_rheo_new[i] = Particles->p_smooth[i];
@@ -629,7 +629,7 @@ void MpsViscosity::calcViscosityInteractionVal(MpsParticleSystem *PSystem, MpsPa
 					//}
 					
 					// Herschel bulkley papanastasiou
-//					Particles->MEU[i] = Particles->MEU_Y[i] + PSystem->MEU0*pow(4.0*Particles->II[i], (PSystem->N - 1.0)*0.5);
+					// Particles->MEU[i] = Particles->MEU_Y[i] + PSystem->MEU0*pow(4.0*Particles->II[i], (PSystem->N - 1.0)*0.5);
 
 					// MEU_Y rheological model
 					Particles->MEU[i] = Particles->MEU_Y[i] + meu_0;
@@ -639,9 +639,9 @@ void MpsViscosity::calcViscosityInteractionVal(MpsParticleSystem *PSystem, MpsPa
 						//std::cout << " MEU>viscmax: " << yield_stress*PSystem->mm*0.5 << " PSystem->MEU0: " << meu_0 << " II: " << Particles->II[i] << std::endl;
 						Particles->MEU[i] = visc_max;
 					}
-					if(Particles->PTYPE[i] <= 0) Particles->MEU[i] = Particles->MEU[i]*Particles->Cv[i] + PSystem->DNS_FL1*PSystem->KNM_VS1*(1.0 - Particles->Cv[i]); // ghost
+					// if(Particles->PTYPE[i] <= 0) Particles->MEU[i] = Particles->MEU[i]*Particles->Cv[i] + PSystem->DNS_FL1*PSystem->KNM_VS1*(1.0 - Particles->Cv[i]); // ghost
 
-					//if(Particles->MEU[i]/Particles->RHO[i] > maxVIS) maxVIS = Particles->MEU[i]/Particles->RHO[i];
+					// if(Particles->MEU[i]/Particles->RHO[i] > maxVIS) maxVIS = Particles->MEU[i]/Particles->RHO[i];
 					if(Particles->MEU[i] > mi_max) mi_max = Particles->MEU[i];
 				}
 				
@@ -991,7 +991,7 @@ void MpsViscosity::calcWallSlipViscosityInteractionVal(MpsParticleSystem *PSyste
 					phi = (Particles->Cv[i] - 0.25)*PSystem->PHI_1/(1.0 - 0.25);
 					phi2 = (Particles->Cv[i] - 0.25)*PSystem->PHI_2/(1.0 - 0.25);
 					if(Particles->Cv[i] <= 0.25) { phi = PSystem->epsilonZero; phi2 = PSystem->epsilonZero; } // phi close to zero
-					if(Particles->PTYPE[i] <= 0) phi = PSystem->PHI_BED;
+					// if(Particles->PTYPE[i] <= 0) phi = PSystem->PHI_BED;
 
 					// normal stress calculation (mehcanical pressure)
 					Particles->p_rheo_new[i] = Particles->p_smooth[i];
@@ -1006,9 +1006,9 @@ void MpsViscosity::calcWallSlipViscosityInteractionVal(MpsParticleSystem *PSyste
 					if(Particles->p_smooth[i] < (WL[kx][ky] - posZi)*PSystem->DNS_FL1*gravityMod) Particles->p_smooth[i] = (WL[kx][ky] - posZi)*PSystem->DNS_FL1*gravityMod;
 					if(PSystem->timeCurrent <= 1.0) normal_stress = (1.0 - PSystem->timeCurrent)*(Particles->p_smooth[i] - (WL[kx][ky] - posZi)*PSystem->DNS_FL1*gravityMod) + PSystem->timeCurrent*normal_stress;
 
-//					normal_stress = Particles->p_smooth[i] - (WL[kx][ky] - posZi)*PSystem->DNS_FL1*gravityMod;
-//					normal_stress = Particles->p_smooth[i];
-					//normal_stress=normal_stress*0.61*1500/PSystem->DNS_FL2;
+					// normal_stress = Particles->p_smooth[i] - (WL[kx][ky] - posZi)*PSystem->DNS_FL1*gravityMod;
+					// normal_stress = Particles->p_smooth[i];
+					// normal_stress = normal_stress*0.61*1500/PSystem->DNS_FL2;
 					if(normal_stress < 1.0 || Particles->Cv[i] < 0.5) normal_stress = 1.0;
 
 					Particles->p_rheo_new[i] = normal_stress;
@@ -1060,7 +1060,7 @@ void MpsViscosity::calcWallSlipViscosityInteractionVal(MpsParticleSystem *PSyste
 					//Particles->MEU[i] = Particles->MEU_Y[i] + meu_0;
 					
 					if(Particles->II[i] == 0 || Particles->MEU[i]>visc_max) Particles->MEU[i] = visc_max;
-					if(Particles->PTYPE[i] <= 0) Particles->MEU[i] = Particles->MEU[i]*Particles->Cv[i] + PSystem->DNS_FL1*PSystem->KNM_VS1*(1.0 - Particles->Cv[i]);
+					// if(Particles->PTYPE[i] <= 0) Particles->MEU[i] = Particles->MEU[i]*Particles->Cv[i] + PSystem->DNS_FL1*PSystem->KNM_VS1*(1.0 - Particles->Cv[i]);
 				}
 				
 				if(Particles->PTYPE[i] >= 2) {
@@ -1414,7 +1414,7 @@ void MpsViscosity::calcWallNoSlipViscosityInteractionVal(MpsParticleSystem *PSys
 					phi = (Particles->Cv[i] - 0.25)*PSystem->PHI_1/(1.0 - 0.25);
 					phi2 = (Particles->Cv[i] - 0.25)*PSystem->PHI_2/(1.0 - 0.25);
 					if(Particles->Cv[i] <= 0.25) { phi = PSystem->epsilonZero; phi2 = PSystem->epsilonZero; } // phi close to zero
-					if(Particles->PTYPE[i] <= 0) phi = PSystem->PHI_BED;
+					// if(Particles->PTYPE[i] <= 0) phi = PSystem->PHI_BED;
 
 					// normal stress calculation (mechanical pressure)
 					Particles->p_rheo_new[i] = Particles->p_smooth[i];
@@ -1429,9 +1429,9 @@ void MpsViscosity::calcWallNoSlipViscosityInteractionVal(MpsParticleSystem *PSys
 					if(Particles->p_smooth[i] < (WL[kx][ky] - posZi)*PSystem->DNS_FL1*gravityMod) Particles->p_smooth[i] = (WL[kx][ky] - posZi)*PSystem->DNS_FL1*gravityMod;
 					if(PSystem->timeCurrent <= 1.0) normal_stress = (1.0 - PSystem->timeCurrent)*(Particles->p_smooth[i] - (WL[kx][ky] - posZi)*PSystem->DNS_FL1*gravityMod) + PSystem->timeCurrent*normal_stress;
 
-//					normal_stress = Particles->p_smooth[i] - (WL[kx][ky] - posZi)*PSystem->DNS_FL1*gravityMod;
-//					normal_stress = Particles->p_smooth[i];
-					//normal_stress=normal_stress*0.61*1500/PSystem->DNS_FL2;
+					// normal_stress = Particles->p_smooth[i] - (WL[kx][ky] - posZi)*PSystem->DNS_FL1*gravityMod;
+					// normal_stress = Particles->p_smooth[i];
+					// normal_stress = normal_stress*0.61*1500/PSystem->DNS_FL2;
 					if(normal_stress < 1.0 || Particles->Cv[i] < 0.5) normal_stress = 1.0;
 
 					Particles->p_rheo_new[i] = normal_stress;
@@ -1483,7 +1483,7 @@ void MpsViscosity::calcWallNoSlipViscosityInteractionVal(MpsParticleSystem *PSys
 					//Particles->MEU[i] = Particles->MEU_Y[i] + meu_0;
 					
 					if(Particles->II[i] == 0 || Particles->MEU[i]>visc_max) Particles->MEU[i] = visc_max;
-					if(Particles->PTYPE[i] <= 0) Particles->MEU[i] = Particles->MEU[i]*Particles->Cv[i] + PSystem->DNS_FL1*PSystem->KNM_VS1*(1.0 - Particles->Cv[i]);
+					// if(Particles->PTYPE[i] <= 0) Particles->MEU[i] = Particles->MEU[i]*Particles->Cv[i] + PSystem->DNS_FL1*PSystem->KNM_VS1*(1.0 - Particles->Cv[i]);
 				}
 				
 				if(Particles->PTYPE[i] >= 2) {

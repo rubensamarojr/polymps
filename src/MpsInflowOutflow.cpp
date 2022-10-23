@@ -296,8 +296,8 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 
 				Particles->motherID[idIO1] = i;
 				Particles->motherID[idIO2] = i;
-				// Particles->press[idIO1] = Pio.press;
-				// Particles->press[idIO2] = Pio.press;
+				Particles->press[idIO1] = Pio.press;
+				Particles->press[idIO2] = Pio.press;
 				// w: ioPlan wall
 				// Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
 				// Particles->press[idIO1] = Pio.press * 2.0 - Particles->press[i];
@@ -396,8 +396,12 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 					Particles->motherID[idIO2] = idReal;
 
 					Particles->press[idReal] = Particles->press[i];
-					// Particles->press[idIO1] = Pio.press;
-					// Particles->press[idIO2] = Pio.press;
+					Particles->press[idIO1] = Pio.press;
+					Particles->press[idIO2] = Pio.press;
+					// w: ioPlan wall
+					// Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
+					// Particles->press[idIO1] = Pio.press * 2.0 - Particles->press[i];
+					// Particles->press[idIO2] = (Pio.press * (2.0 * signDistAux + PSystem->partDist) - Particles->press[i] * (signDistAux + PSystem->partDist) ) / (signDistAux + 0.01 * PSystem->reS2);
 
 					Particles->ioflowID[idReal] = Pio.ID;
 					Particles->ioflowID[idIO1] = Pio.ID;
