@@ -2,6 +2,7 @@
 // Distributed under the MIT License.
 
 #include <iostream>		///< cerr
+// #include <unordered_set>
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
 #include <Eigen/IterativeLinearSolvers>
@@ -650,6 +651,13 @@ void MpsPressure::solvePressurePoissonPndInOutflow(MpsParticleSystem *PSystem, M
 #endif
 }
 
+// INFLOW OUTFLOW FLAGS
+// #define DEBUG_MATRIX	// Show matrix for one particle in matrix
+
+// IO pressure extrapolation. 1: Pio = Pw, 2: Pio = 2Pw - Pi, 3: Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
+#define PIO_EXT 1
+// Set PIO_EXT in file MpsInflowOutflow.cpp, near function checkCreateDeleteParticlesInOutflow line ~ 150
+
 // Solve linear system solver PPE with PND deviation + divergence-free condition source term 
 // and considering Inflow/Ouftlow Boundary Condition
 // Perform a bi conjugate gradient stabilized solver for sparse square asymmetric matrix A to solve Ax=b
@@ -657,7 +665,9 @@ void MpsPressure::solvePressurePoissonPndInOutflow(MpsParticleSystem *PSystem, M
 // sourceTerm	vector
 void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets, MpsInflowOutflow *ioFlow) {
 
-	bool wallContrib = false;
+	bool wallContrib = false;	// Virtual wall particles considered
+	// int pio_ext = 0;		// IO pressure extrapolation. 0: Pio = Pw, 1: Pio = 2Pw - Pi, 2: Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
+	// Change pio_ext in file MpsInflowOutflow.cpp, function checkCreateDeleteParticlesInOutflow line ~ 150
 
 	// Set ID of real particles in the PPE matrix
 	int numRealParticles = 0;
@@ -687,6 +697,22 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 	Particles->sourceTerm.setZero(); // Right hand side-vector set to zero
 	vector<T> coeffs(numRealParticles * n_size); // list of non-zeros coefficients with their estimated number of coeffs
 
+#ifdef DEBUG_MATRIX
+	// Debug
+	// Assembly:
+	Eigen::SparseMatrix<double> SpMatDebug(n_size, n_size);	// declares a column-major sparse matrix type of double
+	using Tdebug = Eigen::Triplet<double>;
+	vector<T> coeffDebug(n_size * n_size);				// list of non-zeros coefficients
+	int i0 = 40;
+	int j0 = 0;
+	int jN = 0;
+	double x1, x2, y1, y2, z1, z2;
+	x1 = 0.005 - 0.5*PSystem->partDist; x2 = 0.005 + 0.5*PSystem->partDist;
+	y1 = 0.095 - 0.5*PSystem->partDist; y2 = 0.095 + 0.5*PSystem->partDist;
+	z1 = 0.255 - 0.5*PSystem->partDist; z2 = 0.255 + 0.5*PSystem->partDist;
+#endif
+
+
 // Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
 //#pragma omp parallel for schedule(dynamic,64)
 	for(int ip=0; ip<Particles->numParticles; ip++) {
@@ -701,10 +727,10 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 
 		/// Off-diagonal sum
 		// vector<int> jAux;
-		vector<int> jPPEindex;
-		vector<double> jPPEvalue;
-		jPPEvalue.assign(n_size, 0.0);
-
+		// vector<int> jPPEindex;
+		// vector<double> jPPEvalue;
+		// jPPEvalue.assign(n_size, 0.0);
+		// unordered_set<int> jPPEelements;
 
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
@@ -713,6 +739,43 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 		// double ni = Particles->pndi[i];
 		
 		double sum = 0.0;
+
+#ifdef DEBUG_MATRIX
+		bool condDebug = posXi >= x1 && posXi <= x2 && posYi >= y1 && posYi <= y2 && posZi >= z1 && posZi <= z2;
+		vector<int> jIndexDebug;
+		double sumDebug = 0;
+		if(condDebug) {
+			int ix, iy, iz;
+			Buckets->bucketCoordinates(ix, iy, iz, posXi, posYi, posZi, PSystem);
+			int minZ = (iz-1)*((int)(PSystem->dim-2.0)); int maxZ = (iz+1)*((int)(PSystem->dim-2.0));
+			for(int jz=minZ;jz<=maxZ;jz++) {
+			for(int jy=iy-1;jy<=iy+1;jy++) {
+			for(int jx=ix-1;jx<=ix+1;jx++) {
+				int jb = jz*PSystem->numBucketsXY + jy*PSystem->numBucketsX + jx;
+				int j = Particles->firstParticleInBucket[jb];
+				if(j == -1) continue;
+				double plx, ply, plz;
+				Particles->getPeriodicLengths(jb, plx, ply, plz, PSystem);
+				while(true) {
+					double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
+					Particles->sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2, plx, ply, plz);
+					// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
+					Particles->sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2, plx, ply, plz);
+					// If j is inside the neighborhood of i and 
+					// is not at the same side of im (avoid real j in the virtual neighborhood)
+					if(dstij2 < PSystem->reL2 && (dstij2 < dstimj2 || PSystem->wallType == boundaryWallType::PARTICLE)) {
+					if(j != i) {
+						if (Particles->particleBC[j] == PSystem->inner) {
+							jIndexDebug.push_back(j);
+						}
+					}}
+					j = Particles->nextParticleInSameBucket[j];
+					if(j == -1) break;
+				}
+			}}}
+		}
+#endif
 
 		int ix, iy, iz;
 		Buckets->bucketCoordinates(ix, iy, iz, posXi, posYi, posZi, PSystem);
@@ -734,7 +797,7 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 				Particles->sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2, plx, ply, plz);
 
 				/// Off-diagonal sum
-				int jPPE = -1;// = Particles->ppeID[j];	// PPE matrix index
+				// int jPPE = -1;// = Particles->ppeID[j];	// PPE matrix index
 
 				// bool entrou = false;
 
@@ -747,11 +810,12 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 					// PSystem->coeffPPE = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero)
 					double mat_ij = wL * PSystem->coeffPPE;
 
-					if (Particles->particleBC[j] == PSystem->inner) {
-						jPPE = Particles->ppeID[j];	// PPE matrix index
-						jPPEindex.push_back(jPPE);
-						// jAux.push_back(j);
-					}
+					// if (Particles->particleBC[j] == PSystem->inner) {
+					// 	jPPE = Particles->ppeID[j];	// PPE matrix index
+					// 	jPPEindex.push_back(jPPE);
+					// 	// jAux.push_back(j);
+					// 	jPPEelements.insert(jPPE);
+					// }
 
 					if (Particles->particleType[j] == PSystem->dummyWall) {
 
@@ -760,6 +824,8 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 					
 					}
 					else if(Particles->particleType[j] == PSystem->inOutflowParticle) {
+
+						sum -= mat_ij;	// Add to diagonal
 
 						// Extrapolate pressure to ioFlowParticle
 						// double alp = 0.75;
@@ -800,53 +866,133 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 						int iofID = Particles->ioflowID[j];		// ID of the inOutflow Plane
 						double Pw = ioFlow[iofID].Pio.press;	// InOutFlow pressure
 
-						/// Off-diagonal disconsidered
+#if PIO_EXT == 1
+						/// Off-diagonal only wij
 						/// Pio = Pw
 						Particles->sourceTerm(iPPE) += - mat_ij * Pw;
-						sum -= mat_ij;	// Add to diagonal
+						// sum -= mat_ij;	// Add to diagonal
+#endif
 
-
-						// /// Off-diagonal sum
-						// int im = Particles->motherID[j];	// ID of the real (effective) particle that generates the IO particle
-
-						// int imPPE = Particles->ppeID[im];	// PPE matrix index
+#if PIO_EXT == 2
+						/// Off-diagonal add IO mothers
+						int im = Particles->motherID[j];	// ID of the real (effective) particle that generated the IO particle
+						int imPPE = Particles->ppeID[im];	// PPE matrix index
 						
-						// // Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
-						// double c_jim = mat_ij * ( - Particles->signDist[j] ) / Particles->signDist[im];
-						// Particles->sourceTerm(iPPE) += - mat_ij * Pw * (Particles->signDist[im] - Particles->signDist[j]) / Particles->signDist[im];
+						// Pio = Pw * d1 - Pi * (d1 - 1)
+						double d1 = (Particles->signDist[im] - Particles->signDist[j]) / PSystem->partDist + 1.0;
+						Particles->sourceTerm(iPPE) += - mat_ij * Pw * d1;
+						double c_jim = mat_ij * (d1 - 1.0);
 						
-						// if(iPPE == imPPE) {
-						// 	sum -= c_jim;	// Add to diagonal
-						// }
-						// else {
-						// 	// Check if off-diagonal of the Mother already exists as a Real (effective) neighbor particle
-						// 	auto it = find(jPPEindex.begin(), jPPEindex.end(), imPPE);
-						// 	if(it != jPPEindex.end()) {
-						// 		// Found the item
-						// 		int jIndex = it - jPPEindex.begin();
-						// 		jPPEvalue[jIndex] -= c_jim;
-						// 		// coeffs.at(iPPE, imPPE) += -c_jim;			// Add to off-diagonal
-						// 		// printf(" FOUND j:%d jPPE:%d imPPE:%d im:%d ip:%d i:%d iPPE:%d", j, jPPE, imPPE, im, ip, i, iPPE);
-						// 	}
-						// 	else {
-						// 	// Mother is not a Real (effective) neighbor particle
-						// 		coeffs.push_back(T(iPPE, imPPE, -c_jim));	// Assign off-diagonal
-						// 		// entrou = true;
-						// 	}
-						// }
+						if(imPPE == iPPE) {
+							// Mother is the particle i
+							sum -= c_jim;	// Add to diagonal
+#ifdef DEBUG_MATRIX
+
+							if(condDebug) {sumDebug -= 1.0;}	// Debug
+#endif
+						}
+						else {
+							// Mother is not the particle i
+							coeffs.push_back(T(iPPE, imPPE, -c_jim));	// Assign/Add off-diagonal
+
+#ifdef DEBUG_MATRIX
+							if(condDebug) {
+								auto it = find(jIndexDebug.begin(), jIndexDebug.end(), im);
+								if(it != jIndexDebug.end()) {
+									// Found the item
+									int jIndex = it - jIndexDebug.begin();
+
+									coeffDebug.push_back(Tdebug(i0, jIndex, -1.0));	// Assign/Add off-diagonal
+									j0++;
+								}
+							}
+#endif
+
+						}
+
+#ifdef DEBUG_MATRIX
+						if(condDebug) {jN++;}
+#endif
+
+#endif // PIO_EXT == 2
+						
+#if PIO_EXT == 3
+						/// Off-diagonal add IO mothers
+						int im = Particles->motherID[j];	// ID of the real (effective) particle that generated the IO particle
+						int imPPE = Particles->ppeID[im];	// PPE matrix index
+						
+						// Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
+						double diio = Particles->signDist[im] - Particles->signDist[j] + 0.00 * PSystem->reS2;
+						double diw = Particles->signDist[im] + 0.01 * PSystem->reS2;
+						Particles->sourceTerm(iPPE) += - mat_ij * Pw * diio / diw;
+						double c_jim = mat_ij * (- Particles->signDist[j] + 0.00 * PSystem->reS2) / diw;
+						
+						if(imPPE == iPPE) {
+							// Mother is the particle i
+							sum -= c_jim;	// Add to diagonal
+						}
+						else {
+							// Mother is not the particle i
+							coeffs.push_back(T(iPPE, imPPE, -c_jim));	// Assign/Add off-diagonal
+
+							// // Check if Mother has already been assigned in the loop as a off-diagonal Real (effective) neighbor particle of i
+							// auto it = find(jPPEindex.begin(), jPPEindex.end(), imPPE);
+							// if(it != jPPEindex.end()) {
+							// 	// Found the index
+							// 	int jIndex = it - jPPEindex.begin();
+							// 	jPPEvalue[jIndex] -= c_jim;
+							// 	// coeffs.at(iPPE, imPPE) += -c_jim;			// Add to off-diagonal
+							// 	// printf(" FOUND j:%d jPPE:%d imPPE:%d im:%d ip:%d i:%d iPPE:%d", j, jPPE, imPPE, im, ip, i, iPPE);
+							// }
+							// else {
+							// 	// Mother is not a Real (effective) neighbor particle of i
+							// 	coeffs.push_back(T(iPPE, imPPE, -c_jim));	// Assign off-diagonal
+							// 	// entrou = true;
+							// }
+						}
+#endif // PIO_EXT == 3
+
 					}
 					else {
 
 						sum -= mat_ij;	// Add to diagonal
 						
+#ifdef DEBUG_MATRIX
+						if(condDebug) {sumDebug -= 1.0;}
+#endif
+
 						if (Particles->particleBC[j] == PSystem->inner) {
+							int jPPE = Particles->ppeID[j];	// PPE matrix index
+							coeffs.push_back(T(iPPE, jPPE, mat_ij));	// Assign/Add off-diagonal
 
-							/// Off-diagonal disconsidered
-							// coeffs.push_back(T(iPPE, jPPE, mat_ij)); 	// Assign off-diagonal
 
-							/// Off-diagonal sum
-							int jIndex = jPPEindex.size() - 1;
-							jPPEvalue[jIndex] += mat_ij; 				// Add to off-diagonal
+#ifdef DEBUG_MATRIX
+							if(condDebug) {
+								// coeffDebug.push_back(Tdebug(i0, j0, -1.0));	// Assign/Add off-diagonal
+								// j0++;
+
+								auto it = find(jIndexDebug.begin(), jIndexDebug.end(), j);
+								if(it != jIndexDebug.end()) {
+									// Found the item
+									int jIndex = it - jIndexDebug.begin();
+
+									coeffDebug.push_back(Tdebug(i0, jIndex, -1.0));	// Assign/Add off-diagonal
+									j0++;
+								}
+								jN++;
+							}
+#endif
+
+							// if(pio_1st) {
+							// 	/// Off-diagonal add IO mothers
+							// 	int jIndex = jPPEindex.size() - 1;
+							// 	jPPEvalue[jIndex] += mat_ij; 				// Add to off-diagonal
+							// }
+							// else {
+							// 	/// Off-diagonal only wij
+							// 	coeffs.push_back(T(iPPE, jPPE, mat_ij)); 	// Assign off-diagonal
+							// }
+
 						}
 					}
 				}}
@@ -864,50 +1010,91 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 
 						if(Particles->particleType[j] == PSystem->inOutflowParticle) {
 
-							int iofID = Particles->ioflowID[j];	// ID of the inOutflow Plane
+							sum -= mat_ij;	// Add to diagonal
+
+							int iofID = Particles->ioflowID[j];		// ID of the inOutflow Plane
 							double Pw = ioFlow[iofID].Pio.press;	// InOutFlow pressure
 
-							/// Off-diagonal sum
+#if PIO_EXT == 1
+							/// Off-diagonal only wij
+							/// Pio = Pw
+							Particles->sourceTerm(iPPE) += - mat_ij * Pw;
+							// sum -= mat_ij;	// Add to diagonal
+#elif PIO_EXT == 2
+							/// Off-diagonal add IO mothers
 							int im = Particles->motherID[j];	// ID of the real (effective) particle that generates the IO particle
-
 							int imPPE = Particles->ppeID[im];	// PPE matrix index
+
+							// Pio = Pw * d1 - Pi * (d1 - 1)
+							double d1 = (Particles->signDist[im] - Particles->signDist[j]) / PSystem->partDist + 1.0;
+							Particles->sourceTerm(iPPE) += - mat_ij * Pw * d1;
+							double c_jim = mat_ij * (d1 - 1.0);
 							
-							// Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
-							double c_jim = mat_ij * ( - Particles->signDist[j] ) / Particles->signDist[im];
-							Particles->sourceTerm(iPPE) += - mat_ij * Pw * (Particles->signDist[im] - Particles->signDist[j]) / Particles->signDist[im];
-							
-							if(iPPE == imPPE) {
+							if(imPPE == iPPE) {
+								// Mother is the particle i
 								sum -= c_jim;	// Add to diagonal
 							}
 							else {
-								// Check if off-diagonal of the Mother already exists as a Real (effective) neighbor particle
-								auto it = find(jPPEindex.begin(), jPPEindex.end(), imPPE);
-								if(it != jPPEindex.end()) {
-									// Found the item
-									int jIndex = it - jPPEindex.begin();
-									jPPEvalue[jIndex] -= c_jim;
-									// coeffs.at(iPPE, imPPE) += -c_jim;			// Add to off-diagonal
-									// printf(" FOUND j:%d jPPE:%d imPPE:%d im:%d ip:%d i:%d iPPE:%d", j, jPPE, imPPE, im, ip, i, iPPE);
-								}
+								// Mother is not the particle i
+								coeffs.push_back(T(iPPE, imPPE, -c_jim));	// Assign/Add off-diagonal
+							}
+#elif PIO_EXT == 3
+							/// Off-diagonal add IO mothers
+							int im = Particles->motherID[j];	// ID of the real (effective) particle that generates the IO particle
+							int imPPE = Particles->ppeID[im];	// PPE matrix index
+							
+							// Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
+							double diio = Particles->signDist[im] - Particles->signDist[j] + 0.00 * PSystem->reS2;
+							double diw = Particles->signDist[im] + 0.01 * PSystem->reS2;
+							Particles->sourceTerm(iPPE) += - mat_ij * Pw * diio / diw;
+							double c_jim = mat_ij * (- Particles->signDist[j] + 0.00 * PSystem->reS2) / diw;
+
+							if(imPPE == iPPE) {
+								// Mother is the particle i
+								sum -= c_jim;	// Add to diagonal
+							}
+							else {
+								// Mother is not the particle i
+								coeffs.push_back(T(iPPE, imPPE, -c_jim));	// Assign/Add off-diagonal
+
+								// // Check if Mother has already been assigned in the loop as a off-diagonal Real (effective) neighbor particle of i
+								// auto it = find(jPPEindex.begin(), jPPEindex.end(), imPPE);
+								// if(it != jPPEindex.end()) {
+								// 	// Found the item
+								// 	int jIndex = it - jPPEindex.begin();
+								// 	jPPEvalue[jIndex] -= c_jim;
+								// 	// coeffs.at(iPPE, imPPE) += -c_jim;			// Add to off-diagonal
+								// 	// printf(" FOUND j:%d jPPE:%d imPPE:%d im:%d ip:%d i:%d iPPE:%d", j, jPPE, imPPE, im, ip, i, iPPE);
+								// }
 								// else if(!entrou){
 								// 	// Mother is not a Real (effective) neighbor particle
 								// 	// printf("ENTROU AQUI\n");
 								// 	coeffs.push_back(T(iPPE, imPPE, -c_jim));	// Assign off-diagonal
 								// }
 							}
+#endif
 						}
 						else {
 
 							sum -= mat_ij;	// Add to diagonal
+
+#ifdef DEBUG_MATRIX
+							if(condDebug) {sumDebug -= 1.0;}
+#endif
 							
 							if (Particles->particleBC[j] == PSystem->inner) {
+								int jPPE = Particles->ppeID[j];	// PPE matrix index
+								coeffs.push_back(T(iPPE, jPPE, mat_ij));	// Assign/Add off-diagonal
 
-								/// Off-diagonal disconsidered
-								// coeffs.push_back(T(iPPE, jPPE, mat_ij)); 	// Assign off-diagonal
-
-								/// Off-diagonal sum
-								int jIndex = jPPEindex.size() - 1;
-								jPPEvalue[jIndex] += mat_ij; 				// Add to off-diagonal
+								// if(pio_1st) {
+								// 	/// Off-diagonal add IO mothers
+								// 	int jIndex = jPPEindex.size() - 1;
+								// 	jPPEvalue[jIndex] += mat_ij; 				// Add to off-diagonal
+								// }
+								// else {
+								// 	/// Off-diagonal only wij
+								// 	coeffs.push_back(T(iPPE, jPPE, mat_ij)); 	// Assign off-diagonal
+								// }
 							}
 						}
 					}}
@@ -931,13 +1118,15 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 			}
 		}
 
-		/// Off-diagonal sum
-		if(jPPEindex.size() > 0) {
-			for(int ii = 0; ii < jPPEindex.size(); ii++) {
-				int jPPE = jPPEindex[ii];							// PPE matrix index
-				coeffs.push_back(T(iPPE, jPPE, jPPEvalue[ii])); 	// Assign off-diagonal
-			}
-		}
+		// if(pio_1st) {
+		// 	/// Off-diagonal add IO mothers
+		// 	if(jPPEindex.size() > 0) {
+		// 		for(int ii = 0; ii < jPPEindex.size(); ii++) {
+		// 			int jPPE = jPPEindex[ii];							// PPE matrix index
+		// 			coeffs.push_back(T(iPPE, jPPE, jPPEvalue[ii])); 	// Assign off-diagonal
+		// 		}
+		// 	}
+		// }
 
 		double density;
 		if(Particles->PTYPE[i] == 1) density = PSystem->DNS_FL1;
@@ -954,9 +1143,28 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 		coeffs.push_back(T(iPPE, iPPE, sum));	// Assign diagonal
 		// coeffs.push_back(T(i, i, sum));	// Assign diagonal
 
+#ifdef DEBUG_MATRIX
+		if(condDebug) {
+			coeffDebug.push_back(Tdebug(i0, i0, 55));	// Assign diagonal
+			// coeffDebug.push_back(Tdebug(i0, i0, sumDebug));	// Assign diagonal
+			cout << "i: " << i << " jPIndexSize: " << jIndexDebug.size() << endl;
+		}
+#endif
+
 		//PSystem->coeffPPESource = PSystem->relaxPND/(PSystem->timeStep*PSystem->timeStep*PSystem->pndSmallZero)
 		Particles->sourceTerm(iPPE) += - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
-	
+		
+		// Zhang et al., 2016. Improvement of boundary conditions for nonplanar boundaries represented by polygons with an initial particle arrangement technique
+		// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
+		// double riw[3];
+		// riw[0] = 0.5*(posXi - posMirrorXi); riw[1] = 0.5*(posYi - posMirrorYi); riw[2] = 0.5*(posZi - posMirrorZi);
+		// double riwSqrt = sqrt(riw[0]*riw[0] + riw[1]*riw[1] + riw[2]*riw[2]);
+		// double dri = PSystem->partDist - riwSqrt;
+		// if(dri > PSystem->epsilonZero) {
+		// 	Particles->sourceTerm(iPPE) += - 0.001 * 2.0 * density * dri * riwSqrt / (PSystem->timeStep * PSystem->timeStep * PSystem->lambdaZero);
+		// }
+		
+
 		// Particles->sourceTerm(i) += - PSystem->coeffPPESource*density*(Particles->pndki[i] - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
 		//Particles->sourceTerm(i) += - 4.0*density*(ni - PSystem->pndSmallZero)/(partDist*partDist*PSystem->pndSmallZero) 
 		//				+ 2.0*density*Particles->velDivergence[i]*PSystem->invPartDist;
@@ -980,15 +1188,15 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 		//Particles->sourceTerm(i) += pndc*((1.0-PSystem->relaxPND)*(Particles->pndki[i] - ni) + PSystem->relaxPND*(PSystem->pndSmallZero - pndski[i]))*ddt/PSystem->pndSmallZero;
 		//Particles->sourceTerm(i) += - PSystem->relaxPND*ddt*(pndski[i] - PSystem->pndSmallZero)/PSystem->pndSmallZero;
 
-		//double riw[3], riwSqrt;
+		// double riw[3], riwSqrt;
 		// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
-		//riw[0] = 0.5*(posXi - posMirrorXi); riw[1] = 0.5*(posYi - posMirrorYi); riw[2] = 0.5*(posZi - posMirrorZi);
-		//riwSqrt = sqrt(riw[0]*riw[0] + riw[1]*riw[1] + riw[2]*riw[2]);
-		//double ST1 = - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero);
-		//double ST2 = 0.0;
-		//if(riwSqrt < 0.5*partDist)
-		//	ST2 = - Cdiag*(1.0-beta)*2.0*partDist/PSystem->lambdaZero*(0.5*partDist - riwSqrt)/(PSystem->timeStep*PSystem->timeStep);
-		//Particles->sourceTerm(i) += ST1 + ST2;
+		// riw[0] = 0.5*(posXi - posMirrorXi); riw[1] = 0.5*(posYi - posMirrorYi); riw[2] = 0.5*(posZi - posMirrorZi);
+		// riwSqrt = sqrt(riw[0]*riw[0] + riw[1]*riw[1] + riw[2]*riw[2]);
+		// double ST1 = - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero);
+		// double ST2 = 0.0;
+		// if(riwSqrt < 0.5*partDist)
+		// 	ST2 = - Cdiag*(1.0-beta)*2.0*partDist/PSystem->lambdaZero*(0.5*partDist - riwSqrt)/(PSystem->timeStep*PSystem->timeStep);
+		// Particles->sourceTerm(i) += ST1 + ST2;
 	}
 
 	// Finished setup matrix
@@ -1031,14 +1239,30 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 		int iofID = Particles->ioflowID[idIO];	// ID of the inOutflow Plane
 		double Pw = ioFlow[iofID].Pio.press;	// InOutFlow pressure
 
+#if PIO_EXT == 1
 		// Pio = Pw
 		Particles->press[idIO] = Pw;
+#elif PIO_EXT == 2
+		// Pio = Pw * d1 - Pi * (d1 - 1)
+		int im = Particles->motherID[idIO];		// ID of the real (effective) particle that generates the IO particle
+		double d1 = (Particles->signDist[im] - Particles->signDist[idIO]) / PSystem->partDist + 1.0;
+		Particles->press[idIO] = Pw * d1 - Particles->press[im] * (d1 - 1.0);
+#elif PIO_EXT == 3
+		// Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
+		int im = Particles->motherID[idIO];		// ID of the real (effective) particle that generates the IO particle
+		double diio = Particles->signDist[im] - Particles->signDist[idIO] + 0.00 * PSystem->reS2;
+		double diw = Particles->signDist[im] + 0.01 * PSystem->reS2;
+		Particles->press[idIO] = Pw * diio / diw - Particles->press[im] * (- Particles->signDist[idIO] + 0.00 * PSystem->reS2) / diw;
+#endif
 		
-		// int im = Particles->motherID[idIO];		// ID of the real (effective) particle that generates the IO particle
-		// // Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
-		// Particles->press[idIO] = (Pw * (Particles->signDist[im] - Particles->signDist[idIO]) - Particles->press[im] * (- Particles->signDist[idIO]) ) / Particles->signDist[im];
 	}
 
+
+#ifdef DEBUG_MATRIX
+	SpMatDebug.setFromTriplets(coeffDebug.begin(), coeffDebug.end());
+	cout << "Size: " << n_size << " j0: " << j0 << " jN: " << jN << endl;
+	cout << Eigen::MatrixXd(SpMatDebug) << endl;
+#endif
 
 
 	// Set zero to negative pressures

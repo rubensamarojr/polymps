@@ -142,8 +142,17 @@ void MpsInflowOutflow::setInOutflowVariables(MpsParticleSystem *PSystem, MpsPart
 #endif
 }
 
+
+// IO pressure extrapolation. 1: Pio = Pw, 2: Pio = 2Pw - Pi, 3: Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
+#define PIO_EXT 1
+// Set PIO_EXT in file MpsPressure.cpp, near function solvePressurePoissonPndDivUInOutflow line ~ 660
+
+
 // Check particles in the Inflow/Outflow region, create real and IO particles, or delete real particles
 void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles) {
+
+	// int pio_ext = 0;		// IO pressure extrapolation. 0: Pio = Pw, 1: Pio = 2Pw - Pi, 2: Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
+	// Change pio_ext in file MpsPressure.cpp, function solvePressurePoissonPndDivUInOutflow line ~ 660 
 	
 	//double minDistIOcreation = 1.1*PSystem->partDist;
 	// Auxiliar variables
@@ -291,17 +300,29 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 				Particles->particleBC[idIO2] = PSystem->other;
 				Particles->particleType[idIO1] = PSystem->inOutflowParticle;
 				Particles->particleType[idIO2] = PSystem->inOutflowParticle;
-				Particles->signDist[idIO1] = -signDistAux; // signDistAux is positive
-				Particles->signDist[idIO2] = -signDistAux - PSystem->partDist;
+				Particles->signDist[idIO1] = signDistAux - PSystem->partDist; // signDistAux is positive
+				Particles->signDist[idIO2] = signDistAux - 2.0*PSystem->partDist;
 
 				Particles->motherID[idIO1] = i;
 				Particles->motherID[idIO2] = i;
+
+				// w: ioPlan wall
+#if PIO_EXT == 1
+				// Pio = Pw
 				Particles->press[idIO1] = Pio.press;
 				Particles->press[idIO2] = Pio.press;
-				// w: ioPlan wall
+#elif PIO_EXT == 2
+				// Pio = Pw * d1 - Pi * d2
+				Particles->press[idIO1] = Pio.press * 2.0 - Particles->press[i];
+				Particles->press[idIO2] = Pio.press * 3.0 - Particles->press[i] * 2.0;
+#elif PIO_EXT == 3
 				// Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
-				// Particles->press[idIO1] = Pio.press * 2.0 - Particles->press[i];
-				// Particles->press[idIO2] = (Pio.press * (2.0 * signDistAux + PSystem->partDist) - Particles->press[i] * (signDistAux + PSystem->partDist) ) / (signDistAux + 0.01 * PSystem->reS2);
+				double diio1 = PSystem->partDist + 0.00 * PSystem->reS2;
+				double diio2 = 2.0 * PSystem->partDist + 0.00 * PSystem->reS2;
+				double diw = signDistAux + 0.01 * PSystem->reS2;
+				Particles->press[idIO1] = Pio.press * diio1 / diw - Particles->press[i] * (diio1 - diw + 0.00 * PSystem->reS2) / diw;
+				Particles->press[idIO2] = Pio.press * diio2 / diw - Particles->press[i] * (diio2 - diw + 0.00 * PSystem->reS2) / diw;
+#endif
 				
 				Particles->ioflowID[idIO1] = Pio.ID;
 				Particles->ioflowID[idIO2] = Pio.ID;
@@ -395,13 +416,30 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 					Particles->motherID[idIO1] = idReal;
 					Particles->motherID[idIO2] = idReal;
 
+					Particles->signDist[idReal] = signDistAux - PSystem->partDist; // signDistAux is positive
+					// Particles->signDist[idIO1] = -signDistAux;
+					// Particles->signDist[idIO2] = -signDistAux - PSystem->partDist;
+					Particles->signDist[idIO1] = signDistAux - 2.0*PSystem->partDist;	// Particles->signDist[idReal] - PSystem->partDist
+					Particles->signDist[idIO2] = signDistAux - 3.0*PSystem->partDist;	// Particles->signDist[idReal] - 2.0*PSystem->partDist
+
 					Particles->press[idReal] = Particles->press[i];
+					// w: ioPlan wall
+#if PIO_EXT == 1
+					// Pio = Pw
 					Particles->press[idIO1] = Pio.press;
 					Particles->press[idIO2] = Pio.press;
-					// w: ioPlan wall
+#elif PIO_EXT == 2
+					// Pio = Pw * d1 - Pi * (d1 - 1)
+					Particles->press[idIO1] = Pio.press * 2.0 - Particles->press[idReal];
+					Particles->press[idIO2] = Pio.press * 3.0 - Particles->press[idReal] * 2.0;
+#elif PIO_EXT == 3
 					// Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
-					// Particles->press[idIO1] = Pio.press * 2.0 - Particles->press[i];
-					// Particles->press[idIO2] = (Pio.press * (2.0 * signDistAux + PSystem->partDist) - Particles->press[i] * (signDistAux + PSystem->partDist) ) / (signDistAux + 0.01 * PSystem->reS2);
+					double diio1 = PSystem->partDist + 0.00 * PSystem->reS2;
+					double diio2 = 2.0 * PSystem->partDist + 0.00 * PSystem->reS2;
+					double diw = Particles->signDist[idReal] + 0.01 * PSystem->reS2;
+					Particles->press[idIO1] = Pio.press * diio1 / diw - Particles->press[idReal] * (diio1 - diw + 0.00 * PSystem->reS2) / diw;
+					Particles->press[idIO2] = Pio.press * diio2 / diw - Particles->press[idReal] * (diio2 - diw + 0.00 * PSystem->reS2) / diw;
+#endif
 
 					Particles->ioflowID[idReal] = Pio.ID;
 					Particles->ioflowID[idIO1] = Pio.ID;
@@ -410,10 +448,6 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 					Particles->isInIORegion[idReal] = true;
 					Particles->isInIORegion[idIO1] = false;
 					Particles->isInIORegion[idIO2] = false;
-
-					Particles->signDist[idReal] = signDistAux - PSystem->partDist; // signDistAux is positive
-					Particles->signDist[idIO1] = -signDistAux;
-					Particles->signDist[idIO2] = -signDistAux - PSystem->partDist;
 
 					Particles->pndi[idReal] = Particles->pndi[i];
 					Particles->pndi[idIO1] = Particles->pndi[i];
@@ -717,7 +751,7 @@ void MpsInflowOutflow::checkOverlapedIOParticles(MpsParticleSystem *PSystem, Mps
 	// int newNumRealIOParticles = numRealAndIOParticles;
 
 	// int numIOParticlesAux = Particles->numIOParticles;
-	double limitDist2 = 0.6*PSystem->partDist;
+	double limitDist2 = 0.6 * PSystem->partDist; //0.6 * PSystem->partDist;
 	limitDist2 *= limitDist2;
 	int numGhostParticlesAux = 0;
 
