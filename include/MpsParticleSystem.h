@@ -206,8 +206,9 @@ public:
 	double reS;				///< Influence radius small
 	double reL;				///< Influence radius large
 	int gradientType;		///< Pressure gradient: Pj - Pmin = 0; Pj + Pi = 1; Pj + Pi - 2*Pmin = 2; ni*Pj/nj + nj*Pi/ni = 3
-	bool gradientCorrection;// Corrected pressure gradient. No = 0; Yes = 1
+	bool gradientCorrection;///< Corrected pressure gradient. No = 0; Yes = 1
 	double relaxPress;		///< Relaxation factor for pressure correction (<= 1)
+	bool divergenceCorrection;	///< Corrected velocity divergence (divU). No = 0; Yes = 1
 	int mpsType;			///< Explicit MPS = 0;  Weakly compressible MPS = 1
 	double soundSpeed;		///< Sound speed (m/s) (10)
 	double gamma;			///< Gamma weakly compressible MPS

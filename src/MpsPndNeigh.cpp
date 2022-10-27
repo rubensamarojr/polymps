@@ -342,19 +342,19 @@ void MpsPndNeigh::calcPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsParticle *
 	for(int ip=0; ip<Particles->numParticles; ip++) {
 		int i = Particles->particleID[ip];
 //	if(Particles->particleType[i] == PSystem->fluid) {
+		double ni = Particles->pndi[i];
+		if(ni < PSystem->epsilonZero) continue;
+
 		double Di = 0.0; double DivV = 0.0; double flagDi = 1.0; 
 		// double pndAux = 0.0;
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 		double velXi = Particles->vel[i*3  ];	double velYi = Particles->vel[i*3+1];	double velZi = Particles->vel[i*3+2];
 		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
+		double Pi = Particles->press[i];
 		double MC[9];
 		MC[0] = Particles->correcMatrixRow1[i*3];	MC[1] = Particles->correcMatrixRow1[i*3+1];	MC[2] = Particles->correcMatrixRow1[i*3+2];
 		MC[3] = Particles->correcMatrixRow2[i*3];	MC[4] = Particles->correcMatrixRow2[i*3+1];	MC[5] = Particles->correcMatrixRow2[i*3+2];
 		MC[6] = Particles->correcMatrixRow3[i*3];	MC[7] = Particles->correcMatrixRow3[i*3+1];	MC[8] = Particles->correcMatrixRow3[i*3+2];
-
-		double ni = Particles->pndi[i];
-		if(ni < PSystem->epsilonZero) continue;
-		double Pi = Particles->press[i];
 		
 		int ix, iy, iz;
 		Buckets->bucketCoordinates(ix, iy, iz, posXi, posYi, posZi, PSystem);
@@ -421,20 +421,17 @@ void MpsPndNeigh::calcPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsParticle *
 							double vijy = Particles->vel[j*3+1]-velYi;
 							double vijz = Particles->vel[j*3+2]-velZi;
 							double wS = Particles->weight(dst, PSystem->reS, PSystem->weightType);
-							// if(ni > PSystem->epsilonZero)
-							// {
-							// 	DivV += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
-							// }
-							if(PSystem->gradientCorrection == false) {
-								if(ni > PSystem->epsilonZero) {
-									DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[j]/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
-								}
+							// DivV += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
+							if(PSystem->divergenceCorrection == false) {
+								DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[j]/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
+								// DivV += (PSystem->dim/PSystem->pndSmallZero)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
 							}
 							else {
 								double v0ijC = (v0ij*MC[0] + v1ij*MC[1] + v2ij*MC[2]);
 								double v1ijC = (v0ij*MC[3] + v1ij*MC[4] + v2ij*MC[5]);
 								double v2ijC = (v0ij*MC[6] + v1ij*MC[7] + v2ij*MC[8]);
-								DivV += (PSystem->dim/PSystem->pndSmallZero)*(vijx*v0ijC+vijy*v1ijC+vijz*v2ijC)*wS/dstij2;
+								DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[j]/ni)*(vijx*v0ijC+vijy*v1ijC+vijz*v2ijC)*wS/dstij2;
+								// DivV += (PSystem->dim/PSystem->pndSmallZero)*(vijx*v0ijC+vijy*v1ijC+vijz*v2ijC)*wS/dstij2;
 							}
 
 							// M1[0][0] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v0*vijx)*wS/dst2; M1[0][1] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v0*vijy)*wS/dst2; M1[0][2] += (PSystem->dim/PSystem->pndSmallZero)*(nj/ni)*(v0*vijz)*wS/dst2;
@@ -504,8 +501,10 @@ void MpsPndNeigh::calcWallSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsPa
 	for(int ip=0; ip<Particles->numParticles; ip++) {
 		int i = Particles->particleID[ip];
 		double ni = Particles->pndi[i];
+		if(ni < PSystem->epsilonZero) continue;
+
 		//if(Particles->particleType[i] == PSystem->fluid && ni > PSystem->epsilonZero) {
-		if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true && ni > PSystem->epsilonZero) {
+		if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true) {
 	//	if(Particles->particleType[i] == PSystem->fluid) {
 			double DivV = 0.0;
 			//double Pi = Particles->press[i];
@@ -513,6 +512,10 @@ void MpsPndNeigh::calcWallSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsPa
 			double velXi = Particles->vel[i*3  ];	double velYi = Particles->vel[i*3+1];	double velZi = Particles->vel[i*3+2];
 			double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
 	//		double velXi = Velk[i*3  ];	double velYi = Velk[i*3+1];	double velZi = Velk[i*3+2
+			double MC[9];
+			MC[0] = Particles->correcMatrixRow1[i*3];	MC[1] = Particles->correcMatrixRow1[i*3+1];	MC[2] = Particles->correcMatrixRow1[i*3+2];
+			MC[3] = Particles->correcMatrixRow2[i*3];	MC[4] = Particles->correcMatrixRow2[i*3+1];	MC[5] = Particles->correcMatrixRow2[i*3+2];
+			MC[6] = Particles->correcMatrixRow3[i*3];	MC[7] = Particles->correcMatrixRow3[i*3+1];	MC[8] = Particles->correcMatrixRow3[i*3+2];
 
 			// Transformation matrix Rref_i = I - 2.0*normal_iwall*normal_iwall
 			double Rref_i[9], normaliw[3], normalMod2;
@@ -569,7 +572,18 @@ void MpsPndNeigh::calcWallSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsPa
 							double vijx = Particles->vel[j*3  ]-velMirrorXi;
 							double vijy = Particles->vel[j*3+1]-velMirrorYi;
 							double vijz = Particles->vel[j*3+2]-velMirrorZi;
-							DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[j]/ni)*(vijx*v0imj+vijy*v1imj+vijz*v2imj)*wS/dstimj2;
+
+							if(PSystem->divergenceCorrection == false) {
+								DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[j]/ni)*(vijx*v0imj+vijy*v1imj+vijz*v2imj)*wS/dstimj2;
+								// DivV += (PSystem->dim/PSystem->pndSmallZero)*(vijx*v0imj+vijy*v1imj+vijz*v2imj)*wS/dstimj2;
+							}
+							else {
+								double v0imjC = (v0imj*MC[0] + v1imj*MC[1] + v2imj*MC[2]);
+								double v1imjC = (v0imj*MC[3] + v1imj*MC[4] + v2imj*MC[5]);
+								double v2imjC = (v0imj*MC[6] + v1imj*MC[7] + v2imj*MC[8]);
+								DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[j]/ni)*(vijx*v0imjC+vijy*v1imjC+vijz*v2imjC)*wS/dstimj2;
+								// DivV += (PSystem->dim/PSystem->pndSmallZero)*(vijx*v0imjC+vijy*v1imjC+vijz*v2imjC)*wS/dstimj2;
+							}
 						}
 					}
 					j = Particles->nextParticleInSameBucket[j];
@@ -587,7 +601,16 @@ void MpsPndNeigh::calcWallSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsPa
 				double vijx = velXi-velMirrorXi;
 				double vijy = velYi-velMirrorYi;
 				double vijz = velZi-velMirrorZi;
-				DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[i]/ni)*(vijx*v0imi+vijy*v1imi+vijz*v2imi)*wS/dstimi2;
+
+				if(PSystem->divergenceCorrection == false) {
+					DivV += (PSystem->dim/PSystem->pndSmallZero)*(vijx*v0imi+vijy*v1imi+vijz*v2imi)*wS/dstimi2;
+				}
+				else {
+					double v0imiC = (v0imi*MC[0] + v1imi*MC[1] + v2imi*MC[2]);
+					double v1imiC = (v0imi*MC[3] + v1imi*MC[4] + v2imi*MC[5]);
+					double v2imiC = (v0imi*MC[6] + v1imi*MC[7] + v2imi*MC[8]);
+					DivV += (PSystem->dim/PSystem->pndSmallZero)*(vijx*v0imiC+vijy*v1imiC+vijz*v2imiC)*wS/dstimi2;
+				}
 		  	}
 
 			Particles->acc[i*3] += -Particles->pndi[i]*PSystem->timeStep*DivV;
@@ -624,8 +647,10 @@ void MpsPndNeigh::calcWallNoSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, Mps
 	for(int ip=0; ip<Particles->numParticles; ip++) {
 		int i = Particles->particleID[ip];
 		double ni = Particles->pndi[i];
+		if(ni < PSystem->epsilonZero) continue;
+
 		// if(Particles->particleType[i] == PSystem->fluid && ni > PSystem->epsilonZero) {
-		if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true && ni > PSystem->epsilonZero) {
+		if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true) {
 		// if(Particles->particleType[i] == PSystem->fluid) {
 			double DivV = 0.0;
 			//double Pi = Particles->press[i];
@@ -633,6 +658,10 @@ void MpsPndNeigh::calcWallNoSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, Mps
 			double velXi = Particles->vel[i*3  ];	double velYi = Particles->vel[i*3+1];	double velZi = Particles->vel[i*3+2];
 			double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
 			// double velXi = Velk[i*3  ];	double velYi = Velk[i*3+1];	double velZi = Velk[i*3+2
+			double MC[9];
+			MC[0] = Particles->correcMatrixRow1[i*3];	MC[1] = Particles->correcMatrixRow1[i*3+1];	MC[2] = Particles->correcMatrixRow1[i*3+2];
+			MC[3] = Particles->correcMatrixRow2[i*3];	MC[4] = Particles->correcMatrixRow2[i*3+1];	MC[5] = Particles->correcMatrixRow2[i*3+2];
+			MC[6] = Particles->correcMatrixRow3[i*3];	MC[7] = Particles->correcMatrixRow3[i*3+1];	MC[8] = Particles->correcMatrixRow3[i*3+2];
 
 			double Rref_i[9], normaliw[3], normalMod2;
 		    // normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
@@ -708,7 +737,18 @@ void MpsPndNeigh::calcWallNoSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, Mps
 	      					double v0m = (Rref_i[0]*v0imj + Rref_i[1]*v1imj + Rref_i[2]*v2imj);
 							double v1m = (Rref_i[3]*v0imj + Rref_i[4]*v1imj + Rref_i[5]*v2imj);
 							double v2m = (Rref_i[6]*v0imj + Rref_i[7]*v1imj + Rref_i[8]*v2imj);
-							DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[j]/ni)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimj2;
+
+							if(PSystem->divergenceCorrection == false) {
+								DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[j]/ni)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimj2;
+								// DivV += (PSystem->dim/PSystem->pndSmallZero)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimj2;
+							}
+							else {
+								double v0mC = (v0m*MC[0] + v1m*MC[1] + v2m*MC[2]);
+								double v1mC = (v0m*MC[3] + v1m*MC[4] + v2m*MC[5]);
+								double v2mC = (v0m*MC[6] + v1m*MC[7] + v2m*MC[8]);
+								DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[j]/ni)*(vijx*v0mC+vijy*v1mC+vijz*v2mC)*wS/dstimj2;
+								// DivV += (PSystem->dim/PSystem->pndSmallZero)*(vijx*v0mC+vijy*v1mC+vijz*v2mC)*wS/dstimj2;
+							}
 						}
 					}
 					j = Particles->nextParticleInSameBucket[j];
@@ -730,7 +770,16 @@ void MpsPndNeigh::calcWallNoSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, Mps
 				double v0m = (Rref_i[0]*v0imi + Rref_i[1]*v1imi + Rref_i[2]*v2imi);
 				double v1m = (Rref_i[3]*v0imi + Rref_i[4]*v1imi + Rref_i[5]*v2imi);
 				double v2m = (Rref_i[6]*v0imi + Rref_i[7]*v1imi + Rref_i[8]*v2imi);
-				DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[i]/ni)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimi2;
+
+				if(PSystem->divergenceCorrection == false) {
+					DivV += (PSystem->dim/PSystem->pndSmallZero)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimi2;
+				}
+				else {
+					double v0mC = (v0m*MC[0] + v1m*MC[1] + v2m*MC[2]);
+					double v1mC = (v0m*MC[3] + v1m*MC[4] + v2m*MC[5]);
+					double v2mC = (v0m*MC[6] + v1m*MC[7] + v2m*MC[8]);
+					DivV += (PSystem->dim/PSystem->pndSmallZero)*(vijx*v0mC+vijy*v1mC+vijz*v2mC)*wS/dstimi2;
+				}
 		  	}
 
 			Particles->acc[i*3] += -Particles->pndi[i]*PSystem->timeStep*DivV;

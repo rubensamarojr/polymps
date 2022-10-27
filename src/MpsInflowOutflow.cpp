@@ -619,8 +619,15 @@ void MpsInflowOutflow::swapIdRealAndIOParticlesInOutflow(MpsParticleSystem *PSys
 // Be aware with "race condition" in OpenMP
 // Loop only for the created particles
 // #pragma omp parallel for reduction(+:numCreatedRealParticlesAux)
-	// for(int i=0; i<Particles->numCreatedParticles; i++) {
-	// 	int idIO = i + Particles->numParticles;
+// 	for(int i=0; i<Particles->numCreatedParticles; i++) {
+// 		int idIO = i + Particles->numParticles;
+
+// 	int ipf = Particles->numRealAndIOParticles - Particles->numParticles;
+// #pragma omp parallel for reduction(+:numCreatedRealParticlesAux)
+// 	for(int ip=0; ip<ipf; ip++) {
+// 		int idIOp = ip + Particles->numParticles;
+// 		int idIO = Particles->particleID[idIOp];
+
 	for(int idIOp=Particles->numParticles; idIOp<Particles->numRealAndIOParticles; idIOp++) {
 		int idIO = Particles->particleID[idIOp];
 	// Verify if the created particle is real

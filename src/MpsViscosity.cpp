@@ -357,7 +357,7 @@ void MpsViscosity::calcViscosityInteractionVal(MpsParticleSystem *PSystem, MpsPa
 						double vec_ijz = Particles->vel[j*3+2] - velZi;
 						double invDstij2 = 1.0/dstij2;
 
-						if(PSystem->gradientCorrection == false) {
+						if(PSystem->divergenceCorrection == false) {
 							sum1 += vec_ijx*v0ij*wS*invDstij2;
 							sum2 += vec_ijx*v1ij*wS*invDstij2;
 							sum3 += vec_ijx*v2ij*wS*invDstij2;
@@ -400,23 +400,23 @@ void MpsViscosity::calcViscosityInteractionVal(MpsParticleSystem *PSystem, MpsPa
 			Uyx = -PSystem->coeffPressGrad*sum4; Uyy = -PSystem->coeffPressGrad*sum5; Uyz = -PSystem->coeffPressGrad*sum6;
 			Uzx = -PSystem->coeffPressGrad*sum7; Uzy = -PSystem->coeffPressGrad*sum8; Uzz = -PSystem->coeffPressGrad*sum9;
 
-			/*if(PSystem->gradientCorrection == true) {
-				double Uaux[9];
-				Uaux[0] = Uxx*Particles->correcMatrixRow1[i*3] + Uyx*Particles->correcMatrixRow1[i*3+1] + Uzx*Particles->correcMatrixRow1[i*3+2];
-				Uaux[1] = Uxy*Particles->correcMatrixRow1[i*3] + Uyy*Particles->correcMatrixRow1[i*3+1] + Uzy*Particles->correcMatrixRow1[i*3+2];
-				Uaux[2] = Uxz*Particles->correcMatrixRow1[i*3] + Uyz*Particles->correcMatrixRow1[i*3+1] + Uzz*Particles->correcMatrixRow1[i*3+2];
-				Uaux[3] = Uxx*Particles->correcMatrixRow2[i*3] + Uyx*Particles->correcMatrixRow2[i*3+1] + Uzx*Particles->correcMatrixRow2[i*3+2];
-				Uaux[4] = Uxy*Particles->correcMatrixRow2[i*3] + Uyy*Particles->correcMatrixRow2[i*3+1] + Uzy*Particles->correcMatrixRow2[i*3+2];
-				Uaux[5] = Uxz*Particles->correcMatrixRow2[i*3] + Uyz*Particles->correcMatrixRow2[i*3+1] + Uzz*Particles->correcMatrixRow2[i*3+2];
-				Uaux[6] = Uxx*Particles->correcMatrixRow3[i*3] + Uyx*Particles->correcMatrixRow3[i*3+1] + Uzx*Particles->correcMatrixRow3[i*3+2];
-				Uaux[7] = Uxy*Particles->correcMatrixRow3[i*3] + Uyy*Particles->correcMatrixRow3[i*3+1] + Uzy*Particles->correcMatrixRow3[i*3+2];
-				Uaux[8] = Uxz*Particles->correcMatrixRow3[i*3] + Uyz*Particles->correcMatrixRow3[i*3+1] + Uzz*Particles->correcMatrixRow3[i*3+2];
+			// if(PSystem->divergenceCorrection == true) {
+			// 	double Uaux[9];
+			// 	Uaux[0] = Uxx*Particles->correcMatrixRow1[i*3] + Uyx*Particles->correcMatrixRow1[i*3+1] + Uzx*Particles->correcMatrixRow1[i*3+2];
+			// 	Uaux[1] = Uxy*Particles->correcMatrixRow1[i*3] + Uyy*Particles->correcMatrixRow1[i*3+1] + Uzy*Particles->correcMatrixRow1[i*3+2];
+			// 	Uaux[2] = Uxz*Particles->correcMatrixRow1[i*3] + Uyz*Particles->correcMatrixRow1[i*3+1] + Uzz*Particles->correcMatrixRow1[i*3+2];
+			// 	Uaux[3] = Uxx*Particles->correcMatrixRow2[i*3] + Uyx*Particles->correcMatrixRow2[i*3+1] + Uzx*Particles->correcMatrixRow2[i*3+2];
+			// 	Uaux[4] = Uxy*Particles->correcMatrixRow2[i*3] + Uyy*Particles->correcMatrixRow2[i*3+1] + Uzy*Particles->correcMatrixRow2[i*3+2];
+			// 	Uaux[5] = Uxz*Particles->correcMatrixRow2[i*3] + Uyz*Particles->correcMatrixRow2[i*3+1] + Uzz*Particles->correcMatrixRow2[i*3+2];
+			// 	Uaux[6] = Uxx*Particles->correcMatrixRow3[i*3] + Uyx*Particles->correcMatrixRow3[i*3+1] + Uzx*Particles->correcMatrixRow3[i*3+2];
+			// 	Uaux[7] = Uxy*Particles->correcMatrixRow3[i*3] + Uyy*Particles->correcMatrixRow3[i*3+1] + Uzy*Particles->correcMatrixRow3[i*3+2];
+			// 	Uaux[8] = Uxz*Particles->correcMatrixRow3[i*3] + Uyz*Particles->correcMatrixRow3[i*3+1] + Uzz*Particles->correcMatrixRow3[i*3+2];
 
-				Uxx = Uaux[0];	Uxy = Uaux[1];	Uxz = Uaux[2];
-				Uyx = Uaux[3];	Uyy = Uaux[4];	Uyz = Uaux[5];
-				Uzx = Uaux[6];	Uzy = Uaux[7];	Uzz = Uaux[8];
-			}
-			*/
+			// 	Uxx = Uaux[0];	Uxy = Uaux[1];	Uxz = Uaux[2];
+			// 	Uyx = Uaux[3];	Uyy = Uaux[4];	Uyz = Uaux[5];
+			// 	Uzx = Uaux[6];	Uzy = Uaux[7];	Uzz = Uaux[8];
+			// }
+			
 			if(sumWs > PSystem->epsilonZero) {
 				Particles->p_smooth[i] = sum10/sumWs;
 			}

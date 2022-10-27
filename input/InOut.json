@@ -183,10 +183,11 @@
 		},
 		"gradient": {
 			"_comment": "Pressure gradient",
-			"type":			0,		"_comment": "0: Pj - Pmin; 1: Pj + Pi; 2: Pj + Pi - 2*Pmin; 3: ni*Pj/nj + nj*Pi/ni",
+			"type":			2,		"_comment": "0: Pj - Pmin; 1: Pj + Pi; 2: Pj + Pi - 2*Pmin; 3: ni*Pj/nj + nj*Pi/ni",
 			"correction":	false,	"_comment": "Corrected pressure gradient (true or false)",
 			"relax_fact": 	1.0,	"_comment": "Relaxation factor (<= 1.0)"
 		},
+		"divergence_correction" :	true,	"_comment": "Corrected (DivU) velocity divergence (true or false)",
 		"_comment": "MPS type",
 		"_comment": "0:Explicit",
 		"_comment": "1:Weakly compressible",
@@ -213,8 +214,8 @@
 			}
 		},
 		"particle_shifting": {
-			"type": 		1,			"_comment": "0: OFF; 1(shift velocity): DW*Uij; 2(shift particle): GradCi",
-			"DRI": 			0.001,		"_comment": "Type 1: Adjusted velocity paramater (DW*Uij) DRI <= 0.01",
+			"type": 		0,			"_comment": "0: OFF; 1(shift velocity): DW*Uij; 2(shift particle): GradCi",
+			"DRI": 			0.0001,		"_comment": "Type 1: Adjusted velocity paramater (DW*Uij) DRI <= 0.01",
 			"maxDu":		0.1,		"_comment": "Type 1: For robustness purpose, velocity deviation is restricted by maxDu",
 			"coef_A":		2.0,		"_comment": "Type 2: Dimensionless number 1-6 (GradCi) coef_A = 2.0 provides a good compromise",
 			"mach_number":	0.1,		"_comment": "Type 2: Mach number Ma~0.1 (GradCi)",

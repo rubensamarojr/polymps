@@ -40,6 +40,23 @@ public:
 	 * @see        <a href="https://doi.org/10.1016/j.cma.2010.12.001" target="_blank">Step-by-step improvement of MPS method in simulating violent free-surface motions and impact-loads</a>
 	 */
 	void correctionMatrix(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+
+	/**
+	 * @brief      Computes the correction matrix
+	 * @details    Contribution of the closest polygon wall.
+	 * @param      PSystem    The physical system
+	 * @param      Particles  The particles data
+	 * @param      Buckets    The buckets data
+	 * @see        <a href="https://doi.org/10.1016/j.cma.2010.12.001" target="_blank">Step-by-step improvement of MPS method in simulating violent free-surface motions and impact-loads</a>
+	 */
+	void correctionMatrixWall(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+	
+	/**
+	 * @brief      Updates the correction matrix
+	 * @param      PSystem    The physical system
+	 * @param      Particles  The particles data
+	 */
+	void updateCorrectionMatrix(MpsParticleSystem *PSystem, MpsParticle *Particles);
 	
 	/**
 	 * @brief      Computes the determinant of a matrix of dimension PSystem->dim x PSystem->dim

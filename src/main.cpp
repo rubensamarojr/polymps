@@ -393,8 +393,12 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 		}
 
 		// Compute correction matrix
-		if(partSyst->gradientCorrection == true) {
+		if(partSyst->gradientCorrection == true || partSyst->divergenceCorrection == true) {
 			vectMatr->correctionMatrix(partSyst, part, buck);
+			if(partSyst->wallType == boundaryWallType::POLYGON) {
+				vectMatr->correctionMatrixWall(partSyst, part, buck);
+			}
+			vectMatr->updateCorrectionMatrix(partSyst, part);
 		}
 
 		// PND, number of neighbors and NPCD calculation
@@ -441,8 +445,12 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 		partPress->calcPress(partSyst, part, buck, inOutflow);
 		
 		// Compute correction matrix
-		if(partSyst->gradientCorrection == true) {
+		if(partSyst->gradientCorrection == true || partSyst->divergenceCorrection == true) {
 			vectMatr->correctionMatrix(partSyst, part, buck);
+			if(partSyst->wallType == boundaryWallType::POLYGON) {
+				vectMatr->correctionMatrixWall(partSyst, part, buck);
+			}
+			vectMatr->updateCorrectionMatrix(partSyst, part);
 		}
 		
 		// Calculation of acceleration due pressure gradient

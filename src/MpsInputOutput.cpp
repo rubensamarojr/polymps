@@ -423,6 +423,8 @@ void MpsInputOutput::readInputFile(MpsParticleSystem *PSystem, MpsParticle *Part
 				cout << e.what() << '\n';
 			}
 
+			PSystem->divergenceCorrection = jnumerical.value("divergence_correction", false);
+
 			PSystem->mpsType = jnumerical.value("mps_type", 1);
 
 			try {

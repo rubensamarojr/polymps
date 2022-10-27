@@ -63,6 +63,147 @@ void MpsVectorMatrix::correctionMatrix(MpsParticleSystem *PSystem, MpsParticle *
 			}
 		}}}
 
+//		if(i == 200) {
+//			printf("\n X %e %e %e ", Particles->correcMatrixRow1[i*3  ], Particles->correcMatrixRow1[i*3+1], Particles->correcMatrixRow1[i*3+2]);
+//			printf("\n Y %e %e %e ", Particles->correcMatrixRow2[i*3  ], Particles->correcMatrixRow2[i*3+1], Particles->correcMatrixRow2[i*3+2]);
+//			printf("\n Z %e %e %e \n", Particles->correcMatrixRow3[i*3  ], Particles->correcMatrixRow3[i*3+1], Particles->correcMatrixRow3[i*3+2]);
+//		}
+	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	cout << __PRETTY_FUNCTION__ << endl;
+#endif
+}
+
+// Correction matrix (Polygon wall)
+void MpsVectorMatrix::correctionMatrixWall(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
+	//  Inverse transformation matrix Rinv_i = - I
+	// double Rinv_i[9];
+	// Rinv_i[0] = -1.0; Rinv_i[1] =  0.0; Rinv_i[2] =  0.0;
+	// Rinv_i[3] =  0.0; Rinv_i[4] = -1.0; Rinv_i[5] =  0.0;
+	// Rinv_i[6] =  0.0; Rinv_i[7] =  0.0; Rinv_i[8] = -1.0;
+#pragma omp parallel for schedule(dynamic,64)
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
+//	if(particleType[i] == PSystem->fluid) {
+		if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true) {
+			double corrMatr_i[9];
+			corrMatr_i[0] = 0.0;	corrMatr_i[1] = 0.0;	corrMatr_i[2] = 0.0;
+			corrMatr_i[3] = 0.0;	corrMatr_i[4] = 0.0;	corrMatr_i[5] = 0.0;
+			corrMatr_i[6] = 0.0;	corrMatr_i[7] = 0.0;	corrMatr_i[8] = 0.0;
+			// Particles->correcMatrixRow1[i*3  ] = 0.0; Particles->correcMatrixRow1[i*3+1] = 0.0; Particles->correcMatrixRow1[i*3+2] = 0.0;
+			// Particles->correcMatrixRow2[i*3  ] = 0.0; Particles->correcMatrixRow2[i*3+1] = 0.0; Particles->correcMatrixRow2[i*3+2] = 0.0;
+			// Particles->correcMatrixRow3[i*3  ] = 0.0; Particles->correcMatrixRow3[i*3+1] = 0.0; Particles->correcMatrixRow3[i*3+2] = 0.0;
+			double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
+			double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
+			
+			// Transformation matrix Rref_i = I - 2.0*normal_iwall*normal_iwall
+			double Rref_i[9], normaliw[3], normalMod2;
+			// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
+			normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
+			normalMod2 = normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2];
+			if(normalMod2 > PSystem->epsilonZero) {
+				double normalMod = sqrt(normalMod2);
+				normaliw[0] = normaliw[0]/normalMod;
+				normaliw[1] = normaliw[1]/normalMod;
+				normaliw[2] = normaliw[2]/normalMod;
+			}
+			else {
+				normaliw[0] = 0;
+				normaliw[1] = 0;
+				normaliw[2] = 0;
+			}
+
+			//  Transformation matrix Rref_i = I - 2.0*normal_iwall*normal_iwall
+			Rref_i[0] = 1.0 - 2.0*normaliw[0]*normaliw[0]; Rref_i[1] = 0.0 - 2.0*normaliw[0]*normaliw[1]; Rref_i[2] = 0.0 - 2.0*normaliw[0]*normaliw[2];
+			Rref_i[3] = 0.0 - 2.0*normaliw[1]*normaliw[0]; Rref_i[4] = 1.0 - 2.0*normaliw[1]*normaliw[1]; Rref_i[5] = 0.0 - 2.0*normaliw[1]*normaliw[2];
+			Rref_i[6] = 0.0 - 2.0*normaliw[2]*normaliw[0]; Rref_i[7] = 0.0 - 2.0*normaliw[2]*normaliw[1]; Rref_i[8] = 1.0 - 2.0*normaliw[2]*normaliw[2];
+
+			int ix, iy, iz;
+			Buckets->bucketCoordinates(ix, iy, iz, posXi, posYi, posZi, PSystem);
+			int minZ = (iz-1)*((int)(PSystem->dim-2.0)); int maxZ = (iz+1)*((int)(PSystem->dim-2.0));
+			for(int jz=minZ;jz<=maxZ;jz++) {
+			for(int jy=iy-1;jy<=iy+1;jy++) {
+			for(int jx=ix-1;jx<=ix+1;jx++) {
+				int jb = jz*PSystem->numBucketsXY + jy*PSystem->numBucketsX + jx;
+				int j = Particles->firstParticleInBucket[jb];
+				if(j == -1) continue;
+				double plx, ply, plz;
+				Particles->getPeriodicLengths(jb, plx, ply, plz, PSystem);
+				while(true) {
+					double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
+					
+					// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
+					Particles->sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2, plx, ply, plz);
+					// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
+					Particles->sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2, plx, ply, plz);
+
+					// If j is inside the neighborhood of i and im (intersection) and 
+					// is not at the same side of im (avoid real j in the virtual neihborhood)
+					if(dstij2 < PSystem->reS2 && dstimj2 < PSystem->reS2 && dstij2 < dstimj2) {
+					if(j != i) {
+						double dst = sqrt(dstimj2);
+						double wS = Particles->weight(dst, PSystem->reS, PSystem->weightType);
+						double invDstimj2 = 1.0/dstimj2;
+						// Particles->correcMatrixRow1[i*3  ] += wS*v0imj*v0imj*invDstimj2;	Particles->correcMatrixRow1[i*3+1] += wS*v0imj*v1imj*invDstimj2;	Particles->correcMatrixRow1[i*3+2] += wS*v0imj*v2imj*invDstimj2;
+						// Particles->correcMatrixRow2[i*3  ] += wS*v1imj*v0imj*invDstimj2;	Particles->correcMatrixRow2[i*3+1] += wS*v1imj*v1imj*invDstimj2;	Particles->correcMatrixRow2[i*3+2] += wS*v1imj*v2imj*invDstimj2;
+						// Particles->correcMatrixRow3[i*3  ] += wS*v2imj*v0imj*invDstimj2;	Particles->correcMatrixRow3[i*3+1] += wS*v2imj*v1imj*invDstimj2;	Particles->correcMatrixRow3[i*3+2] += wS*v2imj*v2imj*invDstimj2;
+
+						// Refelected rij' = Rref_i * ri'j
+						double v0m = (Rref_i[0]*v0imj + Rref_i[1]*v1imj + Rref_i[2]*v2imj);
+						double v1m = (Rref_i[3]*v0imj + Rref_i[4]*v1imj + Rref_i[5]*v2imj);
+						double v2m = (Rref_i[6]*v0imj + Rref_i[7]*v1imj + Rref_i[8]*v2imj);
+
+						corrMatr_i[0] += wS*v0m*v0m*invDstimj2;	corrMatr_i[1] += wS*v0m*v1m*invDstimj2;	corrMatr_i[2] += wS*v0m*v2m*invDstimj2;
+						corrMatr_i[3] += wS*v1m*v0m*invDstimj2;	corrMatr_i[4] += wS*v1m*v1m*invDstimj2;	corrMatr_i[5] += wS*v1m*v2m*invDstimj2;
+						corrMatr_i[6] += wS*v2m*v0m*invDstimj2;	corrMatr_i[7] += wS*v2m*v1m*invDstimj2;	corrMatr_i[8] += wS*v2m*v2m*invDstimj2;
+					}}
+					j = Particles->nextParticleInSameBucket[j];
+					if(j == -1) break;
+				}
+			}}}
+
+			// Add "i" contribution ("i" is a neighbor of "mirror i")
+			double v0imi, v1imi, v2imi, dstimi2;
+			Particles->sqrDistBetweenParticles(i, posMirrorXi, posMirrorYi, posMirrorZi, v0imi, v1imi, v2imi, dstimi2);
+		  	
+			if(dstimi2 < PSystem->reS2) {
+				double dst = sqrt(dstimi2);
+				double wS = Particles->weight(dst, PSystem->reS, PSystem->weightType);
+				double invDstimi2 = 1.0/dstimi2;
+				// Particles->correcMatrixRow1[i*3  ] += wS*v0imi*v0imi*invDstimi2;	Particles->correcMatrixRow1[i*3+1] += wS*v0imi*v1imi*invDstimi2;	Particles->correcMatrixRow1[i*3+2] += wS*v0imi*v2imi*invDstimi2;
+				// Particles->correcMatrixRow2[i*3  ] += wS*v1imi*v0imi*invDstimi2;	Particles->correcMatrixRow2[i*3+1] += wS*v1imi*v1imi*invDstimi2;	Particles->correcMatrixRow2[i*3+2] += wS*v1imi*v2imi*invDstimi2;
+				// Particles->correcMatrixRow3[i*3  ] += wS*v2imi*v0imi*invDstimi2;	Particles->correcMatrixRow3[i*3+1] += wS*v2imi*v1imi*invDstimi2;	Particles->correcMatrixRow3[i*3+2] += wS*v2imi*v2imi*invDstimi2;
+
+				// Refelected rij' = Rref_i * ri'j
+				double v0m = (Rref_i[0]*v0imi + Rref_i[1]*v1imi + Rref_i[2]*v2imi);
+				double v1m = (Rref_i[3]*v0imi + Rref_i[4]*v1imi + Rref_i[5]*v2imi);
+				double v2m = (Rref_i[6]*v0imi + Rref_i[7]*v1imi + Rref_i[8]*v2imi);
+
+				corrMatr_i[0] += wS*v0m*v0m*invDstimi2;	corrMatr_i[1] += wS*v0m*v1m*invDstimi2;	corrMatr_i[2] += wS*v0m*v2m*invDstimi2;
+				corrMatr_i[3] += wS*v1m*v0m*invDstimi2;	corrMatr_i[4] += wS*v1m*v1m*invDstimi2;	corrMatr_i[5] += wS*v1m*v2m*invDstimi2;
+				corrMatr_i[6] += wS*v2m*v0m*invDstimi2;	corrMatr_i[7] += wS*v2m*v1m*invDstimi2;	corrMatr_i[8] += wS*v2m*v2m*invDstimi2;
+			}
+
+			// Add polygon wall contribution to the corrected matrix
+			Particles->correcMatrixRow1[i*3  ] += corrMatr_i[0];	Particles->correcMatrixRow1[i*3+1] += corrMatr_i[1];	Particles->correcMatrixRow1[i*3+2] += corrMatr_i[2];
+			Particles->correcMatrixRow2[i*3  ] += corrMatr_i[3];	Particles->correcMatrixRow2[i*3+1] += corrMatr_i[4];	Particles->correcMatrixRow2[i*3+2] += corrMatr_i[5];
+			Particles->correcMatrixRow3[i*3  ] += corrMatr_i[6];	Particles->correcMatrixRow3[i*3+1] += corrMatr_i[7];	Particles->correcMatrixRow3[i*3+2] += corrMatr_i[8];
+		}
+	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	cout << __PRETTY_FUNCTION__ << endl;
+#endif
+}
+
+// Update the corrected matrix
+void MpsVectorMatrix::updateCorrectionMatrix(MpsParticleSystem *PSystem, MpsParticle *Particles) {
+#pragma omp parallel for
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
 		// coeffPressGrad is a negative cte (-dim/noGrad)
 		Particles->correcMatrixRow1[i*3  ] *= -PSystem->coeffPressGrad;	Particles->correcMatrixRow1[i*3+1] *= -PSystem->coeffPressGrad;	Particles->correcMatrixRow1[i*3+2] *= -PSystem->coeffPressGrad;
 		Particles->correcMatrixRow2[i*3  ] *= -PSystem->coeffPressGrad;	Particles->correcMatrixRow2[i*3+1] *= -PSystem->coeffPressGrad;	Particles->correcMatrixRow2[i*3+2] *= -PSystem->coeffPressGrad;
@@ -79,18 +220,7 @@ void MpsVectorMatrix::correctionMatrix(MpsParticleSystem *PSystem, MpsParticle *
 			Particles->correcMatrixRow2[i*3  ] = 0.0;	Particles->correcMatrixRow2[i*3+1] = 1.0;	Particles->correcMatrixRow2[i*3+2] = 0.0;
 			Particles->correcMatrixRow3[i*3  ] = 0.0;	Particles->correcMatrixRow3[i*3+1] = 0.0;	Particles->correcMatrixRow3[i*3+2] = 1.0;
 		}
-
-//		if(i == 200) {
-//			printf("\n X %e %e %e ", Particles->correcMatrixRow1[i*3  ], Particles->correcMatrixRow1[i*3+1], Particles->correcMatrixRow1[i*3+2]);
-//			printf("\n Y %e %e %e ", Particles->correcMatrixRow2[i*3  ], Particles->correcMatrixRow2[i*3+1], Particles->correcMatrixRow2[i*3+2]);
-//			printf("\n Z %e %e %e \n", Particles->correcMatrixRow3[i*3  ], Particles->correcMatrixRow3[i*3+1], Particles->correcMatrixRow3[i*3+2]);
-//		}
 	}
-
-#ifdef SHOW_FUNCT_NAME_PART
-	// print the function name (useful for investigating programs)
-	cout << __PRETTY_FUNCTION__ << endl;
-#endif
 }
 
 // Determinant of matrix

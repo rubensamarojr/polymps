@@ -206,7 +206,7 @@ void MpsPressure::solvePressurePoissonPnd(MpsParticleSystem *PSystem, MpsParticl
 	Particles->sourceTerm.resize(Particles->numParticlesZero); // Resizing a dynamic-size matrix
 	Particles->sourceTerm.setZero(); // Right hand side-vector set to zero
 	vector<T> coeffs(Particles->numParticlesZero * n_size); // list of non-zeros coefficients
-	                                                    // 
+	
 // Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
 //#pragma omp parallel for schedule(dynamic,64)
 	// for(int ip=0; ip<Particles->numParticles; ip++) {
@@ -504,7 +504,7 @@ void MpsPressure::solvePressurePoissonPndInOutflow(MpsParticleSystem *PSystem, M
 	Particles->sourceTerm.resize(Particles->numParticlesZero); // Resizing a dynamic-size matrix
 	Particles->sourceTerm.setZero(); // Right hand side-vector set to zero
 	vector<T> coeffs(Particles->numParticlesZero * n_size); // list of non-zeros coefficients with their estimated number of coeffs
-	                                                    // 
+	
 // Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
 //#pragma omp parallel for schedule(dynamic,64)
 	// for(int ip=0; ip<Particles->numParticles; ip++) {
@@ -654,9 +654,15 @@ void MpsPressure::solvePressurePoissonPndInOutflow(MpsParticleSystem *PSystem, M
 // INFLOW OUTFLOW FLAGS
 // #define DEBUG_MATRIX	// Show matrix for one particle in matrix
 
+// #define VIRTUAL_WALL_CONTRIB // Virtual wall particles considered
+
 // IO pressure extrapolation. 1: Pio = Pw, 2: Pio = 2Pw - Pi, 3: Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
 #define PIO_EXT 1
 // Set PIO_EXT in file MpsInflowOutflow.cpp, near function checkCreateDeleteParticlesInOutflow line ~ 150
+
+// EDAC PRESSURE. Ramachandran et al., 2019. Entropically damped artificial compressibility for SPH.
+// https://doi.org/10.1016/j.compfluid.2018.11.023
+// #define EDAC_PRESS
 
 // Solve linear system solver PPE with PND deviation + divergence-free condition source term 
 // and considering Inflow/Ouftlow Boundary Condition
@@ -665,7 +671,7 @@ void MpsPressure::solvePressurePoissonPndInOutflow(MpsParticleSystem *PSystem, M
 // sourceTerm	vector
 void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets, MpsInflowOutflow *ioFlow) {
 
-	bool wallContrib = false;	// Virtual wall particles considered
+	// bool wallContrib = false;	// Virtual wall particles considered
 	// int pio_ext = 0;		// IO pressure extrapolation. 0: Pio = Pw, 1: Pio = 2Pw - Pi, 2: Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
 	// Change pio_ext in file MpsInflowOutflow.cpp, function checkCreateDeleteParticlesInOutflow line ~ 150
 
@@ -710,7 +716,7 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 	x1 = 0.005 - 0.5*PSystem->partDist; x2 = 0.005 + 0.5*PSystem->partDist;
 	y1 = 0.095 - 0.5*PSystem->partDist; y2 = 0.095 + 0.5*PSystem->partDist;
 	z1 = 0.255 - 0.5*PSystem->partDist; z2 = 0.255 + 0.5*PSystem->partDist;
-#endif
+#endif // DEBUG_MATRIX
 
 
 // Use #pragma omp parallel for schedule(dynamic,64) if there are "for" inside the main "for"
@@ -775,7 +781,7 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 				}
 			}}}
 		}
-#endif
+#endif // DEBUG_MATRIX
 
 		int ix, iy, iz;
 		Buckets->bucketCoordinates(ix, iy, iz, posXi, posYi, posZi, PSystem);
@@ -871,7 +877,7 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 						/// Pio = Pw
 						Particles->sourceTerm(iPPE) += - mat_ij * Pw;
 						// sum -= mat_ij;	// Add to diagonal
-#endif
+#endif // PIO_EXT
 
 #if PIO_EXT == 2
 						/// Off-diagonal add IO mothers
@@ -889,7 +895,7 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 #ifdef DEBUG_MATRIX
 
 							if(condDebug) {sumDebug -= 1.0;}	// Debug
-#endif
+#endif // DEBUG_MATRIX
 						}
 						else {
 							// Mother is not the particle i
@@ -906,13 +912,13 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 									j0++;
 								}
 							}
-#endif
+#endif // DEBUG_MATRIX
 
 						}
 
 #ifdef DEBUG_MATRIX
 						if(condDebug) {jN++;}
-#endif
+#endif // DEBUG_MATRIX
 
 #endif // PIO_EXT == 2
 						
@@ -959,7 +965,7 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 						
 #ifdef DEBUG_MATRIX
 						if(condDebug) {sumDebug -= 1.0;}
-#endif
+#endif // DEBUG_MATRIX
 
 						if (Particles->particleBC[j] == PSystem->inner) {
 							int jPPE = Particles->ppeID[j];	// PPE matrix index
@@ -981,7 +987,7 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 								}
 								jN++;
 							}
-#endif
+#endif // DEBUG_MATRIX
 
 							// if(pio_1st) {
 							// 	/// Off-diagonal add IO mothers
@@ -997,126 +1003,131 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 					}
 				}}
 
-				if(wallContrib) {
-					// Mirror particle of i and j contribution
-					// If j is inside the neighborhood of i and im (intersection) and 
-					// is not at the same side of im (avoid real j in the virtual neihborhood)
-					if(dstij2 < PSystem->reL2 && dstimj2 < PSystem->reL2 && dstij2 < dstimj2) {
-					if(j != i) {
-						double dst = sqrt(dstimj2);
-						double wL = Particles->weight(dst, PSystem->reL, PSystem->weightType);
-						// PSystem->coeffPPE = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero)
-						double mat_ij = wL * PSystem->coeffPPE;
+#ifdef VIRTUAL_WALL_CONTRIB
+				// Mirror particle of i and j contribution
+				// If j is inside the neighborhood of i and im (intersection) and 
+				// is not at the same side of im (avoid real j in the virtual neihborhood)
+				if(dstij2 < PSystem->reL2 && dstimj2 < PSystem->reL2 && dstij2 < dstimj2) {
+				if(j != i) {
+					double dst = sqrt(dstimj2);
+					double wL = Particles->weight(dst, PSystem->reL, PSystem->weightType);
+					// PSystem->coeffPPE = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero)
+					double mat_ij = wL * PSystem->coeffPPE;
 
-						if(Particles->particleType[j] == PSystem->inOutflowParticle) {
+					if(Particles->particleType[j] == PSystem->inOutflowParticle) {
 
-							sum -= mat_ij;	// Add to diagonal
+						sum -= mat_ij;	// Add to diagonal
 
-							int iofID = Particles->ioflowID[j];		// ID of the inOutflow Plane
-							double Pw = ioFlow[iofID].Pio.press;	// InOutFlow pressure
+						int iofID = Particles->ioflowID[j];		// ID of the inOutflow Plane
+						double Pw = ioFlow[iofID].Pio.press;	// InOutFlow pressure
 
 #if PIO_EXT == 1
-							/// Off-diagonal only wij
-							/// Pio = Pw
-							Particles->sourceTerm(iPPE) += - mat_ij * Pw;
-							// sum -= mat_ij;	// Add to diagonal
+						/// Off-diagonal only wij
+						/// Pio = Pw
+						Particles->sourceTerm(iPPE) += - mat_ij * Pw;
+						// sum -= mat_ij;	// Add to diagonal
 #elif PIO_EXT == 2
-							/// Off-diagonal add IO mothers
-							int im = Particles->motherID[j];	// ID of the real (effective) particle that generates the IO particle
-							int imPPE = Particles->ppeID[im];	// PPE matrix index
+						/// Off-diagonal add IO mothers
+						int im = Particles->motherID[j];	// ID of the real (effective) particle that generates the IO particle
+						int imPPE = Particles->ppeID[im];	// PPE matrix index
 
-							// Pio = Pw * d1 - Pi * (d1 - 1)
-							double d1 = (Particles->signDist[im] - Particles->signDist[j]) / PSystem->partDist + 1.0;
-							Particles->sourceTerm(iPPE) += - mat_ij * Pw * d1;
-							double c_jim = mat_ij * (d1 - 1.0);
-							
-							if(imPPE == iPPE) {
-								// Mother is the particle i
-								sum -= c_jim;	// Add to diagonal
-							}
-							else {
-								// Mother is not the particle i
-								coeffs.push_back(T(iPPE, imPPE, -c_jim));	// Assign/Add off-diagonal
-							}
-#elif PIO_EXT == 3
-							/// Off-diagonal add IO mothers
-							int im = Particles->motherID[j];	// ID of the real (effective) particle that generates the IO particle
-							int imPPE = Particles->ppeID[im];	// PPE matrix index
-							
-							// Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
-							double diio = Particles->signDist[im] - Particles->signDist[j] + 0.00 * PSystem->reS2;
-							double diw = Particles->signDist[im] + 0.01 * PSystem->reS2;
-							Particles->sourceTerm(iPPE) += - mat_ij * Pw * diio / diw;
-							double c_jim = mat_ij * (- Particles->signDist[j] + 0.00 * PSystem->reS2) / diw;
-
-							if(imPPE == iPPE) {
-								// Mother is the particle i
-								sum -= c_jim;	// Add to diagonal
-							}
-							else {
-								// Mother is not the particle i
-								coeffs.push_back(T(iPPE, imPPE, -c_jim));	// Assign/Add off-diagonal
-
-								// // Check if Mother has already been assigned in the loop as a off-diagonal Real (effective) neighbor particle of i
-								// auto it = find(jPPEindex.begin(), jPPEindex.end(), imPPE);
-								// if(it != jPPEindex.end()) {
-								// 	// Found the item
-								// 	int jIndex = it - jPPEindex.begin();
-								// 	jPPEvalue[jIndex] -= c_jim;
-								// 	// coeffs.at(iPPE, imPPE) += -c_jim;			// Add to off-diagonal
-								// 	// printf(" FOUND j:%d jPPE:%d imPPE:%d im:%d ip:%d i:%d iPPE:%d", j, jPPE, imPPE, im, ip, i, iPPE);
-								// }
-								// else if(!entrou){
-								// 	// Mother is not a Real (effective) neighbor particle
-								// 	// printf("ENTROU AQUI\n");
-								// 	coeffs.push_back(T(iPPE, imPPE, -c_jim));	// Assign off-diagonal
-								// }
-							}
-#endif
+						// Pio = Pw * d1 - Pi * (d1 - 1)
+						double d1 = (Particles->signDist[im] - Particles->signDist[j]) / PSystem->partDist + 1.0;
+						Particles->sourceTerm(iPPE) += - mat_ij * Pw * d1;
+						double c_jim = mat_ij * (d1 - 1.0);
+						
+						if(imPPE == iPPE) {
+							// Mother is the particle i
+							sum -= c_jim;	// Add to diagonal
 						}
 						else {
+							// Mother is not the particle i
+							coeffs.push_back(T(iPPE, imPPE, -c_jim));	// Assign/Add off-diagonal
+						}
+#elif PIO_EXT == 3
+						/// Off-diagonal add IO mothers
+						int im = Particles->motherID[j];	// ID of the real (effective) particle that generates the IO particle
+						int imPPE = Particles->ppeID[im];	// PPE matrix index
+						
+						// Pio = Pw * di-io / di-w - Pi * (di-io - di-w) / di-w
+						double diio = Particles->signDist[im] - Particles->signDist[j] + 0.00 * PSystem->reS2;
+						double diw = Particles->signDist[im] + 0.01 * PSystem->reS2;
+						Particles->sourceTerm(iPPE) += - mat_ij * Pw * diio / diw;
+						double c_jim = mat_ij * (- Particles->signDist[j] + 0.00 * PSystem->reS2) / diw;
 
-							sum -= mat_ij;	// Add to diagonal
+						if(imPPE == iPPE) {
+							// Mother is the particle i
+							sum -= c_jim;	// Add to diagonal
+						}
+						else {
+							// Mother is not the particle i
+							coeffs.push_back(T(iPPE, imPPE, -c_jim));	// Assign/Add off-diagonal
+
+							// // Check if Mother has already been assigned in the loop as a off-diagonal Real (effective) neighbor particle of i
+							// auto it = find(jPPEindex.begin(), jPPEindex.end(), imPPE);
+							// if(it != jPPEindex.end()) {
+							// 	// Found the item
+							// 	int jIndex = it - jPPEindex.begin();
+							// 	jPPEvalue[jIndex] -= c_jim;
+							// 	// coeffs.at(iPPE, imPPE) += -c_jim;			// Add to off-diagonal
+							// 	// printf(" FOUND j:%d jPPE:%d imPPE:%d im:%d ip:%d i:%d iPPE:%d", j, jPPE, imPPE, im, ip, i, iPPE);
+							// }
+							// else if(!entrou){
+							// 	// Mother is not a Real (effective) neighbor particle
+							// 	// printf("ENTROU AQUI\n");
+							// 	coeffs.push_back(T(iPPE, imPPE, -c_jim));	// Assign off-diagonal
+							// }
+						}
+#endif // PIO_EXT
+					}
+					else {
+
+						sum -= mat_ij;	// Add to diagonal
 
 #ifdef DEBUG_MATRIX
-							if(condDebug) {sumDebug -= 1.0;}
-#endif
-							
-							if (Particles->particleBC[j] == PSystem->inner) {
-								int jPPE = Particles->ppeID[j];	// PPE matrix index
-								coeffs.push_back(T(iPPE, jPPE, mat_ij));	// Assign/Add off-diagonal
+						if(condDebug) {sumDebug -= 1.0;}
+#endif // DEBUG_MATRIX
+						
+						if (Particles->particleBC[j] == PSystem->inner) {
+							int jPPE = Particles->ppeID[j];	// PPE matrix index
+							coeffs.push_back(T(iPPE, jPPE, mat_ij));	// Assign/Add off-diagonal
 
-								// if(pio_1st) {
-								// 	/// Off-diagonal add IO mothers
-								// 	int jIndex = jPPEindex.size() - 1;
-								// 	jPPEvalue[jIndex] += mat_ij; 				// Add to off-diagonal
-								// }
-								// else {
-								// 	/// Off-diagonal only wij
-								// 	coeffs.push_back(T(iPPE, jPPE, mat_ij)); 	// Assign off-diagonal
-								// }
-							}
+							// if(pio_1st) {
+							// 	/// Off-diagonal add IO mothers
+							// 	int jIndex = jPPEindex.size() - 1;
+							// 	jPPEvalue[jIndex] += mat_ij; 				// Add to off-diagonal
+							// }
+							// else {
+							// 	/// Off-diagonal only wij
+							// 	coeffs.push_back(T(iPPE, jPPE, mat_ij)); 	// Assign off-diagonal
+							// }
 						}
-					}}
-				}
+					}
+				}}
+#endif // VIRTUAL_WALL_CONTRIB
+
 				
 				j = Particles->nextParticleInSameBucket[j];
 				if(j == -1) break;
 			}
 		}}}
 
-		if(wallContrib) {
-			// Add "i" contribution ("i" is a neighbor of "mirror i")
-			double v0imi, v1imi, v2imi, dstimi2;
-			Particles->sqrDistBetweenParticles(i, posMirrorXi, posMirrorYi, posMirrorZi, v0imi, v1imi, v2imi, dstimi2);
-			
-			if(dstimi2 < PSystem->reL2) {
-				double dst = sqrt(dstimi2);
-				double wL = Particles->weight(dst, PSystem->reL, PSystem->weightType);
-				// PSystem->coeffPPE = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero)
-				sum -= wL * PSystem->coeffPPE;	// Add to diagonal
-			}
+#ifdef VIRTUAL_WALL_CONTRIB
+		// Add "i" contribution ("i" is a neighbor of "mirror i")
+		double v0imi, v1imi, v2imi, dstimi2;
+		// int j = i;
+		Particles->sqrDistBetweenParticles(i, posMirrorXi, posMirrorYi, posMirrorZi, v0imi, v1imi, v2imi, dstimi2);
+		
+		if(dstimi2 < PSystem->reL2) {
+			double dst = sqrt(dstimi2);
+			double wL = Particles->weight(dst, PSystem->reL, PSystem->weightType);
+			// PSystem->coeffPPE = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero)
+			// sum -= wL * PSystem->coeffPPE;	// Add to diagonal
+
+			double pgh = Particles->RHO[i]*(v0imi*PSystem->gravityX + v1imi*PSystem->gravityY + v2imi*PSystem->gravityZ)*wL;
+			Particles->sourceTerm(iPPE) -= PSystem->coeffPPE*pgh;
 		}
+#endif // VIRTUAL_WALL_CONTRIB
 
 		// if(pio_1st) {
 		// 	/// Off-diagonal add IO mothers
@@ -1135,6 +1146,15 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 		// Increase diagonal
 		sum -= PSystem->alphaCompressibility*density/(PSystem->timeStep*PSystem->timeStep);
 
+
+#ifdef EDAC_PRESS
+		// Results not good !!
+		double Cs = 10 * 1.0;
+		double nu_edac = 0.5 * PSystem->reS * Cs / 8.0;
+		sum += 1.0 / (nu_edac * PSystem->timeStep);
+		Particles->sourceTerm(iPPE) -= Particles->press[i] / (nu_edac * PSystem->timeStep);
+#endif
+
 		//double Cdiag = 1.0;
 		//double beta = 0.9;
 		//double DI2 = Cdiag*beta*PSystem->coeffPPE*PSystem->relaxPND*pndWallContribution[i]*density;
@@ -1149,7 +1169,7 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 			// coeffDebug.push_back(Tdebug(i0, i0, sumDebug));	// Assign diagonal
 			cout << "i: " << i << " jPIndexSize: " << jIndexDebug.size() << endl;
 		}
-#endif
+#endif // DEBUG_MATRIX
 
 		//PSystem->coeffPPESource = PSystem->relaxPND/(PSystem->timeStep*PSystem->timeStep*PSystem->pndSmallZero)
 		Particles->sourceTerm(iPPE) += - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
@@ -1253,7 +1273,7 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 		double diio = Particles->signDist[im] - Particles->signDist[idIO] + 0.00 * PSystem->reS2;
 		double diw = Particles->signDist[im] + 0.01 * PSystem->reS2;
 		Particles->press[idIO] = Pw * diio / diw - Particles->press[im] * (- Particles->signDist[idIO] + 0.00 * PSystem->reS2) / diw;
-#endif
+#endif // PIO_EXT
 		
 	}
 
@@ -1262,7 +1282,7 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 	SpMatDebug.setFromTriplets(coeffDebug.begin(), coeffDebug.end());
 	cout << "Size: " << n_size << " j0: " << j0 << " jN: " << jN << endl;
 	cout << Eigen::MatrixXd(SpMatDebug) << endl;
-#endif
+#endif // DEBUG_MATRIX
 
 
 	// Set zero to negative pressures
@@ -1281,7 +1301,7 @@ void MpsPressure::solveConjugateGradient(Eigen::SparseMatrix<double> p_mat, MpsP
 	//cg.setTolerance(1.0e-9);
 	cg.compute(p_mat);
 	if (cg.info() != Eigen::ComputationInfo::Success) {
-		cerr << "Error: Failed decompostion." << endl;
+		cerr << "Error: Failed decomposition." << endl;
 	}
 	//Particles->pressurePPE = cg.solve(Particles->sourceTerm);
 
@@ -1324,7 +1344,7 @@ void MpsPressure::solveBiConjugateGradientStabilized(Eigen::SparseMatrix<double>
 	//bicg.setTolerance(1.0e-9);
 	bicg.compute(p_mat);
 	if (bicg.info() != Eigen::ComputationInfo::Success) {
-		cerr << "Error: Failed decompostion." << endl;
+		cerr << "Error: Failed decomposition." << endl;
 	}
 
 // 	// If the number of ghost particles is positive (in the current step), then the number
@@ -1421,7 +1441,7 @@ void MpsPressure::calcVelDivergence(MpsParticleSystem *PSystem, MpsParticle *Par
 							double dst = sqrt(dstij2);
 							double wS = Particles->weight(dst, PSystem->reS, PSystem->weightType);
 							
-							if(PSystem->gradientCorrection == false) {
+							if(PSystem->divergenceCorrection == false) {
 								if(ni > PSystem->epsilonZero) {
 									// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
 									DivV += dim_nSmall*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
@@ -1431,6 +1451,7 @@ void MpsPressure::calcVelDivergence(MpsParticleSystem *PSystem, MpsParticle *Par
 								double v0ijC = (v0ij*MC[0] + v1ij*MC[1] + v2ij*MC[2]);
 								double v1ijC = (v0ij*MC[3] + v1ij*MC[4] + v2ij*MC[5]);
 								double v2ijC = (v0ij*MC[6] + v1ij*MC[7] + v2ij*MC[8]);
+								// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0ijC+vijy*v1ijC+vijz*v2ijC)*wS/dstij2;
 								DivV += dim_nSmall*(vijx*v0ijC+vijy*v1ijC+vijz*v2ijC)*wS/dstij2;
 							}
 //						}
@@ -1471,7 +1492,11 @@ void MpsPressure::calcWallSlipVelDivergence(MpsParticleSystem *PSystem, MpsParti
 			double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 			double velXi = Particles->vel[i*3  ];	double velYi = Particles->vel[i*3+1];	double velZi = Particles->vel[i*3+2];
 			double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
-			
+			double MC[9];
+			MC[0] = Particles->correcMatrixRow1[i*3];	MC[1] = Particles->correcMatrixRow1[i*3+1];	MC[2] = Particles->correcMatrixRow1[i*3+2];
+			MC[3] = Particles->correcMatrixRow2[i*3];	MC[4] = Particles->correcMatrixRow2[i*3+1];	MC[5] = Particles->correcMatrixRow2[i*3+2];
+			MC[6] = Particles->correcMatrixRow3[i*3];	MC[7] = Particles->correcMatrixRow3[i*3+1];	MC[8] = Particles->correcMatrixRow3[i*3+2];
+
 			// Transformation matrix Rref_i = I - 2.0*normal_iwall*normal_iwall
 			double Rref_i[9], normaliw[3], normalMod2;
 			// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
@@ -1528,8 +1553,19 @@ void MpsPressure::calcWallSlipVelDivergence(MpsParticleSystem *PSystem, MpsParti
 							double vijy = Particles->vel[j*3+1]-velMirrorYi;
 							double vijz = Particles->vel[j*3+2]-velMirrorZi;
 
-							// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0imj+vijy*v1imj+vijz*v2imj)*wS/dstimj2;
-							DivV += dim_nSmall*(vijx*v0imj+vijy*v1imj+vijz*v2imj)*wS/dstimj2;
+							if(PSystem->divergenceCorrection == false) {
+								if(ni > PSystem->epsilonZero) {
+									// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0imj+vijy*v1imj+vijz*v2imj)*wS/dstimj2;
+									DivV += dim_nSmall*(vijx*v0imj+vijy*v1imj+vijz*v2imj)*wS/dstimj2;
+								}
+							}
+							else {
+								double v0imjC = (v0imj*MC[0] + v1imj*MC[1] + v2imj*MC[2]);
+								double v1imjC = (v0imj*MC[3] + v1imj*MC[4] + v2imj*MC[5]);
+								double v2imjC = (v0imj*MC[6] + v1imj*MC[7] + v2imj*MC[8]);
+								// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0imjC+vijy*v1imjC+vijz*v2imjC)*wS/dstimj2;
+								DivV += dim_nSmall*(vijx*v0imjC+vijy*v1imjC+vijz*v2imjC)*wS/dstimj2;
+							}
 						}
 					}
 					j = Particles->nextParticleInSameBucket[j];
@@ -1548,8 +1584,17 @@ void MpsPressure::calcWallSlipVelDivergence(MpsParticleSystem *PSystem, MpsParti
 				double vijy = velYi-velMirrorYi;
 				double vijz = velZi-velMirrorZi;
 
-				// DivV += dim_nSmall*(Particles->pndi[i]/ni)*(vijx*v0imi+vijy*v1imi+vijz*v2imi)*wS/dstimi2;
-				DivV += dim_nSmall*(vijx*v0imi+vijy*v1imi+vijz*v2imi)*wS/dstimi2;
+				if(PSystem->divergenceCorrection == false) {
+					if(ni > PSystem->epsilonZero) {
+						DivV += dim_nSmall*(vijx*v0imi+vijy*v1imi+vijz*v2imi)*wS/dstimi2;
+					}
+				}
+				else {
+					double v0imiC = (v0imi*MC[0] + v1imi*MC[1] + v2imi*MC[2]);
+					double v1imiC = (v0imi*MC[3] + v1imi*MC[4] + v2imi*MC[5]);
+					double v2imiC = (v0imi*MC[6] + v1imi*MC[7] + v2imi*MC[8]);
+					DivV += dim_nSmall*(vijx*v0imiC+vijy*v1imiC+vijz*v2imiC)*wS/dstimi2;
+				}
 			}
 
 			Particles->velDivergence[i] += DivV;
@@ -1589,6 +1634,10 @@ void MpsPressure::calcWallNoSlipVelDivergence(MpsParticleSystem *PSystem, MpsPar
 			double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 			double velXi = Particles->vel[i*3  ];	double velYi = Particles->vel[i*3+1];	double velZi = Particles->vel[i*3+2];
 			double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
+			double MC[9];
+			MC[0] = Particles->correcMatrixRow1[i*3];	MC[1] = Particles->correcMatrixRow1[i*3+1];	MC[2] = Particles->correcMatrixRow1[i*3+2];
+			MC[3] = Particles->correcMatrixRow2[i*3];	MC[4] = Particles->correcMatrixRow2[i*3+1];	MC[5] = Particles->correcMatrixRow2[i*3+2];
+			MC[6] = Particles->correcMatrixRow3[i*3];	MC[7] = Particles->correcMatrixRow3[i*3+1];	MC[8] = Particles->correcMatrixRow3[i*3+2];
 
 			double Rref_i[9], normaliw[3], normalMod2;
 			// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
@@ -1664,9 +1713,20 @@ void MpsPressure::calcWallNoSlipVelDivergence(MpsParticleSystem *PSystem, MpsPar
 							double v0m = (Rref_i[0]*v0imj + Rref_i[1]*v1imj + Rref_i[2]*v2imj);
 							double v1m = (Rref_i[3]*v0imj + Rref_i[4]*v1imj + Rref_i[5]*v2imj);
 							double v2m = (Rref_i[6]*v0imj + Rref_i[7]*v1imj + Rref_i[8]*v2imj);
-							
-							// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimj2;
-							DivV += dim_nSmall*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimj2;
+
+							if(PSystem->divergenceCorrection == false) {
+								if(ni > PSystem->epsilonZero) {
+									// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimj2;
+									DivV += dim_nSmall*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimj2;
+								}
+							}
+							else {
+								double v0mC = (v0m*MC[0] + v1m*MC[1] + v2m*MC[2]);
+								double v1mC = (v0m*MC[3] + v1m*MC[4] + v2m*MC[5]);
+								double v2mC = (v0m*MC[6] + v1m*MC[7] + v2m*MC[8]);
+								// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0mC+vijy*v1mC+vijz*v2mC)*wS/dstimj2;
+								DivV += dim_nSmall*(vijx*v0mC+vijy*v1mC+vijz*v2mC)*wS/dstimj2;
+							}
 						}
 					}
 					j = Particles->nextParticleInSameBucket[j];
@@ -1689,8 +1749,17 @@ void MpsPressure::calcWallNoSlipVelDivergence(MpsParticleSystem *PSystem, MpsPar
 				double v1m = (Rref_i[3]*v0imi + Rref_i[4]*v1imi + Rref_i[5]*v2imi);
 				double v2m = (Rref_i[6]*v0imi + Rref_i[7]*v1imi + Rref_i[8]*v2imi);
 
-				// DivV += dim_nSmall*(Particles->pndi[i]/ni)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimi2;
-				DivV += dim_nSmall*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimi2;
+				if(PSystem->divergenceCorrection == false) {
+					if(ni > PSystem->epsilonZero) {
+						DivV += dim_nSmall*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimi2;
+					}
+				}
+				else {
+					double v0mC = (v0m*MC[0] + v1m*MC[1] + v2m*MC[2]);
+					double v1mC = (v0m*MC[3] + v1m*MC[4] + v2m*MC[5]);
+					double v2mC = (v0m*MC[6] + v1m*MC[7] + v2m*MC[8]);
+					DivV += dim_nSmall*(vijx*v0mC+vijy*v1mC+vijz*v2mC)*wS/dstimi2;
+				}
 			}
 
 			Particles->velDivergence[i] += DivV;
@@ -1965,22 +2034,22 @@ void MpsPressure::predictionWallPressGradient(MpsParticleSystem *PSystem, MpsPar
 			double Pi = Particles->press[i];			double ni = Particles->pndi[i];		double pressMin = Pi;
 			
 			// Wall gradient Mitsume`s model
-		    double Rref_i[9], normaliw[3], normaliwSqrt;
-		    // normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
-		    normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
-		    normaliwSqrt = sqrt(normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2]);
-		    if(normaliwSqrt > PSystem->epsilonZero) {
-		    	normaliw[0] = normaliw[0]/normaliwSqrt;
-		    	normaliw[1] = normaliw[1]/normaliwSqrt;
-		    	normaliw[2] = normaliw[2]/normaliwSqrt;
-		    }
-		    else {
-		    	normaliw[0] = 0.0;
-		    	normaliw[1] = 0.0;
-		    	normaliw[2] = 0.0;
-		    }
-		    //  Transformation matrix Rref_i = I - 2.0*normal_iwall*normal_iwall
-		    Rref_i[0] = 1.0 - 2.0*normaliw[0]*normaliw[0]; Rref_i[1] = 0.0 - 2.0*normaliw[0]*normaliw[1]; Rref_i[2] = 0.0 - 2.0*normaliw[0]*normaliw[2];
+			double Rref_i[9], normaliw[3], normaliwSqrt;
+			// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
+			normaliw[0] = 0.5*(posXi - posMirrorXi); normaliw[1] = 0.5*(posYi - posMirrorYi); normaliw[2] = 0.5*(posZi - posMirrorZi);
+			normaliwSqrt = sqrt(normaliw[0]*normaliw[0] + normaliw[1]*normaliw[1] + normaliw[2]*normaliw[2]);
+			if(normaliwSqrt > PSystem->epsilonZero) {
+				normaliw[0] = normaliw[0]/normaliwSqrt;
+				normaliw[1] = normaliw[1]/normaliwSqrt;
+				normaliw[2] = normaliw[2]/normaliwSqrt;
+			}
+			else {
+				normaliw[0] = 0.0;
+				normaliw[1] = 0.0;
+				normaliw[2] = 0.0;
+			}
+			//  Transformation matrix Rref_i = I - 2.0*normal_iwall*normal_iwall
+			Rref_i[0] = 1.0 - 2.0*normaliw[0]*normaliw[0]; Rref_i[1] = 0.0 - 2.0*normaliw[0]*normaliw[1]; Rref_i[2] = 0.0 - 2.0*normaliw[0]*normaliw[2];
 			Rref_i[3] = 0.0 - 2.0*normaliw[1]*normaliw[0]; Rref_i[4] = 1.0 - 2.0*normaliw[1]*normaliw[1]; Rref_i[5] = 0.0 - 2.0*normaliw[1]*normaliw[2];
 			Rref_i[6] = 0.0 - 2.0*normaliw[2]*normaliw[0]; Rref_i[7] = 0.0 - 2.0*normaliw[2]*normaliw[1]; Rref_i[8] = 1.0 - 2.0*normaliw[2]*normaliw[2];
 			// Taylor pressure Pj
@@ -2281,6 +2350,11 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 		double pressMin = Particles->press[i];
 		double Pi = Particles->press[i];
 		double ni = Particles->pndi[i];
+		double MC[9];
+		MC[0] = Particles->correcMatrixRow1[i*3];	MC[1] = Particles->correcMatrixRow1[i*3+1];	MC[2] = Particles->correcMatrixRow1[i*3+2];
+		MC[3] = Particles->correcMatrixRow2[i*3];	MC[4] = Particles->correcMatrixRow2[i*3+1];	MC[5] = Particles->correcMatrixRow2[i*3+2];
+		MC[6] = Particles->correcMatrixRow3[i*3];	MC[7] = Particles->correcMatrixRow3[i*3+1];	MC[8] = Particles->correcMatrixRow3[i*3+2];
+
 		// Wall gradient Mitsume`s model
 		double Rref_i[9], normaliw[3], normaliwSqrt;
 		// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
@@ -2394,7 +2468,15 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 						if(ni > PSystem->epsilonZero && nj > PSystem->epsilonZero)
 							wS *= (ni*Pj/nj + nj*Pi/ni)/dstimj2;
 					}
-					accX += v0imj*wS;	accY += v1imj*wS;	accZ += v2imj*wS;
+
+					if(PSystem->gradientCorrection == false) {
+						accX += v0imj*wS;	accY += v1imj*wS;	accZ += v2imj*wS;
+					}
+					else {
+						accX += (v0imj*MC[0] + v1imj*MC[1] + v2imj*MC[2])*wS;
+						accY += (v0imj*MC[3] + v1imj*MC[4] + v2imj*MC[5])*wS;
+						accZ += (v0imj*MC[6] + v1imj*MC[7] + v2imj*MC[8])*wS;
+					}
 				}}
 				j = Particles->nextParticleInSameBucket[j];
 				if(j == -1) break;
@@ -2428,7 +2510,15 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 				if(ni > PSystem->epsilonZero && nj > PSystem->epsilonZero)
 					wS *= (ni*Pj/nj + nj*Pi/ni)/dstimi2;
 			}
-			accX += v0imi*wS;	accY += v1imi*wS;	accZ += v2imi*wS;
+
+			if(PSystem->gradientCorrection == false) {
+				accX += v0imi*wS;	accY += v1imi*wS;	accZ += v2imi*wS;
+			}
+			else {
+				accX += (v0imi*MC[0] + v1imi*MC[1] + v2imi*MC[2])*wS;
+				accY += (v0imi*MC[3] + v1imi*MC[4] + v2imi*MC[5])*wS;
+				accZ += (v0imi*MC[6] + v1imi*MC[7] + v2imi*MC[8])*wS;
+			}
 	  	}
 
 		// Repulsive force
