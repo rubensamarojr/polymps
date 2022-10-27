@@ -660,6 +660,9 @@ void MpsPressure::solvePressurePoissonPndInOutflow(MpsParticleSystem *PSystem, M
 #define PIO_EXT 1
 // Set PIO_EXT in file MpsInflowOutflow.cpp, near function checkCreateDeleteParticlesInOutflow line ~ 150
 
+// Divergence model. 1: Original, 2: Mojtaba
+#define DIV_MOD 1
+
 // EDAC PRESSURE. Ramachandran et al., 2019. Entropically damped artificial compressibility for SPH.
 // https://doi.org/10.1016/j.compfluid.2018.11.023
 // #define EDAC_PRESS
@@ -1403,6 +1406,8 @@ void MpsPressure::calcVelDivergence(MpsParticleSystem *PSystem, MpsParticle *Par
 		if(Particles->particleType[i] == PSystem->fluid) {
 		double DivV = 0.0;
 		double ni = Particles->pndi[i];
+		if(ni < PSystem->epsilonZero) continue;	// Avoid division by zero
+
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 		double velXi = Particles->vel[i*3  ];	double velYi = Particles->vel[i*3+1];	double velZi = Particles->vel[i*3+2];
 		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
@@ -1442,17 +1447,21 @@ void MpsPressure::calcVelDivergence(MpsParticleSystem *PSystem, MpsParticle *Par
 							double wS = Particles->weight(dst, PSystem->reS, PSystem->weightType);
 							
 							if(PSystem->divergenceCorrection == false) {
-								if(ni > PSystem->epsilonZero) {
-									// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
-									DivV += dim_nSmall*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
-								}
+#if DIV_MOD == 1
+								DivV += dim_nSmall*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
+#elif DIV_MOD == 2
+								DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0ij+vijy*v1ij+vijz*v2ij)*wS/dstij2;
+#endif
 							}
 							else {
 								double v0ijC = (v0ij*MC[0] + v1ij*MC[1] + v2ij*MC[2]);
 								double v1ijC = (v0ij*MC[3] + v1ij*MC[4] + v2ij*MC[5]);
 								double v2ijC = (v0ij*MC[6] + v1ij*MC[7] + v2ij*MC[8]);
-								// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0ijC+vijy*v1ijC+vijz*v2ijC)*wS/dstij2;
+#if DIV_MOD == 1
 								DivV += dim_nSmall*(vijx*v0ijC+vijy*v1ijC+vijz*v2ijC)*wS/dstij2;
+#elif DIV_MOD == 2
+								DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0ijC+vijy*v1ijC+vijz*v2ijC)*wS/dstij2;
+#endif
 							}
 //						}
 					}
@@ -1487,7 +1496,9 @@ void MpsPressure::calcWallSlipVelDivergence(MpsParticleSystem *PSystem, MpsParti
 		int i = Particles->particleID[ip];
 	// if(Particles->particleType[i] == PSystem->fluid) {
 		double ni = Particles->pndi[i];
-		if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true && ni > PSystem->epsilonZero) {
+		if(ni < PSystem->epsilonZero) continue;	// Avoid division by zero
+
+		if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true) {
 			double DivV = 0.0;
 			double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 			double velXi = Particles->vel[i*3  ];	double velYi = Particles->vel[i*3+1];	double velZi = Particles->vel[i*3+2];
@@ -1554,17 +1565,21 @@ void MpsPressure::calcWallSlipVelDivergence(MpsParticleSystem *PSystem, MpsParti
 							double vijz = Particles->vel[j*3+2]-velMirrorZi;
 
 							if(PSystem->divergenceCorrection == false) {
-								if(ni > PSystem->epsilonZero) {
-									// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0imj+vijy*v1imj+vijz*v2imj)*wS/dstimj2;
-									DivV += dim_nSmall*(vijx*v0imj+vijy*v1imj+vijz*v2imj)*wS/dstimj2;
-								}
+#if DIV_MOD == 1
+								DivV += dim_nSmall*(vijx*v0imj+vijy*v1imj+vijz*v2imj)*wS/dstimj2;
+#elif DIV_MOD == 2
+								DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0imj+vijy*v1imj+vijz*v2imj)*wS/dstimj2;
+#endif
 							}
 							else {
 								double v0imjC = (v0imj*MC[0] + v1imj*MC[1] + v2imj*MC[2]);
 								double v1imjC = (v0imj*MC[3] + v1imj*MC[4] + v2imj*MC[5]);
 								double v2imjC = (v0imj*MC[6] + v1imj*MC[7] + v2imj*MC[8]);
-								// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0imjC+vijy*v1imjC+vijz*v2imjC)*wS/dstimj2;
+#if DIV_MOD == 1
 								DivV += dim_nSmall*(vijx*v0imjC+vijy*v1imjC+vijz*v2imjC)*wS/dstimj2;
+#elif DIV_MOD == 2
+								DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0imjC+vijy*v1imjC+vijz*v2imjC)*wS/dstimj2;
+#endif
 							}
 						}
 					}
@@ -1585,9 +1600,7 @@ void MpsPressure::calcWallSlipVelDivergence(MpsParticleSystem *PSystem, MpsParti
 				double vijz = velZi-velMirrorZi;
 
 				if(PSystem->divergenceCorrection == false) {
-					if(ni > PSystem->epsilonZero) {
-						DivV += dim_nSmall*(vijx*v0imi+vijy*v1imi+vijz*v2imi)*wS/dstimi2;
-					}
+					DivV += dim_nSmall*(vijx*v0imi+vijy*v1imi+vijz*v2imi)*wS/dstimi2;
 				}
 				else {
 					double v0imiC = (v0imi*MC[0] + v1imi*MC[1] + v2imi*MC[2]);
@@ -1627,8 +1640,10 @@ void MpsPressure::calcWallNoSlipVelDivergence(MpsParticleSystem *PSystem, MpsPar
 	for(int ip=0; ip<Particles->numParticles; ip++) {
 		int i = Particles->particleID[ip];
 		double ni = Particles->pndi[i];
+		if(ni < PSystem->epsilonZero) continue;	// Avoid division by zero
+
 		// if(Particles->particleType[i] == PSystem->fluid && ni > PSystem->epsilonZero) {
-		if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true && ni > PSystem->epsilonZero) {
+		if(Particles->particleType[i] == PSystem->fluid && Particles->particleNearWall[i] == true) {
 		// if(Particles->particleType[i] == PSystem->fluid) {
 			double DivV = 0.0;
 			double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
@@ -1715,17 +1730,21 @@ void MpsPressure::calcWallNoSlipVelDivergence(MpsParticleSystem *PSystem, MpsPar
 							double v2m = (Rref_i[6]*v0imj + Rref_i[7]*v1imj + Rref_i[8]*v2imj);
 
 							if(PSystem->divergenceCorrection == false) {
-								if(ni > PSystem->epsilonZero) {
-									// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimj2;
-									DivV += dim_nSmall*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimj2;
-								}
+#if DIV_MOD == 1
+								DivV += dim_nSmall*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimj2;
+#elif DIV_MOD == 1
+								DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimj2;
+#endif
 							}
 							else {
 								double v0mC = (v0m*MC[0] + v1m*MC[1] + v2m*MC[2]);
 								double v1mC = (v0m*MC[3] + v1m*MC[4] + v2m*MC[5]);
 								double v2mC = (v0m*MC[6] + v1m*MC[7] + v2m*MC[8]);
-								// DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0mC+vijy*v1mC+vijz*v2mC)*wS/dstimj2;
+#if DIV_MOD == 1
 								DivV += dim_nSmall*(vijx*v0mC+vijy*v1mC+vijz*v2mC)*wS/dstimj2;
+#elif DIV_MOD == 2
+								DivV += dim_nSmall*(Particles->pndi[j]/ni)*(vijx*v0mC+vijy*v1mC+vijz*v2mC)*wS/dstimj2;
+#endif
 							}
 						}
 					}
@@ -1750,9 +1769,7 @@ void MpsPressure::calcWallNoSlipVelDivergence(MpsParticleSystem *PSystem, MpsPar
 				double v2m = (Rref_i[6]*v0imi + Rref_i[7]*v1imi + Rref_i[8]*v2imi);
 
 				if(PSystem->divergenceCorrection == false) {
-					if(ni > PSystem->epsilonZero) {
-						DivV += dim_nSmall*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimi2;
-					}
+					DivV += dim_nSmall*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimi2;
 				}
 				else {
 					double v0mC = (v0m*MC[0] + v1m*MC[1] + v2m*MC[2]);
