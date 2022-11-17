@@ -147,6 +147,11 @@ void MpsInflowOutflow::setInOutflowVariables(MpsParticleSystem *PSystem, MpsPart
 #define PIO_EXT 1
 // Set PIO_EXT in file MpsPressure.cpp, near function solvePressurePoissonPndDivUInOutflow line ~ 660
 
+// Type of BC 0: cte, 1: sin
+#define IO_TYP 0
+
+#define FREQ 0.5
+
 
 // Check particles in the Inflow/Outflow region, create real and IO particles, or delete real particles
 void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PSystem, MpsParticle *Particles) {
@@ -309,8 +314,16 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 				// w: ioPlan wall
 #if PIO_EXT == 1
 				// Pio = Pw
-				Particles->press[idIO1] = Pio.press;
-				Particles->press[idIO2] = Pio.press;
+#if IO_TYP == 0
+				 Particles->press[idIO1] = Pio.press;
+				 Particles->press[idIO2] = Pio.press;
+#elif IO_TYP == 1
+				double c11 = 1.0;
+				if(Pio.ID == 1) c11 = -1.0;
+				Particles->press[idIO1] = Pio.press * (1.0 + c11 * sin(2.0 * M_PI * FREQ * PSystem->timeCurrent));
+				Particles->press[idIO2] = Pio.press * (1.0 + c11 * sin(2.0 * M_PI * FREQ * PSystem->timeCurrent));
+#endif
+
 #elif PIO_EXT == 2
 				// Pio = Pw * d1 - Pi * d2
 				Particles->press[idIO1] = Pio.press * 2.0 - Particles->press[i];
@@ -339,6 +352,9 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 				Particles->pndski[idIO2] = Particles->pndski[i];
 				Particles->pndSmall[idIO1] = Particles->pndSmall[i];
 				Particles->pndSmall[idIO2] = Particles->pndSmall[i];
+
+				Particles->concentration[idIO1] = Particles->concentration[i];
+				Particles->concentration[idIO2] = Particles->concentration[i];
 
 				// Update lastParticle ID
 // The atomic construct allows multiple threads to safely update a shared (global) variable
@@ -426,8 +442,16 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 					// w: ioPlan wall
 #if PIO_EXT == 1
 					// Pio = Pw
+#if IO_TYP == 0
 					Particles->press[idIO1] = Pio.press;
 					Particles->press[idIO2] = Pio.press;
+#elif IO_TYP == 1
+					double c11 = 1.0;
+					if(Pio.ID == 1) c11 = -1.0;
+					Particles->press[idIO1] = Pio.press * (1.0 + c11 * sin(2.0 * M_PI * FREQ * PSystem->timeCurrent));
+					Particles->press[idIO2] = Pio.press * (1.0 + c11 * sin(2.0 * M_PI * FREQ * PSystem->timeCurrent));
+#endif
+
 #elif PIO_EXT == 2
 					// Pio = Pw * d1 - Pi * (d1 - 1)
 					Particles->press[idIO1] = Pio.press * 2.0 - Particles->press[idReal];
@@ -468,6 +492,10 @@ void MpsInflowOutflow::checkCreateDeleteParticlesInOutflow(MpsParticleSystem *PS
 					Particles->pndski[idIO2] = Particles->pndski[i];
 					Particles->pndSmall[idIO1] = Particles->pndSmall[i];
 					Particles->pndSmall[idIO2] = Particles->pndSmall[i];
+
+					Particles->concentration[idReal] = Particles->concentration[i];
+					Particles->concentration[idIO1] = Particles->concentration[i];
+					Particles->concentration[idIO2] = Particles->concentration[i];
 
 					// Update lastParticle ID
 // The atomic construct allows multiple threads to safely update a shared (global) variable

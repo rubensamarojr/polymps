@@ -27,25 +27,25 @@
 	},
 	"pathNames": {
 		"_comment": "Paths of input and output files/folders",
-		"particle_grid_file":	"input/grid/3D_square_tube_mps.grid",
-		"mesh_rigid_file": 		"input/stl/square-tube-small-Body-hollow.stl",
+		"particle_grid_file":	"input/grid/3D_circle_tube_lo0p0050_mps.grid",
+		"mesh_rigid_file": 		"input/stl/circle-tube-hollow-R0p0525.stl",
 		"mesh_deformable_file": "input/stl/elastic_beam_16.stl", 		"_comment": "NOT WORKING !!",
 		"mesh_forced_file": 	"input/stl/tank_liao_forced_gate.stl", 	"_comment": "NOT WORKING !!",
-		"vtu_output_folder":	"output/InOut_lo0p0100_Sin_DP700-T2p0s-30s",
+		"vtu_output_folder":	"output/InOutCircle_lo0p0050_DP30",
 		"forceTxt_file":		"output/dambreak01_force.txt", 			"_comment": "NOT WORKING !!",
 		"pressTxt_file":		"output/dambreak01_press.txt", 			"_comment": "NOT WORKING !!"
 	},
 	"domain": {
 		"_comment": "Geometry dimension limits of the analysis domain (m)",
 		"min": {
-			"x":	-0.3,
-			"y":	-0.3,
-			"z":	0.0
+			"x":	-0.01,
+			"y":	-0.01,
+			"z":	-0.01
 		},
 		"max": {
-			"x":	1.0, 
-			"y":	0.3,
-			"z":	0.6
+			"x":	0.17,
+			"y":	0.11,
+			"z":	0.11
 		},
 		"boundary": {
 			"_comment": "Periodic Boundary Condition",
@@ -82,7 +82,7 @@
 						"y":	0.0,
 						"z":	0.0
 					},
-					"pressure": 350.0,	"_comment": "Cte pressure (Pa)"
+					"pressure": 30.0,	"_comment": "Cte pressure (Pa)"
 				},
 				{
 					"id":	1,
@@ -105,7 +105,7 @@
 						"y":	0.0,
 						"z":	0.0
 					},
-					"pressure": 350.0,	"_comment": "Cte pressure (Pa)"
+					"pressure": 0.0,	"_comment": "Cte pressure (Pa)"
 				}
 			]
 		}
@@ -161,10 +161,10 @@
 	"numerical": {
 		"_comment": "Numerical parameters",
 		"dimension": 		3,			"_comment": "Dimension (2 or 3)",
-		"particle_dist": 	0.01,		"_comment": "Average particle distance (m)",
+		"particle_dist": 	0.005,		"_comment": "Average particle distance (m)",
 		"time_step": 		0.0005,	"_comment": "Time step (s)",
-		"final_time": 		50.0,		"_comment": "Time of simulation (s)",
-		"iter_output": 		200,		"_comment": "Number of iterations to determine the output interval",
+		"final_time": 		30.0,		"_comment": "Time of simulation (s)",
+		"iter_output": 		100,		"_comment": "Number of iterations to determine the output interval",
 		"CFL_number":	 	0.2,		"_comment": "Courant (CFL) condition number (0.2 is recomendable)",
 		"_comment": "Weight function",
 		"_comment": "0: wij = re/rij - 1",
@@ -214,7 +214,7 @@
 			}
 		},
 		"particle_shifting": {
-			"type": 		2,			"_comment": "0: OFF; 1(shift velocity): DW*Uij; 2(shift position): GradCi",
+			"type": 		2,			"_comment": "0: OFF; 1(shift velocity): DW*Uij; 2(shift particle): GradCi",
 			"DRI": 			0.0001,		"_comment": "Type 1: Adjusted velocity paramater (DW*Uij) DRI <= 0.01",
 			"maxDu":		0.1,		"_comment": "Type 1: For robustness purpose, velocity deviation is restricted by maxDu",
 			"coef_A":		0.01,		"_comment": "Type 2: Dimensionless number 1-6 (GradCi) coef_A = 2.0 provides a good compromise",

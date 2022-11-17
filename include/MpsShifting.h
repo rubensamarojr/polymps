@@ -42,16 +42,6 @@ public:
 	void calcShifting(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
 
 	/**
-	 * @brief      Calculates normal vector on the fluid particle.
-	 * @details    The surface normal is a weighted summation of direction vectors. Contribution of the neighboring particles.
-	 * @param      PSystem    The particle system
-	 * @param      Particles  The particles data
-	 * @param      Buckets    The buckets data
-	 * @see        Eq. (39) in <a href="https://onlinelibrary.wiley.com/doi/full/10.1002/nme.5844" target="_blank">An accurate and stable multiphase moving particle semi-implicit method based on a corrective matrix for all particle interaction models</a>
-	 */
-	void calcNormalParticles(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
-
-	/**
 	 * @brief      Adjustment of particle velocity.
 	 * @details    Contribution of the closest polygon wall.
 	 * @param      PSystem    The particle system
@@ -60,6 +50,24 @@ public:
 	 * @see        We adpated to polygon wall the Eq. (21) from <a href="https://doi.org/10.1016/j.compfluid.2016.07.014" target="_blank">Improvements for accuracy and stability in a weakly-compressible particle method</a>
 	 */
 	void calcWallShifting(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+
+	/**
+	 * @brief      Adjustment of particle velocity based on the shifting type 1
+	 * @param      PSystem    The particle system
+	 * @param      Particles  The particles data
+	 * @see        Eq. (21) in <a href="https://doi.org/10.1016/j.compfluid.2016.07.014" target="_blank">Improvements for accuracy and stability in a weakly-compressible particle method</a>
+	 */
+	void updateVelocity(MpsParticleSystem *PSystem, MpsParticle *Particles);
+	
+	/**
+	 * @brief      Calculates normal vector on the fluid particle.
+	 * @details    The surface normal is a weighted summation of direction vectors. Contribution of the neighboring particles.
+	 * @param      PSystem    The particle system
+	 * @param      Particles  The particles data
+	 * @param      Buckets    The buckets data
+	 * @see        Eq. (39) in <a href="https://onlinelibrary.wiley.com/doi/full/10.1002/nme.5844" target="_blank">An accurate and stable multiphase moving particle semi-implicit method based on a corrective matrix for all particle interaction models</a>
+	 */
+	void calcNormalParticles(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
 
 	/**
 	 * @brief      Calculates normal vector on the fluid particle.
@@ -72,24 +80,44 @@ public:
 	void calcWallNormalParticles(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
 
 	/**
-	 * @brief      Calculates the Concentration and Gradient of concentration on the fluid particle, and adjusts its position.
+	 * @brief      Calculates the Concentration on the fluid particle.
 	 * @details    Contribution of the neighboring particles.
 	 * @param      PSystem    The particle system
 	 * @param      Particles  The particles data
 	 * @param      Buckets    The buckets data
 	 * @see        Eq. (15) and (16) in <a href="https://doi.org/10.1002/fld.5083" target="_blank">Three-dimensional weakly compressible moving particle simulation coupled with geometrically nonlinear shell for hydro-elastic free-surface flows</a>
 	 */
-	void calcConcAndConcGradient(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+	void calcConcentration(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
 	
 	/**
-	 * @brief      Calculates the Concentration and Gradient of concentration on the fluid particle, and adjusts its position.
+	 * @brief      Calculates the Concentration on the fluid particle.
 	 * @details    Contribution of the closest polygon wall.
 	 * @param      PSystem    The particle system
 	 * @param      Particles  The particles data
 	 * @param      Buckets    The buckets data
 	 * @see        Eq. (33) in <a href="https://doi.org/10.1002/fld.5083" target="_blank">Three-dimensional weakly compressible moving particle simulation coupled with geometrically nonlinear shell for hydro-elastic free-surface flows</a>
 	 */
-	void calcWallConcAndConcGradient(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+	void calcWallConcentration(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+
+	/**
+	 * @brief      Calculates Gradient of concentration on the fluid particle.
+	 * @details    Contribution of the neighboring particles.
+	 * @param      PSystem    The particle system
+	 * @param      Particles  The particles data
+	 * @param      Buckets    The buckets data
+	 * @see        Eq. (15) and (16) in <a href="https://doi.org/10.1002/fld.5083" target="_blank">Three-dimensional weakly compressible moving particle simulation coupled with geometrically nonlinear shell for hydro-elastic free-surface flows</a>
+	 */
+	void calcConcentrationGradient(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+	
+	/**
+	 * @brief      Calculates Gradient of concentration on the fluid particle.
+	 * @details    Contribution of the closest polygon wall.
+	 * @param      PSystem    The particle system
+	 * @param      Particles  The particles data
+	 * @param      Buckets    The buckets data
+	 * @see        Eq. (33) in <a href="https://doi.org/10.1002/fld.5083" target="_blank">Three-dimensional weakly compressible moving particle simulation coupled with geometrically nonlinear shell for hydro-elastic free-surface flows</a>
+	 */
+	void calcWallConcentrationGradient(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
 	
 	/**
 	 * @brief      Adjustment of particle position based on the Gradient of concentration
@@ -97,6 +125,40 @@ public:
 	 * @param      Particles  The particles data
 	 */
 	void updatePosition(MpsParticleSystem *PSystem, MpsParticle *Particles);
+
+	/**
+	 * @brief      Calculates gradient of velocity.
+	 * @details    Contribution of the neighboring particles.
+	 * @param      PSystem    The particle system
+	 * @param      Particles  The particles data
+	 * @param      Buckets    The buckets data
+	 */
+	void calcVelGradient(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+
+	/**
+	 * @brief      Calculates gradient of velocity.
+	 * @details    Contribution of the closest polygon wall. Free-slip boundary condition.
+	 * @param      PSystem    The particle system
+	 * @param      Particles  The particles data
+	 * @param      Buckets    The buckets data
+	 */
+	void calcWallSlipVelGradient(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+	
+	/**
+	 * @brief      Calculates gradient of velocity.
+	 * @details    Contribution of the closest polygon wall. No-slip boundary condition.
+	 * @param      PSystem    The particle system
+	 * @param      Particles  The particles data
+	 * @param      Buckets    The buckets data
+	 */
+	void calcWallNoSlipVelGradient(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+
+	/**
+	 * @brief      Interpolates velocity according to a first-order Taylor expansion
+	 * @param      PSystem    The particle system
+	 * @param      Particles  The particles data
+	 */
+	void interpolateVelocity(MpsParticleSystem *PSystem, MpsParticle *Particles);
 
 	/**
 	 * @brief      Calculates normal vector on the fluid particle.

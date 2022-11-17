@@ -48,6 +48,21 @@ public:
 	void readInputFile(MpsParticleSystem *PSystem, MpsParticle *Particles);
 
 	/**
+	 * @brief      Check if the answer is ok
+	 * @param      answer  The answer
+	 * @param      result  The result
+	 * @return     True if ok
+	 */
+	bool checkAnswerOK(std::string& answer, bool& result);
+
+	/**
+	 * @brief      Ask yes or no
+	 * @param      message  The message
+	 * @return     Return the user answer
+	 */
+	bool question_yesno(std::string const& message);
+
+	/**
 	 * @brief      Reads data from input file .grid to class MpsParticle and allocate memory to its attributes.
 	 * @param      PSystem    The particle system
 	 * @param      Particles  The particles data

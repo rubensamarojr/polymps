@@ -184,6 +184,8 @@ public:
 	int    *particleID;		///< Global and static particle ID. The particle carries its ID value over all simulation
 	double *press;			///< Particle pressure
 	double *pressAverage;	///< Time averaged particle pressure
+	double *pressMin;		///< Particle minimum pressure
+	double *pressMax;		///< Particle maximum pressure
 	// Vectors
 	double *pos;				///< Particle position
 	double *vel;				///< Particle velocity
@@ -195,7 +197,9 @@ public:
 	double *correcMatrixRow2;	///< Correction matrix - Row 2
 	double *correcMatrixRow3;	///< Correction matrix - Row 3
 	double *normal;				///< Particle normal
-	double *dvelCollision;		///< Variation of velocity due collision
+	double *dvelCollision;		///< Variation of velocity due to Particle Collision (PC)
+	double *dVelShift;			///< Variation of velocity due to Particle Shifting (PS)
+	double *dPosShift;			///< Variation of position due to Particle Shifting (PS)
 
 	double *signDist;			///< Signed distance between particle and inOutflow plane
 	bool *isInIORegion;			///< True if the particle is in the inOutflow region
@@ -203,6 +207,9 @@ public:
 	int *motherID;				///< ID of the real (effective) particle that generates the IO particle
 	int *ppeID;					///< ID of the inner Particles PPE solver
 	int *ioflowID;				///< ID of the inOutflow Plane near the IO particle
+	double *velGradientRow1;	///< Gradient of the shifted velocity x shifted position - Row 1
+	double *velGradientRow2;	///< Gradient of the shifted velocity x shifted position - Row 2
+	double *velGradientRow3;	///< Gradient of the shifted velocity x shifted position - Row 3
 
 	// Polygons
 	// Scalars
@@ -259,6 +266,7 @@ public:
 	double *npcdDeviation2;	///< NPCD deviation modulus
 	double *concentration;	///< Concentration
 	double *velDivergence;	///< Divergence of velocity
+	double *velDivergenceki;	///< Divergence of velocity, step k
 	double *diffusiveTerm;	///< Diffusive term
 	double *Dns, *invDns;	///< Density and its inverse
 

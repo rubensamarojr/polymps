@@ -166,6 +166,15 @@ public:
 	void extrapolatePressParticlesNearPolygonWall(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
 
 	/**
+	 * @brief      Calculates minimum and maximum pressure inside the support of particle i.
+	 * @details    Contribution of the neighboring particles.
+	 * @param      PSystem    The particle system
+	 * @param      Particles  The particles data
+	 * @param      Buckets    The buckets data
+	 */
+	void calcPressMinMax(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+
+	/**
 	 * @brief      Calculates predicted acceleration due to the gradient of pressure.
 	 * @details    Contribution of the neighboring particles.
 	 * @param      PSystem    The particle system

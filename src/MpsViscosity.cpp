@@ -357,7 +357,7 @@ void MpsViscosity::calcViscosityInteractionVal(MpsParticleSystem *PSystem, MpsPa
 						double vec_ijz = Particles->vel[j*3+2] - velZi;
 						double invDstij2 = 1.0/dstij2;
 
-						if(PSystem->divergenceCorrection == false) {
+						if(PSystem->gradientCorrection == false) {
 							sum1 += vec_ijx*v0ij*wS*invDstij2;
 							sum2 += vec_ijx*v1ij*wS*invDstij2;
 							sum3 += vec_ijx*v2ij*wS*invDstij2;
@@ -400,7 +400,7 @@ void MpsViscosity::calcViscosityInteractionVal(MpsParticleSystem *PSystem, MpsPa
 			Uyx = -PSystem->coeffPressGrad*sum4; Uyy = -PSystem->coeffPressGrad*sum5; Uyz = -PSystem->coeffPressGrad*sum6;
 			Uzx = -PSystem->coeffPressGrad*sum7; Uzy = -PSystem->coeffPressGrad*sum8; Uzz = -PSystem->coeffPressGrad*sum9;
 
-			// if(PSystem->divergenceCorrection == true) {
+			// if(PSystem->gradientCorrection == true) {
 			// 	double Uaux[9];
 			// 	Uaux[0] = Uxx*Particles->correcMatrixRow1[i*3] + Uyx*Particles->correcMatrixRow1[i*3+1] + Uzx*Particles->correcMatrixRow1[i*3+2];
 			// 	Uaux[1] = Uxy*Particles->correcMatrixRow1[i*3] + Uyy*Particles->correcMatrixRow1[i*3+1] + Uzy*Particles->correcMatrixRow1[i*3+2];

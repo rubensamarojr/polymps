@@ -663,6 +663,11 @@ void MpsPressure::solvePressurePoissonPndInOutflow(MpsParticleSystem *PSystem, M
 // Divergence model. 1: Original, 2: Mojtaba
 #define DIV_MOD 1
 
+// Type of BC 0: cte, 1: sin
+#define IO_TYP 0
+
+#define FREQ 0.5
+
 // EDAC PRESSURE. Ramachandran et al., 2019. Entropically damped artificial compressibility for SPH.
 // https://doi.org/10.1016/j.compfluid.2018.11.023
 // #define EDAC_PRESS
@@ -873,7 +878,13 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 						
 						
 						int iofID = Particles->ioflowID[j];		// ID of the inOutflow Plane
+#if IO_TYP == 0
 						double Pw = ioFlow[iofID].Pio.press;	// InOutFlow pressure
+#elif IO_TYP == 1
+						double c11 = 1.0;
+						if(ioFlow[iofID].Pio.ID == 1) c11 = -1.0;
+						double Pw = ioFlow[iofID].Pio.press * (1.0 + c11 *sin(2.0 * M_PI * FREQ * PSystem->timeCurrent));	// InOutFlow pressure
+#endif
 
 #if PIO_EXT == 1
 						/// Off-diagonal only wij
@@ -1022,7 +1033,13 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 						sum -= mat_ij;	// Add to diagonal
 
 						int iofID = Particles->ioflowID[j];		// ID of the inOutflow Plane
+#if IO_TYP == 0
 						double Pw = ioFlow[iofID].Pio.press;	// InOutFlow pressure
+#elif IO_TYP == 1
+						double c11 = 1.0;
+						if(ioFlow[iofID].Pio.ID == 1) c11 = -1.0;
+						double Pw = ioFlow[iofID].Pio.press * (1.0 + c11 *sin(2.0 * M_PI * FREQ * PSystem->timeCurrent));	// InOutFlow pressure
+#endif
 
 #if PIO_EXT == 1
 						/// Off-diagonal only wij
@@ -1175,7 +1192,9 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 #endif // DEBUG_MATRIX
 
 		//PSystem->coeffPPESource = PSystem->relaxPND/(PSystem->timeStep*PSystem->timeStep*PSystem->pndSmallZero)
-		Particles->sourceTerm(iPPE) += - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
+		
+		// New source term below
+		// Particles->sourceTerm(iPPE) += - PSystem->coeffPPESource*density*(ni - PSystem->pndSmallZero) + (1.0-PSystem->relaxPND)*density*Particles->velDivergence[i]/PSystem->timeStep;
 		
 		// Zhang et al., 2016. Improvement of boundary conditions for nonplanar boundaries represented by polygons with an initial particle arrangement technique
 		// normal fluid-wall particle = 0.5*(normal fluid-mirror particle)
@@ -1193,16 +1212,19 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 		//				+ 2.0*density*Particles->velDivergence[i]*PSystem->invPartDist;
 
 		// Sun et al., 2015. Modified MPS method for the 2D fluid structure interaction problem with free surface
-		////double dtPhysical = partDist/20.0;
-		//double dtPhysical = PSystem->timeStep;
-		//double a1 = fabs(ni - PSystem->pndSmallZero)/PSystem->pndSmallZero;
-		//if ((PSystem->pndSmallZero-ni)*Particles->velDivergence[i] > PSystem->epsilonZero)
-		//{
-		//	a1 += dtPhysical*fabs(Particles->velDivergence[i]);
-		//}
-		////double a2 = fabs((ni - PSystem->pndSmallZero)/PSystem->pndSmallZero);
-		//Particles->sourceTerm(i) += - a1*density/(dtPhysical*dtPhysical)*(ni - PSystem->pndSmallZero)/PSystem->pndSmallZero 
-		//	+ density*Particles->velDivergence[i]/dtPhysical;
+		// double dtPhysical = PSystem->partDist/20.0;
+		double dtPhysical = PSystem->timeStep;
+		double a1 = fabs(ni - PSystem->pndSmallZero)/PSystem->pndSmallZero;
+		if ((PSystem->pndSmallZero-ni)*Particles->velDivergence[i] > PSystem->epsilonZero)
+		{
+			a1 += dtPhysical*fabs(Particles->velDivergence[i]);
+		}
+		double a2 = fabs((ni - PSystem->pndSmallZero)/PSystem->pndSmallZero);
+		// double a3 = fabs(1.0 - a2);
+		double a3 = 1.0;
+		Particles->sourceTerm(iPPE) += - 0.0*a1*density/(dtPhysical*dtPhysical)*(ni - PSystem->pndSmallZero)/PSystem->pndSmallZero 
+			+ a3*density*Particles->velDivergence[i]/dtPhysical
+			+ a2*density*Particles->velDivergenceki[i]/dtPhysical;
 
 		// 2019 - Enhancement of stabilization of MPS to arbitrary geometries with a generic wall boundary condition
 		//double pndc = 0.0;
@@ -1260,7 +1282,13 @@ void MpsPressure::solvePressurePoissonPndDivUInOutflow(MpsParticleSystem *PSyste
 		int idIO = Particles->particleID[idIOp];
 		
 		int iofID = Particles->ioflowID[idIO];	// ID of the inOutflow Plane
+#if IO_TYP == 0
 		double Pw = ioFlow[iofID].Pio.press;	// InOutFlow pressure
+#elif IO_TYP == 1
+		double c11 = 1.0;
+		if(ioFlow[iofID].Pio.ID == 1) c11 = -1.0;
+		double Pw = ioFlow[iofID].Pio.press * (1.0 + c11 *sin(2.0 * M_PI * FREQ * PSystem->timeCurrent));	// InOutFlow pressure
+#endif
 
 #if PIO_EXT == 1
 		// Pio = Pw
@@ -1402,6 +1430,9 @@ void MpsPressure::calcVelDivergence(MpsParticleSystem *PSystem, MpsParticle *Par
 #pragma omp parallel for schedule(dynamic,64)
 	for(int ip=0; ip<Particles->numParticles; ip++) {
 		int i = Particles->particleID[ip];
+
+		Particles->velDivergenceki[i] = Particles->velDivergence[i]; // Step k
+
 		Particles->velDivergence[i] = 0.0;
 		if(Particles->particleType[i] == PSystem->fluid) {
 		double DivV = 0.0;
@@ -2217,26 +2248,20 @@ void MpsPressure::predictionWallPressGradient(MpsParticleSystem *PSystem, MpsPar
 #endif
 }
 
-// Acceleration due to pressure gradient
-void MpsPressure::calcPressGradient(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
+// Calculates minimum and maximum pressure inside the support of particle i.
+void MpsPressure::calcPressMinMax(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 #pragma omp parallel for schedule(dynamic,64)
 	for(int ip=0; ip<Particles->numParticles; ip++) {
 		int i = Particles->particleID[ip];
 // if(Particles->particleType[i] == PSystem->fluid) {
-		double accX = 0.0;			double accY = 0.0;			double accZ = 0.0;
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
-		double pressMin = Particles->press[i];
-		double Pi = Particles->press[i];
-		double ni = Particles->pndi[i];
-		double MC[9];
-		MC[0] = Particles->correcMatrixRow1[i*3];	MC[1] = Particles->correcMatrixRow1[i*3+1];	MC[2] = Particles->correcMatrixRow1[i*3+2];
-		MC[3] = Particles->correcMatrixRow2[i*3];	MC[4] = Particles->correcMatrixRow2[i*3+1];	MC[5] = Particles->correcMatrixRow2[i*3+2];
-		MC[6] = Particles->correcMatrixRow3[i*3];	MC[7] = Particles->correcMatrixRow3[i*3+1];	MC[8] = Particles->correcMatrixRow3[i*3+2];
+		Particles->pressMin[i] = Particles->press[i];
+		Particles->pressMax[i] = Particles->press[i];
+		
 		int ix, iy, iz;
 		Buckets->bucketCoordinates(ix, iy, iz, posXi, posYi, posZi, PSystem);
 		int minZ = (iz-1)*((int)(PSystem->dim-2.0)); int maxZ = (iz+1)*((int)(PSystem->dim-2.0));
-		if(PSystem->gradientType == 0 || PSystem->gradientType == 2) {
 		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
@@ -2257,12 +2282,72 @@ void MpsPressure::calcPressGradient(MpsParticleSystem *PSystem, MpsParticle *Par
 				// is not at the same side of im (avoid real j in the virtual neihborhood)
 				if(dstij2 < PSystem->reS2 && (dstij2 < dstimj2 || PSystem->wallType == boundaryWallType::PARTICLE)) {
 				if(j != i) {
-					if(pressMin > Particles->press[j]) pressMin = Particles->press[j];
+					if(Particles->press[j] < Particles->pressMin[i]) {
+						Particles->pressMin[i] = Particles->press[j];
+					}
+					else {
+						Particles->pressMax[i] = Particles->press[j];
+					}
 				}}
 				j = Particles->nextParticleInSameBucket[j];
 				if(j == -1) break;
 			}
-		}}}}
+		}}}
+	}
+}
+
+
+// Acceleration due to pressure gradient
+void MpsPressure::calcPressGradient(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
+	double eta_p = 0.9;
+
+#pragma omp parallel for schedule(dynamic,64)
+	for(int ip=0; ip<Particles->numParticles; ip++) {
+		int i = Particles->particleID[ip];
+// if(Particles->particleType[i] == PSystem->fluid) {
+		double accX = 0.0;			double accY = 0.0;			double accZ = 0.0;
+		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
+		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
+		// double pressMin = Particles->press[i];
+		double Pi = Particles->press[i];
+		double PiMin = Particles->pressMin[i];
+		double PiMax = Particles->pressMax[i];
+		double ni = Particles->pndi[i];
+		double MC[9];
+		MC[0] = Particles->correcMatrixRow1[i*3];	MC[1] = Particles->correcMatrixRow1[i*3+1];	MC[2] = Particles->correcMatrixRow1[i*3+2];
+		MC[3] = Particles->correcMatrixRow2[i*3];	MC[4] = Particles->correcMatrixRow2[i*3+1];	MC[5] = Particles->correcMatrixRow2[i*3+2];
+		MC[6] = Particles->correcMatrixRow3[i*3];	MC[7] = Particles->correcMatrixRow3[i*3+1];	MC[8] = Particles->correcMatrixRow3[i*3+2];
+		int ix, iy, iz;
+		Buckets->bucketCoordinates(ix, iy, iz, posXi, posYi, posZi, PSystem);
+		int minZ = (iz-1)*((int)(PSystem->dim-2.0)); int maxZ = (iz+1)*((int)(PSystem->dim-2.0));
+		
+		// if(PSystem->gradientType == 0 || PSystem->gradientType == 2) {
+		// for(int jz=minZ;jz<=maxZ;jz++) {
+		// for(int jy=iy-1;jy<=iy+1;jy++) {
+		// for(int jx=ix-1;jx<=ix+1;jx++) {
+		// 	int jb = jz*PSystem->numBucketsXY + jy*PSystem->numBucketsX + jx;
+		// 	int j = Particles->firstParticleInBucket[jb];
+		// 	if(j == -1) continue;
+		// 	double plx, ply, plz;
+		// 	Particles->getPeriodicLengths(jb, plx, ply, plz, PSystem);
+		// 	while(true) {
+		// 		double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
+				
+		// 		// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
+		// 		Particles->sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2, plx, ply, plz);
+		// 		// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
+		// 		Particles->sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2, plx, ply, plz);
+
+		// 		// If j is inside the neighborhood of i and 
+		// 		// is not at the same side of im (avoid real j in the virtual neihborhood)
+		// 		if(dstij2 < PSystem->reS2 && (dstij2 < dstimj2 || PSystem->wallType == boundaryWallType::PARTICLE)) {
+		// 		if(j != i) {
+		// 			if(pressMin > Particles->press[j]) pressMin = Particles->press[j];
+		// 		}}
+		// 		j = Particles->nextParticleInSameBucket[j];
+		// 		if(j == -1) break;
+		// 	}
+		// }}}}
 		
 		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
@@ -2287,16 +2372,21 @@ void MpsPressure::calcPressGradient(MpsParticleSystem *PSystem, MpsParticle *Par
 					double dst = sqrt(dstij2);
 					double wS = Particles->weightGradient(dst, PSystem->reS, PSystem->weightType);
 					if(PSystem->gradientType == 0)
-						wS *= (Particles->press[j] - pressMin)/dstij2;
+						wS *= (Particles->press[j] - PiMin)/dstij2;
 					else if(PSystem->gradientType == 1)
 						wS *= (Particles->press[j] + Pi)/dstij2;
 					else if(PSystem->gradientType == 2)
-						wS *= (Particles->press[j] + Pi - 2.0*pressMin)/dstij2;
+						wS *= (Particles->press[j] + Pi - 2.0*PiMin)/dstij2;
 					else if(PSystem->gradientType == 3) {
 						double nj = Particles->pndi[j];
 						if(ni > PSystem->epsilonZero && nj > PSystem->epsilonZero)
 							wS *= (ni*Particles->press[j]/nj + nj*Pi/ni)/dstij2;
 					}
+					else if(PSystem->gradientType == 4) {
+						wS *= (Particles->press[j] - Pi + eta_p*(PiMax - PiMin))/dstij2;//(Particles->press[j] + Particles->press[i] - eta_p*(pressMin[i] - pressMin[j])/dstimj2
+						// wS *= (Particles->press[j] + Pi - (Particles->pressMin[j] + PiMin))/dstij2;//(Particles->press[j] + Particles->press[i] - eta_p*(pressMin[i] - pressMin[j])/dstimj2
+					}
+
 					if(PSystem->gradientCorrection == false) {
 						accX += v0ij*wS;	accY += v1ij*wS;	accZ += v2ij*wS;
 					}
@@ -2344,6 +2434,8 @@ void MpsPressure::calcPressGradient(MpsParticleSystem *PSystem, MpsParticle *Par
 
 // Acceleration due to pressure gradient (Polygon wall)
 void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
+	double eta_p = 0.9;
+
 	//int nPartNearMesh = partNearMesh.size();
 	double VolumeForce = pow(PSystem->partDist,PSystem->dim);
 	// Maximum velocity is the minimum of the computed and expected maximum velocities
@@ -2364,8 +2456,10 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 		double accX = 0.0;			double accY = 0.0;			double accZ = 0.0;
 		double posXi = Particles->pos[i*3  ];	double posYi = Particles->pos[i*3+1];	double posZi = Particles->pos[i*3+2];
 		double posMirrorXi = Particles->mirrorParticlePos[i*3  ];	double posMirrorYi = Particles->mirrorParticlePos[i*3+1];	double posMirrorZi = Particles->mirrorParticlePos[i*3+2];
-		double pressMin = Particles->press[i];
+		// double pressMin = Particles->press[i];
 		double Pi = Particles->press[i];
+		double PiMin = Particles->pressMin[i];
+		double PiMax = Particles->pressMax[i];
 		double ni = Particles->pndi[i];
 		double MC[9];
 		MC[0] = Particles->correcMatrixRow1[i*3];	MC[1] = Particles->correcMatrixRow1[i*3+1];	MC[2] = Particles->correcMatrixRow1[i*3+2];
@@ -2415,33 +2509,35 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 		int ix, iy, iz;
 		Buckets->bucketCoordinates(ix, iy, iz, posXi, posYi, posZi, PSystem);
 		int minZ = (iz-1)*((int)(PSystem->dim-2.0)); int maxZ = (iz+1)*((int)(PSystem->dim-2.0));
-		if(PSystem->gradientType == 0 || PSystem->gradientType == 2) {
-		for(int jz=minZ;jz<=maxZ;jz++) {
-		for(int jy=iy-1;jy<=iy+1;jy++) {
-		for(int jx=ix-1;jx<=ix+1;jx++) {
-			int jb = jz*PSystem->numBucketsXY + jy*PSystem->numBucketsX + jx;
-			int j = Particles->firstParticleInBucket[jb];
-			if(j == -1) continue;
-			double plx, ply, plz;
-			Particles->getPeriodicLengths(jb, plx, ply, plz, PSystem);
-			while(true) {
-				double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
-				
-				// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
-				Particles->sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2, plx, ply, plz);
-				// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
-				Particles->sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2, plx, ply, plz);
 
-				// If j is inside the neighborhood of i and 
-				// is not at the same side of im (avoid real j in the virtual neihborhood)
-				if(dstij2 < PSystem->reS2 && dstij2 < dstimj2) {
-				if(j != i) {
-					if(pressMin > Particles->press[j]) pressMin = Particles->press[j];
-				}}
-				j = Particles->nextParticleInSameBucket[j];
-				if(j == -1) break;
-			}
-		}}}}
+		// if(PSystem->gradientType == 0 || PSystem->gradientType == 2) {
+		// for(int jz=minZ;jz<=maxZ;jz++) {
+		// for(int jy=iy-1;jy<=iy+1;jy++) {
+		// for(int jx=ix-1;jx<=ix+1;jx++) {
+		// 	int jb = jz*PSystem->numBucketsXY + jy*PSystem->numBucketsX + jx;
+		// 	int j = Particles->firstParticleInBucket[jb];
+		// 	if(j == -1) continue;
+		// 	double plx, ply, plz;
+		// 	Particles->getPeriodicLengths(jb, plx, ply, plz, PSystem);
+		// 	while(true) {
+		// 		double v0ij, v1ij, v2ij, v0imj, v1imj, v2imj, dstij2, dstimj2;
+				
+		// 		// Particle square distance r_ij^2 = (Xj - Xi_temporary_position)^2
+		// 		Particles->sqrDistBetweenParticles(j, posXi, posYi, posZi, v0ij, v1ij, v2ij, dstij2, plx, ply, plz);
+		// 		// Mirror particle square distance r_imj^2 = (Xj - Xim_temporary_position)^2
+		// 		Particles->sqrDistBetweenParticles(j, posMirrorXi, posMirrorYi, posMirrorZi, v0imj, v1imj, v2imj, dstimj2, plx, ply, plz);
+
+		// 		// If j is inside the neighborhood of i and 
+		// 		// is not at the same side of im (avoid real j in the virtual neihborhood)
+		// 		if(dstij2 < PSystem->reS2 && dstij2 < dstimj2) {
+		// 		if(j != i) {
+		// 			if(pressMin > Particles->press[j]) pressMin = Particles->press[j];
+		// 		}}
+		// 		j = Particles->nextParticleInSameBucket[j];
+		// 		if(j == -1) break;
+		// 	}
+		// }}}}
+
 		for(int jz=minZ;jz<=maxZ;jz++) {
 		for(int jy=iy-1;jy<=iy+1;jy++) {
 		for(int jx=ix-1;jx<=ix+1;jx++) {
@@ -2475,15 +2571,19 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 					// 	printf("\ni:%5d j:%5d timeCurrent: %lf / Pj: %lf / Pi: %lf / Zj: %lf / Zi: %lf", i, j, PSystem->timeCurrent, Pj, Pi, Particles->pos[j*3+2], posMirrorZi);
 
 					if(PSystem->gradientType == 0)
-						wS *= (Pj - pressMin)/dstimj2;//(Particles->press[j] - pressMin)/dstimj2
+						wS *= (Pj - PiMin)/dstimj2;//(Particles->press[j] - pressMin)/dstimj2
 					else if(PSystem->gradientType == 1)
 						wS *= (Pj + Pi)/dstimj2;//(Particles->press[j] + Particles->press[i])/dstimj2
 					else if(PSystem->gradientType == 2)
-						wS *= (Pj + Pi - 2.0*pressMin)/dstimj2;//(Particles->press[j] + Particles->press[i] - 2.0*pressMin)/dstimj2
+						wS *= (Pj + Pi - 2.0*PiMin)/dstimj2;//(Particles->press[j] + Particles->press[i] - 2.0*pressMin)/dstimj2
 					else if(PSystem->gradientType == 3) {
 						double nj = Particles->pndi[j];
 						if(ni > PSystem->epsilonZero && nj > PSystem->epsilonZero)
 							wS *= (ni*Pj/nj + nj*Pi/ni)/dstimj2;
+					}
+					else if(PSystem->gradientType == 4) {
+						wS *= (Pj - Pi + eta_p*(PiMax - PiMin))/dstimj2;//(Particles->press[j] + Particles->press[i] - eta_p*(pressMin[i] - pressMin[j])/dstimj2
+						// wS *= (Pj + Pi - (Particles->pressMin[j] + PiMin))/dstimj2;//(Particles->press[j] + Particles->press[i] - eta_p*(pressMin[i] - pressMin[j])/dstimj2
 					}
 
 					if(PSystem->gradientCorrection == false) {
@@ -2517,15 +2617,19 @@ void MpsPressure::calcWallPressGradient(MpsParticleSystem *PSystem, MpsParticle 
 			//	printf("\ni:%5d timeCurrent: %lf / Pj: %lf / Pi: %lf / Zj: %lf / Zi: %lf", i, PSystem->timeCurrent, Pj, Pi, posZi, posMirrorZi);
 
 			if(PSystem->gradientType == 0)
-				wS *= (Pj - pressMin)/dstimi2;//(Particles->press[i] - pressMin)/dstimi2
+				wS *= (Pj - PiMin)/dstimi2;//(Particles->press[i] - pressMin)/dstimi2
 			else if(PSystem->gradientType == 1)
 				wS *= (Pj + Pi)/dstimi2;//(Particles->press[i] + Particles->press[i])/dstimi2;
 			else if(PSystem->gradientType == 2)
-				wS *= (Pj + Pi - 2.0*pressMin)/dstimi2;//(Particles->press[i] + Particles->press[i] - 2.0*pressMin)/dstimi2;
+				wS *= (Pj + Pi - 2.0*PiMin)/dstimi2;//(Particles->press[i] + Particles->press[i] - 2.0*pressMin)/dstimi2;
 			else if(PSystem->gradientType == 3) {
 				double nj = Particles->pndi[i];
 				if(ni > PSystem->epsilonZero && nj > PSystem->epsilonZero)
 					wS *= (ni*Pj/nj + nj*Pi/ni)/dstimi2;
+			}
+			else if(PSystem->gradientType == 4) {
+				wS *= (Pj - Pi + eta_p*(PiMax - PiMin))/dstimi2;//(Particles->press[j] + Particles->press[i] - eta_p*(pressMin[i] - pressMin[j])/dstimj2
+				// wS *= (Pj + Pi - (PiMin + PiMin))/dstimi2;//(Particles->press[j] + Particles->press[i] - eta_p*(pressMin[i] - pressMin[j])/dstimj2
 			}
 
 			if(PSystem->gradientCorrection == false) {

@@ -612,6 +612,15 @@ void MpsInputOutput::readInputFile(MpsParticleSystem *PSystem, MpsParticle *Part
 		}
 	}
 
+	PSystem->CFLvisc = PSystem->timeStep*PSystem->KNM_VS1/(PSystem->partDist*PSystem->partDist);
+	if(PSystem->CFLvisc > 0.1) {
+		printf("The time step is too large considering the diffusive CFL: %f\n", PSystem->CFLvisc);
+		// printf("Continue the simulation ? (y/n): \n");
+		bool yesOrNo = question_yesno("Continue the simulation");
+		if(yesOrNo == false)
+			throw invalid_argument("Simulation stoped because of a large time step");
+	}
+
 	// // Print the values
 	// cout << "INPUT FILE .JSON" << endl;
 	// cout << "Number of Meshs: " << numOfMeshs << " | ";
@@ -710,6 +719,42 @@ void MpsInputOutput::readInputFile(MpsParticleSystem *PSystem, MpsParticle *Part
 }
 
 
+bool MpsInputOutput::checkAnswerOK(string& answer, bool& result)
+{
+	transform(answer.begin(), answer.end(), answer.begin(),
+				[](unsigned char x){return ::tolower(x);});
+
+	bool answer_valid =
+		(answer == "y")   ||
+		(answer == "n")   ||
+		(answer == "yes") ||
+		(answer == "no");
+
+	result = answer_valid && answer[0] == 'y';    
+	return answer_valid;
+}
+
+
+bool MpsInputOutput::question_yesno(string const& message)
+{
+	string answer;
+	bool	result;
+
+	cout << message << "? [y/n]\n";
+	while(cin >> answer && !checkAnswerOK(answer, result))
+	{
+		cout << "Invalid answer: " << answer << " Please try again\n"
+		<< message << "? [y/n]\n";
+	}
+	if (!cin) {
+	// We never got an answer.
+	// Not much we can do here. Probably give up?
+	throw runtime_error("User Input read failed");
+	}
+	return result;
+}
+
+
 // Read data from file .grid to class MpsParticle and allocates memory
 void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle *Particles) {
 	char *grid_file_char = new char[gridFilename.length()+1];
@@ -750,6 +795,10 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 
 	Particles->press = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);			// Particle pressure
 	Particles->pressAverage = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	// Time averaged particle pressure
+	
+	Particles->pressMin = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);			// Particle minimum pressure
+	Particles->pressMax = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);			// Particle maximum pressure
+	
 	Particles->pndi = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);			// PND
 	Particles->pndki = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);			// PND step k
 	Particles->pndski = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);			// Mean fluid neighbor PND step k
@@ -757,6 +806,9 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 	Particles->npcdDeviation2 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	// NPCD deviation modulus
 	Particles->concentration = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	// Concentration
 	Particles->velDivergence = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	// Divergence of velocity
+
+	Particles->velDivergenceki = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	// Divergence of velocity, step k
+
 	Particles->diffusiveTerm = (double*)malloc(sizeof(double)*Particles->numParticlesMemory);	// Diffusive term
 	
 	Particles->Dns = (double*)malloc(sizeof(double)*PSystem->numPartTypes);				// Density
@@ -773,8 +825,12 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 	Particles->correcMatrixRow2 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);	// Correction matrix - Row 2
 	Particles->correcMatrixRow3 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);	// Correction matrix - Row 3
 	Particles->normal = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);			// Particle normal
-	Particles->dvelCollision = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);		// Variation of velocity due collision
-
+	Particles->dvelCollision = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);		// Variation of velocity due to Particle Collision (PC)
+	Particles->dVelShift = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);			// Variation of velocity due to Particle Shifting (PS)
+	Particles->dPosShift = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);			// Variation of position due to Particle Shifting (PS)
+	Particles->velGradientRow1 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);	// Gradient of the shifted velocity x shifted position - Row 1
+	Particles->velGradientRow2 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);	// Gradient of the shifted velocity x shifted position - Row 2
+	Particles->velGradientRow3 = (double*)malloc(sizeof(double)*Particles->numParticlesMemory*3);	// Gradient of the shifted velocity x shifted position - Row 3
 
 	// Alocate memory only if inOutflow is used
 	if(PSystem->inOutflowOn == true && PSystem->numInOutflowPlane > 0) {
@@ -892,6 +948,8 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 		Particles->correcMatrixRow3[i]=0.0;Particles->normal[i]=0.0;Particles->dvelCollision[i]=0.0;
 		Particles->particleAtWallPos[i]=0.0;Particles->mirrorParticlePos[i]=0.0;Particles->wallParticleForce1[i]=0.0;
 		Particles->wallParticleForce2[i]=0.0;Particles->polygonNormal[i]=0.0;Particles->forceWall[i]=0.0;
+		Particles->dVelShift[i]=0.0;Particles->dPosShift[i]=0.0;
+		Particles->velGradientRow1[i]=0.0;Particles->velGradientRow2[i]=0.0;Particles->velGradientRow3[i]=0.0;
 		//Acv[i]=0.0;
 	}
 
@@ -906,6 +964,9 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 		Particles->npcdDeviation2[i]=0.0;Particles->concentration[i]=0.0;Particles->velDivergence[i]=0.0;
 		Particles->diffusiveTerm[i]=0.0;Particles->pndWallContribution[i]=0.0;Particles->deviationDotPolygonNormal[i]=0.0;
 		Particles->numNeighborsSurfaceParticles[i]=0.0;
+
+		Particles->pressMin[i]=0.0;	Particles->pressMax[i]=0.0;
+		Particles->velDivergenceki[i]=0.0;
 
 		Particles->distParticleWall2[i]=PSystem->nearInfinity;
 	}
@@ -2222,7 +2283,7 @@ void MpsInputOutput::writePvd(MpsParticleSystem *PSystem)
 	string vtuOutputFoldername_copy;
 	vtuOutputFoldername_copy = vtuOutputFoldername;
 	size_t found = vtuOutputFoldername_copy.find('/');
-	if(found != std::string::npos)
+	if(found != string::npos)
 	{
 		vtuOutputFoldername_copy.erase(0,found+1);
 	}
@@ -2778,8 +2839,8 @@ void MpsInputOutput::stringToChar(char *out_char) {
 
 // Delete all files inside the simulation folder
 void MpsInputOutput::deleteDirectoryFiles() {
-	for (const auto& entry : std::experimental::filesystem::directory_iterator(vtuOutputFoldername)) 
-		std::experimental::filesystem::remove_all(entry.path());
+	for (const auto& entry : experimental::filesystem::directory_iterator(vtuOutputFoldername)) 
+		experimental::filesystem::remove_all(entry.path());
 }
 
 // Allocation of memory for Inflow/Outflow planes (interfaces)

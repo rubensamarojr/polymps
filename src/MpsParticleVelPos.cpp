@@ -99,6 +99,7 @@ void MpsParticleVelPos::updateVelocityPosition2nd(MpsParticleSystem *PSystem, Mp
 	}
 }
 	PSystem->CFLcurrent = PSystem->timeStep*PSystem->velMax/PSystem->partDist;
+	// PSystem->CFLvisc = PSystem->timeStep*PSystem->KNM_VS1/(PSystem->partDist*PSystem->partDist);
 
 #ifdef SHOW_FUNCT_NAME_PART
 	// print the function name (useful for investigating programs)

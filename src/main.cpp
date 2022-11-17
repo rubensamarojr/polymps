@@ -453,6 +453,11 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 			vectMatr->updateCorrectionMatrix(partSyst, part);
 		}
 		
+		// Minimum and Maximum pressure calculation
+		if(partSyst->gradientType == 0 || partSyst->gradientType == 2 || partSyst->gradientType == 4) {
+			partPress->calcPressMinMax(partSyst, part, buck);
+		}
+
 		// Calculation of acceleration due pressure gradient
 		partPress->calcPressGradient(partSyst, part, buck);	///< Add acceleration due pressure gradient 
 		if(partSyst->wallType == boundaryWallType::POLYGON) {
@@ -510,17 +515,45 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 			//partShift->correctionMatrix(part);
 			//partShift->calcNormalParticles(partSyst, part, buck);
 			partShift->calcShifting(partSyst, part, buck);
-			//partShift->calcWallShifting(partSyst, part, buck);
+			partShift->calcWallShifting(partSyst, part, buck);
+			partShift->updateVelocity(partSyst, part);
+
+			// partShift->calcVelGradient(partSyst, part, buck);
+			// if(partSyst->wallType == boundaryWallType::POLYGON) {
+			// 	if(partSyst->slipCondition == slipBC::FREE_SLIP) {
+			// 		partShift->calcWallSlipVelGradient(partSyst, part, buck); // Free-Slip condition
+			// 	}
+			// 	else if(partSyst->slipCondition == slipBC::NO_SLIP) {
+			// 		partShift->calcWallNoSlipVelGradient(partSyst, part, buck); // No-Slip condition
+			// 	}
+			// }
+			// partShift->interpolateVelocity(partSyst, part);
 		}
 		// Adjust position
 		else if(partSyst->shiftingType == 2) {
-			//partShift->calcNormalConcentration(part);
-			partShift->calcConcAndConcGradient(partSyst, part, buck);
+			// partShift->calcNormalConcentration(part);
+			partShift->calcConcentration(partSyst, part, buck);
 			if(partSyst->wallType == boundaryWallType::POLYGON) {
-				partShift->calcWallConcAndConcGradient(partSyst, part, buck);
+				partShift->calcWallConcentration(partSyst, part, buck);
+			}
+			partShift->calcConcentrationGradient(partSyst, part, buck);
+			if(partSyst->wallType == boundaryWallType::POLYGON) {
+				partShift->calcWallConcentrationGradient(partSyst, part, buck);
 			}
 			partShift->updatePosition(partSyst, part);
+
+			partShift->calcVelGradient(partSyst, part, buck);
+			if(partSyst->wallType == boundaryWallType::POLYGON) {
+				if(partSyst->slipCondition == slipBC::FREE_SLIP) {
+					partShift->calcWallSlipVelGradient(partSyst, part, buck); // Free-Slip condition
+				}
+				else if(partSyst->slipCondition == slipBC::NO_SLIP) {
+					partShift->calcWallNoSlipVelGradient(partSyst, part, buck); // No-Slip condition
+				}
+			}
+			partShift->interpolateVelocity(partSyst, part);
 		}
+		
 		// Wall and dummy velocity
 		if(partSyst->wallType == boundaryWallType::PARTICLE) {
 			partVelPos->updateVelocityParticlesWallDummy(partSyst, part, buck);
