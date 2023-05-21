@@ -57,7 +57,7 @@ Eigen, libigl and JSON for Modern C++ are third party [header-only](https://en.w
 
 Please have a look at some examples in the folder [**input**](https://github.com/rubensamarojr/polymps/tree/master/input).
 
-In order to run these examples, please, go to the directory **input/grid** and extract the compressed folder [**grid.zip**](https://github.com/rubensamarojr/polymps/blob/master/input/grid/grid.zip) in the grid directory itself.
+In order to run these examples, please, go to the directory [**input/grid**](https://github.com/rubensamarojr/polymps/tree/master/input/grid) and extract the compressed folder [**grid.zip**](https://github.com/rubensamarojr/polymps/blob/master/input/grid/grid.zip) in the grid directory itself.
 
 ### Foldernames, Filenames, Physical and Numerical parameters
 It is necessary to create a file (extension **.json**) and set all parameters.
@@ -83,7 +83,7 @@ Code compiled and tested on Windows 7, and Linux CentOS 7 and Ubuntu64.
 
 You can build the project in GNU/Linux using the makefile. Follow these steps (CPU version):
 
-Clone this repository into your system using `terminal in Linux`, and [Git BASH](https://gitforwindows.org/) `or command prompt (cmd) in Windows`
+Clone this repository into your system using `terminal in Linux`, and [Git BASH](https://gitforwindows.org) `or command prompt (cmd) in Windows`
 ```bash
 git clone https://github.com/rubensaaj/polymps.git
 ```
@@ -116,7 +116,7 @@ This should create a binary `main` in folder **bin**
 
 ## Run
 
-:warning:FIRST OF ALL, go to the directory **input/grid** and extract the compressed folder [**grid.zip**](https://github.com/rubensamarojr/polymps/blob/master/input/grid/grid.zip) in the grid directory itself. Check if **dam1610_3D_fluid_lo0p010_mps.grid** contains the data mentioned before in [Fluid domain](#fluid-domain).
+:warning:FIRST OF ALL, go to the directory [**input/grid**](https://github.com/rubensamarojr/polymps/tree/master/input/grid) and extract the compressed folder [**grid.zip**](https://github.com/rubensamarojr/polymps/blob/master/input/grid/grid.zip) in the grid directory itself. Check if **dam1610_3D_fluid_lo0p010_mps.grid** contains the data mentioned before in [Fluid domain](#fluid-domain).
 
 ### on LINUX
 
@@ -147,7 +147,7 @@ case_02
 ```
 
 ## Output
-This code writes pvd (header file) and corresponding vtu files as output. Look in the **output** directory.
+This code writes pvd (header file) and corresponding vtu files as output. Look in the [**output**](https://github.com/rubensamarojr/polymps/tree/master/output) directory.
 You can visualize them by open the pvd file with [Paraview](https://www.paraview.org) :eyes:.
 
 ## Directories
@@ -157,14 +157,14 @@ The PolyMPS contains several files and directories:
 | File/Folder | Description |
 | --- | --- |
 | eigen | library for linear algebra: matrices, vectors, numerical solvers, and related algorithms |
-| include | header files |
-| input |	simple input examples (json, grid and stl files). Grid files compressed in a folder|
+| [include](https://github.com/rubensamarojr/polymps/tree/master/include) | header files |
+| [input](https://github.com/rubensamarojr/polymps/tree/master/input) |	simple input examples (json, grid and stl files). Grid files compressed in a folder|
 | libigl | geometry processing library |
 | json | file that uses human-readable text to store and transmit data objects |
-| output |ouput files (pvd, vtu and txt files) |
-| src |	source files |
-| LICENSE |	MIT License |
-| Makefile | set of tasks to compile the program |
+| [output](https://github.com/rubensamarojr/polymps/tree/master/output) |ouput files (pvd, vtu and txt files) |
+| [src](https://github.com/rubensamarojr/polymps/tree/master/src) |	source files |
+| [LICENSE](https://github.com/rubensamarojr/polymps/blob/master/LICENSE) |	MIT License |
+| [Makefile](https://github.com/rubensamarojr/polymps/blob/master/Makefile) | set of tasks to compile the program |
 | README |text file |
 
 ## License
