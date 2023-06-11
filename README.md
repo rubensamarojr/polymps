@@ -2,7 +2,7 @@
 
 A C++ code for numerical modelling of free-surface flow :ocean: using Explicit, Weakly Compressible or Incompressible Moving Particle Simulation/Semi-implicit [MPS](https://doi.org/10.13182/NSE96-A24205) method. Boundary walls can be modeled by polygonal mesh (triangles) or discrete layers of wall and dummy (ghost) particles.
 
-<img src='/output/dambreak01_movie.gif' width="96%">
+<img src='/output/3D_dam_1610_h300_lo0p0100_pnd2_adj2_LNJ_SITE.gif' width="96%">
 
 ## How to cite PolyMPS ?
 If you use PolyMPS, please cite the following reference:
