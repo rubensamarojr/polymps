@@ -1,4 +1,4 @@
-# PolyMPS
+![logo_PolyMPS](logo_polymps.png)
 
 A C++ code for numerical modelling of free-surface flow :ocean: using Explicit, Weakly Compressible or Incompressible Moving Particle Simulation/Semi-implicit [MPS](https://doi.org/10.13182/NSE96-A24205) method. Boundary walls can be modeled by polygonal mesh (triangles) or discrete layers of wall and dummy (ghost) particles.
 
