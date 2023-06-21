@@ -4,6 +4,8 @@ A C++ code for numerical modelling of free-surface flow :ocean: using Explicit, 
 
 <img src='/output/3D_dam_1610_h300_lo0p0100_pnd2_adj2_LNJ_SITE.gif' width="96%">
 
+### See EXAMPLES in the folder [**input**](https://github.com/rubensamarojr/polymps/tree/master/input).
+
 ## How to cite PolyMPS ?
 If you use PolyMPS, please cite the following reference:
 
@@ -55,7 +57,7 @@ Eigen, libigl and JSON for Modern C++ are third party [header-only](https://en.w
 
 ## Input files
 
-Please have a look at some examples in the folder [**input**](https://github.com/rubensamarojr/polymps/tree/master/input).
+Have a look at some examples in the folder [**input**](https://github.com/rubensamarojr/polymps/tree/master/input).
 
 In order to run these examples, please, go to the directory [**input/grid**](https://github.com/rubensamarojr/polymps/tree/master/input/grid) and extract the compressed folder [**grid.zip**](https://github.com/rubensamarojr/polymps/blob/master/input/grid/grid.zip) in the grid directory itself.
 
