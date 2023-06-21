@@ -27,11 +27,11 @@ Newtonian Dam break simulation.
 
 2D Particle-based wall and incompressible MPS.
 
-![dam1610_2D.](dam1610_h300_lo0p0050_WC_image.png)
-
 ### dam1610_h300_lo0p0050_WC.json
 
 2D Particle-based wall and weakly-compressible MPS.
+
+![dam1610_2D.](dam1610_h300_lo0p0050_WC_image.png)
 </br>
 
 ## Dam break
@@ -77,6 +77,12 @@ Non-Newtonian Dam break simulation.
 
 **Reference:** [Fraccarollo et al. 2002. Riemann wave description of erosional dam-break flows.](https://doi.org/10.1017/S0022112002008455)
 
+### damErosion3D_WC.json
+
+3D Polygon-based wall and weakly-compressible MPS.
+
+<!--![damErosionWC_3D.](damErosion3D_WC_image.png)-->
+
 ### 2D_dam_fraccarollo_lo02p50e-03_INC.json
 
 2D Particle-based wall and incompressible MPS.
@@ -90,10 +96,6 @@ Non-Newtonian Dam break simulation.
 ### subaerial_2D_lo08p00e-04_INC.json
 
 2D Particle-based wall and incompressible MPS.
-
-### damErosion3D_WC.json
-
-3D Polygon-based wall and weakly-compressible MPS.
 </br>
 
 ## Non-Newtonian (Nodoushan)
