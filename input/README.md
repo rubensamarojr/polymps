@@ -81,7 +81,7 @@ Non-Newtonian Dam break simulation.
 
 3D Polygon-based wall and weakly-compressible MPS.
 
-<!--![damErosionWC_3D.](damErosion3D_WC_image.png)-->
+![damErosionWC_3D.](damErosion3D_WC_image.png)
 
 ### 2D_dam_fraccarollo_lo02p50e-03_INC.json
 
