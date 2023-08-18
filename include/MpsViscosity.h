@@ -34,13 +34,13 @@ public:
 	virtual ~MpsViscosity();
 	
 	/**
-	 * @brief      Calculates accelerations due to Laplacian of velocity and the gravity field
+	 * @brief      Calculates accelerations due to Laplacian of velocity
 	 * @details    Contribution of the neighboring particles.
 	 * @param      PSystem    The particle system
 	 * @param      Particles  The particles data
 	 * @param      Buckets    The buckets data
 	 */
-	void calcViscosityGravity(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
+	void calcViscosity(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets);
 	
 	/**
 	 * @brief      Calculates the volume of fraction if second fluid (phase II) is in the mixture.

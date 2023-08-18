@@ -17,7 +17,7 @@ MpsParticleVelPos::~MpsParticleVelPos()
 }
 
 // Prediction of particle velocity and position
-void MpsParticleVelPos::updateVelocityPosition1st(MpsParticleSystem *PSystem, MpsParticle *Particles) {
+void MpsParticleVelPos::predictionVelocityPosition(MpsParticleSystem *PSystem, MpsParticle *Particles) {
 #pragma omp parallel for
 	for(int i=0; i<Particles->numParticles; i++) {
 		if(Particles->particleType[i] == PSystem->fluid) {
@@ -49,8 +49,8 @@ void MpsParticleVelPos::updateVelocityPosition1st(MpsParticleSystem *PSystem, Mp
 #endif
 }
 
-// Update velocity and positions
-void MpsParticleVelPos::updateVelocityPosition2nd(MpsParticleSystem *PSystem, MpsParticle *Particles) {
+// Correction of velocities and positions
+void MpsParticleVelPos::correctionVelocityPosition(MpsParticleSystem *PSystem, MpsParticle *Particles) {
 	PSystem->velMax = 0.0;						// Maximum flow velocity
 	// double auxiliar[5] = {1.2, -3.3, 4.3, -0.3, 5.6};
 

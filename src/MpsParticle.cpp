@@ -107,6 +107,28 @@ double MpsParticle::delWeight(const double dst, const double re, const int wijTy
 	}
 }
 
+// Add gravity to particle acceleration
+void MpsParticle::addGravity(MpsParticleSystem *PSystem, MpsParticle *Particles) {
+#pragma omp parallel for
+	for(int i=0; i<Particles->numParticles; i++) {
+		// if(Particles->particleType[i] == PSystem->fluid) {
+			Particles->acc[i*3  ] += PSystem->gravityX;
+			Particles->acc[i*3+1] += PSystem->gravityY;
+			Particles->acc[i*3+2] += PSystem->gravityZ;
+
+			// Auxiliar variable to show prediction acceleration
+			Particles->accStar[i*3  ] = Particles->acc[i*3  ];
+			Particles->accStar[i*3+1] = Particles->acc[i*3+1];
+			Particles->accStar[i*3+2] = Particles->acc[i*3+2];
+		// }
+	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	cout << __PRETTY_FUNCTION__ << endl;
+#endif
+}
+
 ////////////////////////////////////////////////////////////
 // Functions called only at the initial instant (t=0)
 ////////////////////////////////////////////////////////////

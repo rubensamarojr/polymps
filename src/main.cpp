@@ -247,9 +247,11 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 			}
 			partSyst->fileNumber++; // Integer number
 		}
+
 		///////////////////////////
 		/// Numerical simulation //
 		///////////////////////////
+		
 		// Update particle ID's in buckets
 		buck->updateParticlesID(partSyst, part);
 
@@ -258,8 +260,12 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 			partVisc->calcVolumeFraction(partSyst, part, buck); ///< Volume of fraction if phase II in the mixture
 			partVisc->calcViscosityInteractionVal(partSyst, part, buck); ///< Viscosity interaction values for "real" fluid particles
 		}
+
 		// Calculation of acceleration due laplacian of velocity and gravity
-		partVisc->calcViscosityGravity(partSyst, part, buck);
+		partVisc->calcViscosity(partSyst, part, buck);
+
+		// Add gravity to acceleration
+		part->addGravity(partSyst, part);
 
 		// Add acceleration due pressure gradient (Prediction)
 		if(partSyst->relaxPress < 1.0) {
@@ -269,8 +275,8 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 			}
 		}
 		
-		// Update velocity and positions. Set some variables to zero or inf
-		partVelPos->updateVelocityPosition1st(partSyst, part);
+		// Prediction of velocities and positions. Set some variables to zero or inf
+		partVelPos->predictionVelocityPosition(partSyst, part);
 		
 		// Verify if particle is out of the domain
 		part->checkParticleOutDomain(partSyst);
@@ -282,6 +288,7 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 		else {;
 			partColl->checkDynamicParticleCollisions(partSyst, part, buck);
 		}
+
 		// Contributions due polygon wall
 		if(partSyst->wallType == boundaryWallType::POLYGON) {
 			// Fluid particles: Calculation of PND due wall and number of neighboors
@@ -305,10 +312,12 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 
 			partPndNeig->calcWallNPCD(partSyst, part, buck);	///< NPCD PND due to the polygon wall
 		}
+
 		// Compute correction matrix
 		if(partSyst->gradientCorrection == true) {
 			vectMatr->correctionMatrix(partSyst, part, buck);
 		}
+
 		// PND, number of neighbors and NPCD calculation
 		partPndNeig->calcPndnNeighNPCD(partSyst, part, buck);
 		// Diffusion term
@@ -361,15 +370,18 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 			// Extrapolate pressure to inner particles near polygon walls (Not working !!)
 			///partPress->extrapolatePressParticlesNearPolygonWall(partSyst, part, buck);
 		}
+
 		// Compute correction matrix
 		if(partSyst->gradientCorrection == true) {
 			vectMatr->correctionMatrix(partSyst, part, buck);
 		}
+
 		// Calculation of acceleration due pressure gradient
 		partPress->calcPressGradient(partSyst, part, buck);	///< Add acceleration due pressure gradient 
 		if(partSyst->wallType == boundaryWallType::POLYGON) {
 			partPress->calcWallPressGradient(partSyst, part, buck);	///< Add acceleration from pressure gradient due to the polygon wall
 		}
+
 		// Add acceleration due laplacian of viscosity on wall
 		///////////////// Non-Newtonian flow /////////////////
 		if(partSyst->fluidType == viscType::NON_NEWTONIAN) {
@@ -394,13 +406,15 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 				partVisc->calcWallNoSlipViscosity(partSyst, part, buck); ///< No-Slip condition. Add acceleration due laplacian of viscosity on wall (Polygon wall)
 			}
 		}
+
+		// Update forced solid wall modeled by polygons
 		if(partSyst->forcedOn == true) {
 			// Update forced mesh
 			mesh[meshType::FORCED].updateForcedPolygonMesh(nodeFRWX, nodeFRWY, nodeFRWZ, partSyst->uniformVelWall, partSyst->timeStep, partSyst->timeCurrent);
 		}
 		
-		// Update velocity and positions
-		partVelPos->updateVelocityPosition2nd(partSyst, part);
+		// Correction of velocities and positions
+		partVelPos->correctionVelocityPosition(partSyst, part);
 		
 		// Verify if particle is out of the domain
 		part->checkParticleOutDomain(partSyst);
@@ -421,6 +435,7 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 				partShift->calcWallConcAndConcGradient(partSyst, part, buck);
 			}
 		}
+
 		// Wall and dummy velocity
 		if(partSyst->wallType == boundaryWallType::PARTICLE) {
 			partVelPos->updateVelocityParticlesWallDummy(partSyst, part, buck);

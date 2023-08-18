@@ -100,6 +100,13 @@ public:
 	 * @return     The value of the derivative of weight function
 	 */
 	double delWeight(const double dst, const double re, const int wijType);
+
+	/**
+	 * @brief      Add gravity to particle acceleration
+	 * @param      PSystem    The physical system
+	 * @param      Particles  The particles data
+	 */
+	void addGravity(MpsParticleSystem *PSystem, MpsParticle *Particles);
 	
 	/**
 	 * @brief      Verify if particle is out of domain
@@ -214,6 +221,8 @@ public:
 	double *velDivergence;	///< Divergence of velocity
 	double *diffusiveTerm;	///< Diffusive term
 	double *Dns, *invDns;	///< Density and its inverse
+	double *pndAuxVar1;		///< Auxiliar variable to be used in PND calculations
+	double *pndAuxVar2;		///< Auxiliar variable to be used in PND calculations
 
 	// Polygons
 	// Scalars

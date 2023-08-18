@@ -16,8 +16,8 @@ MpsViscosity::~MpsViscosity()
 {
 }
 
-// Acceleration due Laplacian of velocity and gravity
-void MpsViscosity::calcViscosityGravity(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
+// Acceleration due Laplacian of velocity
+void MpsViscosity::calcViscosity(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 #pragma omp parallel for schedule(dynamic,64)
 	for(int i=0; i<Particles->numParticles; i++) {
 //		if(Particles->particleType[i] == PSystem->fluid) {
@@ -83,13 +83,14 @@ void MpsViscosity::calcViscosityGravity(MpsParticleSystem *PSystem, MpsParticle 
 		// Modified
 		//if(PSystem->timeCurrent > 0.3) {
 		// coeffViscMultiphase = 2.0*PSystem->dim/(PSystem->pndLargeZero*PSystem->lambdaZero);
-		Particles->acc[i*3  ] = PSystem->coeffViscMultiphase*accX + PSystem->gravityX;
-		Particles->acc[i*3+1] = PSystem->coeffViscMultiphase*accY + PSystem->gravityY;
-		Particles->acc[i*3+2] = PSystem->coeffViscMultiphase*accZ + PSystem->gravityZ;
-		//}		
-		Particles->accStar[i*3  ] = Particles->acc[i*3  ];
-		Particles->accStar[i*3+1] = Particles->acc[i*3+1];
-		Particles->accStar[i*3+2] = Particles->acc[i*3+2];
+		Particles->acc[i*3  ] = PSystem->coeffViscMultiphase*accX;
+		Particles->acc[i*3+1] = PSystem->coeffViscMultiphase*accY;
+		Particles->acc[i*3+2] = PSystem->coeffViscMultiphase*accZ;
+		//}
+				
+		// Particles->accStar[i*3  ] = Particles->acc[i*3  ];
+		// Particles->accStar[i*3+1] = Particles->acc[i*3+1];
+		// Particles->accStar[i*3+2] = Particles->acc[i*3+2];
 	}
 	
 #ifdef SHOW_FUNCT_NAME_PART

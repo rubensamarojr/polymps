@@ -37,16 +37,16 @@ public:
 	 * @param      PSystem    The physical system
 	 * @param      Particles  The particles data
 	 */
-	void updateVelocityPosition1st(MpsParticleSystem *PSystem, MpsParticle *Particles);
+	void predictionVelocityPosition(MpsParticleSystem *PSystem, MpsParticle *Particles);
 
 	/**
-	 * @brief      Updates particle velocity and position
+	 * @brief      Correction of particle velocity and position
 	 * @details    Besides velocity and position for each particle, the maximum velocity (PSystem->velMax) 
 	 * of the fluid domain is calculated herein.
 	 * @param      PSystem    The physical system
 	 * @param      Particles  The particles data
 	 */
-	void updateVelocityPosition2nd(MpsParticleSystem *PSystem, MpsParticle *Particles);
+	void correctionVelocityPosition(MpsParticleSystem *PSystem, MpsParticle *Particles);
 
 	// 
 	/**

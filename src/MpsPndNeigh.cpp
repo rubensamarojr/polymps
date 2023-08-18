@@ -453,7 +453,7 @@ void MpsPndNeigh::calcPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsParticle *
 //				Particles->correcMatrixRow2[i*3  ]*M1[0][1] + Particles->correcMatrixRow2[i*3+1]*M1[1][1] + Particles->correcMatrixRow2[i*3+2]*M1[2][1] +
 //				Particles->correcMatrixRow3[i*3  ]*M1[0][2] + Particles->correcMatrixRow3[i*3+1]*M1[1][2] + Particles->correcMatrixRow3[i*3+2]*M1[2][2];
 
-		Particles->acc[i*3] = Particles->pndi[i]*(1.0+PSystem->timeStep*(-DivV+Di*flagDi));
+		Particles->pndAuxVar1[i] = Particles->pndi[i]*(1.0+PSystem->timeStep*(-DivV+Di*flagDi));
 
 
 //		if(isnan(DivV) || isnan(Di))
@@ -461,25 +461,25 @@ void MpsPndNeigh::calcPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsParticle *
 		Particles->velDivergence[i] = DivV;
 		Particles->diffusiveTerm[i] = Di;
 
-	//Particles->acc[i*3] = Particles->pndi[i]*(1.0+PSystem->timeStep*(-(1.0-PSystem->diffusiveCoef)*DivV+Di*flagDi));
-	//Particles->acc[i*3] = Particles->pndSmall[i]*(1.0+PSystem->timeStep*(-DivV+Di*flagDi));
-	//Particles->acc[i*3] =     PSystem->pndSmallZero*(1.0+PSystem->timeStep*(-DivV+Di*flagDi)); // Ruim
+	//Particles->pndAuxVar1[i] = Particles->pndi[i]*(1.0+PSystem->timeStep*(-(1.0-PSystem->diffusiveCoef)*DivV+Di*flagDi));
+	//Particles->pndAuxVar1[i] = Particles->pndSmall[i]*(1.0+PSystem->timeStep*(-DivV+Di*flagDi));
+	//Particles->pndAuxVar1[i] =     PSystem->pndSmallZero*(1.0+PSystem->timeStep*(-DivV+Di*flagDi)); // Ruim
 //		if(Particles->particleType[i] == PSystem->wall)
 //		{
 //			if(pndAux < PSystem->pndSmallZero)
 //				pndAux = PSystem->pndSmallZero;
-//			Particles->acc[i*3] = pndAux;
+//			Particles->pndAuxVar1[i] = pndAux;
 //		}
 //		if(Particles->particleBC[i] == PSystem->surface)
 //		{
-//			Particles->acc[i*3] = pndAux;
+//			Particles->pndAuxVar1[i] = pndAux;
 //		}
 	}
 //#pragma omp parallel for
 //	for(int i=0; i<Particles->numParticles; i++) {
 /////	if(Particles->particleType[i] == PSystem->fluid) {
-//		Particles->pndi[i] = Particles->acc[i*3];
-//		Particles->acc[i*3]=0.0;
+//		Particles->pndi[i] = Particles->pndAuxVar1[i];
+//		Particles->pndAuxVar1[i]=0.0;
 //	}
 
 #ifdef SHOW_FUNCT_NAME_PART
@@ -584,15 +584,15 @@ void MpsPndNeigh::calcWallSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, MpsPa
 				DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[i]/ni)*(vijx*v0imi+vijy*v1imi+vijz*v2imi)*wS/dstimi2;
 		  	}
 
-			Particles->acc[i*3] += -Particles->pndi[i]*PSystem->timeStep*DivV;
-			//Particles->acc[i*3] = PSystem->pndSmallZero*(1.0+PSystem->timeStep*(-DivV+Di*flagDi));
+			Particles->pndAuxVar1[i] += -Particles->pndi[i]*PSystem->timeStep*DivV;
+			//Particles->pndAuxVar1[i] = PSystem->pndSmallZero*(1.0+PSystem->timeStep*(-DivV+Di*flagDi));
 		}
 	}
 //#pragma omp parallel for
 //	for(int i=0; i<Particles->numParticles; i++) {
 //	if(Particles->particleType[i] == PSystem->fluid) {
-//		Particles->pndi[i] += Particles->acc[i*3];
-//		Particles->acc[i*3]=0.0;
+//		Particles->pndi[i] += Particles->pndAuxVar1[i];
+//		Particles->pndAuxVar1[i]=0.0;
 //	}}
 
 #ifdef SHOW_FUNCT_NAME_PART
@@ -726,15 +726,15 @@ void MpsPndNeigh::calcWallNoSlipPndDiffusiveTerm(MpsParticleSystem *PSystem, Mps
 				DivV += (PSystem->dim/PSystem->pndSmallZero)*(Particles->pndi[i]/ni)*(vijx*v0m+vijy*v1m+vijz*v2m)*wS/dstimi2;
 		  	}
 
-			Particles->acc[i*3] += -Particles->pndi[i]*PSystem->timeStep*DivV;
-			//Particles->acc[i*3] = PSystem->pndSmallZero*(1.0+PSystem->timeStep*(-DivV+Di*flagDi));
+			Particles->pndAuxVar1[i] += -Particles->pndi[i]*PSystem->timeStep*DivV;
+			//Particles->pndAuxVar1[i] = PSystem->pndSmallZero*(1.0+PSystem->timeStep*(-DivV+Di*flagDi));
 		}
 	}
 //#pragma omp parallel for
 //	for(int i=0; i<Particles->numParticles; i++) {
 //	if(Particles->particleType[i] == PSystem->fluid) {
-//		Particles->pndi[i] += Particles->acc[i*3];
-//		Particles->acc[i*3]=0.0;
+//		Particles->pndi[i] += Particles->pndAuxVar1[i];
+//		Particles->pndAuxVar1[i]=0.0;
 //	}}
 
 #ifdef SHOW_FUNCT_NAME_PART
@@ -748,10 +748,10 @@ void MpsPndNeigh::updatePnd(MpsParticle *Particles) {
 #pragma omp parallel for
 	for(int i=0; i<Particles->numParticles; i++) {
 	//		if(Particles->particleType[i] == PSystem->fluid)
-			Particles->pndi[i] = Particles->acc[i*3];
+			Particles->pndi[i] = Particles->pndAuxVar1[i];
 //		else
 //		{
-//			Particles->pndi[i] = Particles->acc[i*3];
+//			Particles->pndi[i] = Particles->pndAuxVar1[i];
 			/*
 			double mi;
 			if(PTYPE[i] == 1) 
@@ -764,7 +764,7 @@ void MpsPndNeigh::updatePnd(MpsParticle *Particles) {
 				Particles->pndi[i] = PSystem->pndSmallZero*pow(Particles->press[i]*PSystem->gamma/(mi*PSystem->coeffPressWCMPS)+1,PSystem->gamma);
 				*/
 //		}
-		Particles->acc[i*3]=0.0;
+		Particles->pndAuxVar1[i]=0.0;
 	}
 
 #ifdef SHOW_FUNCT_NAME_PART
@@ -777,6 +777,9 @@ void MpsPndNeigh::updatePnd(MpsParticle *Particles) {
 void MpsPndNeigh::meanPndParticlesWallDummySurface(MpsParticleSystem *PSystem, MpsParticle *Particles, MpsBucket *Buckets) {
 #pragma omp parallel for schedule(dynamic,64)
 	for(int i=0; i<Particles->numParticles; i++) {
+		// Set variables to zero
+		Particles->pndAuxVar1[i] = 0.0;
+		Particles->pndAuxVar2[i] = 0.0;
 //	if(Particles->particleType[i] == PSystem->wall) {
 		if(Particles->particleType[i] == PSystem->wall || Particles->particleBC[i] == PSystem->surface) {
 //	if(Particles->particleBC[i] == PSystem->surface) {
@@ -818,9 +821,9 @@ void MpsPndNeigh::meanPndParticlesWallDummySurface(MpsParticleSystem *PSystem, M
 					if(j == -1) break;
 				}
 			}}}
-			Particles->acc[i*3  ] = PNDup;
-			Particles->acc[i*3+1] = PNDdo;
-			//Particles->acc[i*3] = PSystem->pndSmallZero*(1.0+PSystem->timeStep*(-DivV+Di*flagDi));
+			Particles->pndAuxVar1[i] = PNDup;
+			Particles->pndAuxVar2[i] = PNDdo;
+			//Particles->pndAuxVar1[i] = PSystem->pndSmallZero*(1.0+PSystem->timeStep*(-DivV+Di*flagDi));
 	//	}}}
 		}
 	}
@@ -831,14 +834,15 @@ void MpsPndNeigh::meanPndParticlesWallDummySurface(MpsParticleSystem *PSystem, M
 //	if(Particles->particleBC[i] == PSystem->surface) {
 		// Prevent PNDdo = 0
 //		if(Particles->numNeigh[i] < 1)
-			if(Particles->acc[i*3+1] < PSystem->epsilonZero)
-				Particles->pndi[i] = Particles->acc[i*3];
+			if(Particles->pndAuxVar2[i] < PSystem->epsilonZero)
+				Particles->pndi[i] = Particles->pndAuxVar1[i];
 			else
-				Particles->pndi[i] = Particles->acc[i*3]/(Particles->acc[i*3+1]);
-//			Particles->pndi[i] = Particles->acc[i*3]/(Particles->acc[i*3+1] + 0.01*PSystem->reS2/4.0);
+				Particles->pndi[i] = Particles->pndAuxVar1[i]/(Particles->pndAuxVar2[i]);
+//			Particles->pndi[i] = Particles->pndAuxVar1[i]/(Particles->pndAuxVar2[i] + 0.01*PSystem->reS2/4.0);
 		}
 //	}
-		Particles->acc[i*3]=0.0;Particles->acc[i*3+1]=0.0;
+		Particles->pndAuxVar1[i]=0.0;
+		Particles->pndAuxVar2[i]=0.0;
 	}
 
 #ifdef SHOW_FUNCT_NAME_PART
@@ -889,21 +893,24 @@ void MpsPndNeigh::meanPnd(MpsParticleSystem *PSystem, MpsParticle *Particles, Mp
 				if(j == -1) break;
 			}
 		}}}
-		Particles->acc[i*3  ] += PNDup;
-		Particles->acc[i*3+1] += PNDdo;
-		//Particles->acc[i*3] = PSystem->pndSmallZero*(1.0+PSystem->timeStep*(-DivV+Di*flagDi));
+		// Sum to polygon wall contribution
+		Particles->pndAuxVar1[i] += PNDup;
+		Particles->pndAuxVar2[i] += PNDdo;
+		//Particles->pndAuxVar1[i] = PSystem->pndSmallZero*(1.0+PSystem->timeStep*(-DivV+Di*flagDi));
 	}
 #pragma omp parallel for
 for(int i=0; i<Particles->numParticles; i++) {
 //	if(Particles->particleType[i] == PSystem->fluid) {
 	// Prevent PNDdo = 0
 		if(Particles->numNeigh[i] < 1) {
-			Particles->pndi[i] = Particles->acc[i*3];
+			Particles->pndi[i] = Particles->pndAuxVar1[i];
 		}
 		else {
-			Particles->pndi[i] = Particles->acc[i*3]/Particles->acc[i*3+1];
+			Particles->pndi[i] = Particles->pndAuxVar1[i]/Particles->pndAuxVar2[i];
 		}
-		Particles->acc[i*3]=0.0;Particles->acc[i*3+1]=0.0;
+		// Set variables to zero
+		Particles->pndAuxVar1[i] = 0.0;
+		Particles->pndAuxVar2[i] = 0.0;
 	}
 
 #ifdef SHOW_FUNCT_NAME_PART
@@ -921,6 +928,9 @@ void MpsPndNeigh::meanWallPnd(MpsParticleSystem *PSystem, MpsParticle *Particles
 	//for(int im=0;im<nPartNearMesh;im++) {
 	//int i = partNearMesh[im];
 	for(int i=0; i<Particles->numParticles; i++) {
+		// Set variables to zero
+		Particles->pndAuxVar1[i] = 0.0;
+		Particles->pndAuxVar2[i] = 0.0;
 //	if(Particles->particleType[i] == PSystem->fluid) {
 		if(Particles->particleNearWall[i] == true) {
 			double PNDup = 0.0;
@@ -972,8 +982,8 @@ void MpsPndNeigh::meanWallPnd(MpsParticleSystem *PSystem, MpsParticle *Particles
 				PNDup += Particles->pndi[i]*wS;
 				PNDdo += wS;
 			}
-			Particles->acc[i*3  ] = PNDup;
-			Particles->acc[i*3+1] = PNDdo;
+			Particles->pndAuxVar1[i] = PNDup;
+			Particles->pndAuxVar2[i] = PNDdo;
 		}
 	}
 

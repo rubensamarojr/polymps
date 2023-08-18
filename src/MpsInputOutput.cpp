@@ -678,9 +678,12 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 	Particles->concentration = (double*)malloc(sizeof(double)*Particles->numParticles);	// Concentration
 	Particles->velDivergence = (double*)malloc(sizeof(double)*Particles->numParticles);	// Divergence of velocity
 	Particles->diffusiveTerm = (double*)malloc(sizeof(double)*Particles->numParticles);	// Diffusive term
-	
+	Particles->pndAuxVar1 = (double*)malloc(sizeof(double)*Particles->numParticles);	// Auxiliar PND variable
+	Particles->pndAuxVar2 = (double*)malloc(sizeof(double)*Particles->numParticles);	// Auxiliar PND variable
+
 	Particles->Dns = (double*)malloc(sizeof(double)*PSystem->numPartTypes);				// Density
 	Particles->invDns = (double*)malloc(sizeof(double)*PSystem->numPartTypes);			// Inverse of Density
+	
 
 	// Vectors
 	Particles->acc = (double*)malloc(sizeof(double)*Particles->numParticles*3);			// Particle acceleration
@@ -793,7 +796,7 @@ void MpsInputOutput::readMpsParticleFile(MpsParticleSystem *PSystem, MpsParticle
 		Particles->pndi[i]=0.0;Particles->pndki[i]=0.0;Particles->pndski[i]=0.0;Particles->pndSmall[i]=0.0;
 		Particles->npcdDeviation2[i]=0.0;Particles->concentration[i]=0.0;Particles->velDivergence[i]=0.0;
 		Particles->diffusiveTerm[i]=0.0;Particles->pndWallContribution[i]=0.0;Particles->deviationDotPolygonNormal[i]=0.0;
-		Particles->numNeighborsSurfaceParticles[i]=0.0;
+		Particles->numNeighborsSurfaceParticles[i]=0.0;Particles->pndAuxVar1[i]=0.0;Particles->pndAuxVar2[i]=0.0;
 
 		Particles->distParticleWall2[i]=10e8*PSystem->partDist;
 	}
