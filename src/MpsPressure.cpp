@@ -828,8 +828,10 @@ void MpsPressure::extrapolatePressParticlesWallDummy(MpsParticleSystem *PSystem,
 					if(j == -1) break;
 				}
 			}}}
-			if(pressure < 0.0)
+			if(pressure < 0.0){
 				pressure = 0.0;
+				continue;
+			}
 			if(ni > 0)
 				Particles->press[i] = pressure/ni;
 			else
