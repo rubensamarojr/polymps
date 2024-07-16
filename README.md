@@ -4,12 +4,7 @@ A C++ code for numerical modelling of free-surface flow :ocean: using Explicit, 
 
 <img src='/output/3D_dam_1610_h300_lo0p0100_pnd2_adj2_LNJ_SITE.gif' width="96%">
 
-### See EXAMPLES in the folder [**input**](https://github.com/rubensamarojr/polymps/tree/master/input).
-
-## How to cite PolyMPS ?
-If you use PolyMPS, please cite the following reference:
-
-Amaro Jr, R. A. and Cheng, L.Y. "PolyMPS - An open source CFD solver based on Polygon walls in Moving Particle Semi-implicit (MPS) method", Software Impacts, 14. https://doi.org/10.1016/j.simpa.2022.100376
+[**Quick start**](#contents) | [**Examples**](https://github.com/rubensamarojr/polymps/tree/master/input) | [**Paper**](https://doi.org/10.1016/j.simpa.2022.100376) | [**Citation**](#how-to-cite-polymps)
 
 ## Forum
 
@@ -27,7 +22,6 @@ On the [PolyMPS Discussions](https://github.com/rubensamarojr/polymps/discussion
     - [on LINUX](#on-linux)
     - [on WINDOWS](#on-windows)
 - [Json input filename](#json-input-filename)
-- [Additional note](#additional-note)
 - [Output](#output)
 - [Directories](#directories)
 - [License](#license)
@@ -168,6 +162,23 @@ The PolyMPS contains several files and directories:
 | [LICENSE](https://github.com/rubensamarojr/polymps/blob/master/LICENSE) |	MIT License |
 | [Makefile](https://github.com/rubensamarojr/polymps/blob/master/Makefile) | set of tasks to compile the program |
 | README |text file |
+
+## How to cite PolyMPS
+
+Please star :star: this project if it helps you.
+
+If you publish work using PolyMPS, please cite the following reference:
+```latex
+@Article{Amaro2022,
+  author    = {Amaro Jr., Rubens Augusto and Cheng, Liang-Yee},
+  title     = {PolyMPS - An open source {CFD} solver based on Polygon walls in Moving Particle Semi-implicit ({MPS}) method},
+  year      = {2022},
+  journal   = {Software Impacts},
+  volume    = {14},
+  doi       = {10.1016/j.simpa.2022.100376},
+  publisher = {Elsevier {BV}},
+}
+```
 
 ## License
 
