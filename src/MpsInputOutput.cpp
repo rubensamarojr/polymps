@@ -877,6 +877,11 @@ void MpsInputOutput::writeOutputFiles(MpsParticleSystem *PSystem, MpsParticle *P
 			writeVtuBinary(PSystem, Particles);
 		}
 	}
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	cout << __PRETTY_FUNCTION__ << endl;
+#endif
 }
 
 // Write data. Format .prof
@@ -2313,9 +2318,15 @@ void MpsInputOutput::writeBuckets(MpsParticleSystem *PSystem, MpsParticle *Parti
 }
 
 //
-void MpsInputOutput::stringToChar(char *out_char) {
-	out_char = new char[vtuOutputFoldername.length()+1];
-	strcpy(out_char, vtuOutputFoldername.c_str());
+void MpsInputOutput::stringToChar(char **out_char) {
+	// Allocate memory for the char array
+	*out_char = new char[vtuOutputFoldername.length()+1];
+	strcpy(*out_char, vtuOutputFoldername.c_str());
+
+#ifdef SHOW_FUNCT_NAME_PART
+	// print the function name (useful for investigating programs)
+	cout << __PRETTY_FUNCTION__ << endl;
+#endif
 }
 
 // Delete all files inside the simulation folder

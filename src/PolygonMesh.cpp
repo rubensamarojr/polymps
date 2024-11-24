@@ -137,7 +137,12 @@ void PolygonMesh::writePolygonMeshFile(const int mesh_ID, const std::string& pat
 	//std::string output_index3 = (boost::format(path + "output_%1%.stl") % output_index).str();
 
 	igl::writeSTL(outout_filename,NV,NF,NNormals);
-	//igl::writeSTL(outout_filename,NV,NF); 
+	//igl::writeSTL(outout_filename,NV,NF);
+
+#ifdef SHOW_FUNCT_NAME_POLY
+	// print the function name (useful for investigating programs)
+	std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 // Update node positions based on Finite Element Method computation - NOT WORKING !!!
@@ -168,31 +173,182 @@ void PolygonMesh::updatePolygonMesh(double *nodeX, double *nodeY, double *nodeZ,
 // Update forced motion rigid wall
 void PolygonMesh::updateForcedPolygonMesh(double *nodeX, double *nodeY, double *nodeZ, double *velVWall, const double dt, const double time) {
 	// Update node positions
+	
 	// Set the motion here
-	// Liao 2015
-	double f1 = -300.0*time*time*time + 75.0*time*time;
-	double f2 = -300.0*(time+dt)*(time+dt)*(time+dt) + 75.0*(time+dt)*(time+dt);
-	double vel = (f2 - f1)/dt;
-	double tfim = 0.13;
 
-	// Yilmaz 2021
-	//double vel = 2.0;
-	//double tfim = 0.15;
+	double vel = 0.0;
+	
+	// // Liao, et al. 2015. Free surface flow impacting on an elastic structure: Experiment versus numerical simulation. 
+	// // Applied Ocean Research, 50, pp.192–208. https://doi.org/10.1016/j.apor.2015.02.002
+	// double f1 = -300.0*time*time*time + 75.0*time*time;
+	// double f2 = -300.0*(time+dt)*(time+dt)*(time+dt) + 75.0*(time+dt)*(time+dt);
+	// double vel = (f2 - f1)/dt;
+	// double tfim = 0.13;
+	// bool rotation = false;
 
-	if(time > tfim)
-		vel = 0.0;
+	// // Yilmaz, et al. 2021. Numerical modeling of the dam-break wave impact on elastic sluice gate: A new benchmark case 
+	// // for hydroelasticity problems. Ocean Engineering, 231. https://doi.org/10.1016/j.oceaneng.2021.108870
+	// double vel = 2.0;
+	// double tfim = 0.15;
+	// bool rotation = false;
+	
+	// if(time > tfim)
+	// 	vel = 0.0;
 
-	velVWall[0] = 0.0;
-	velVWall[1] = 0.0;
-	velVWall[2] = vel;
+	// // Idelsohn, et al. 2008. Interaction between an elastic structure and free-surface flows: experimental versus numerical 
+	// // comparisons using the PFEM. Computational Mechanics, 43, pp.125–32. http://link.springer.com/10.1007/s00466-008-0245-7
+	// // (Rotation along Y axis)
+	// double thetaAmp, omegaAmp;
+	// double Xcg = 0.304;
+	// double Zcg = 0.00;
+	// double thetaMax = 4.0;
+	// bool rotation = true;
 
+
+	// Bulian, et al. 2014. Experimental sloshing pressure impacts in ensemble domaintransient and stationary statistical 
+	// characteristics. Phys. Fluids, 26 (3). https://doi.org/10.1063/1.4866315
+	// (Rotation along Y axis)
+	double thetaAmp, omegaAmp;
+	double Xcg = 0.45;		// X rotation center
+	double Zcg = 0.00;		// Z rotation center
+	double thetaMax = 4.0;			// Amplitude angle
+	double Tmotion  = 1.9171;		// Motion period
+	double Tramp 	= 1.75*Tmotion;	// Ramp time
+	bool rotation 	= true;
+
+
+	// Node displacements
 	double dx = 0.0;
 	double dy = 0.0;
-	double dz = vel*dt;
+	double dz = 0.0;
+
+	
+	if(rotation)
+	{
+		/*
+		///////////////////////////////////
+		// Shallow (Idelsohn, et al. 2008.)
+		double tShallow = 1.646;
+		double tfim = 0.40;
+		double tx3  = 0.37;
+		double alp  = 1.20;
+		
+		// Initial ramp
+		thetaAmp = alp * time; // degrees
+		omegaAmp = alp; // degrees/s
+
+		// Sinusoidal
+		if(time > tfim)
+		{
+			thetaAmp = thetaMax * sin(2.0 * M_PI * (time-tx3)/tShallow); // degrees
+			omegaAmp = thetaMax * 2.0 * M_PI/tShallow * cos(2.0 * M_PI * (time-tx3)/tShallow); // degrees/s
+		}
+		
+		
+		////////////////////////////////
+		// Deep (Idelsohn, et al. 2008.)
+		double tDeep = 1.211;
+		// double tfim = 0.18;
+		double tx3   = 0.25;
+		double alp   = 2.00;
+		double tfim2 = 0.40;
+		double alp2  = 11.25;
+
+		// Initial ramp
+		thetaAmp = alp * time; // degrees
+		omegaAmp = alp; // degrees/s
+		// 2nd ramp
+		if(time > tfim)
+		{
+			thetaAmp = alp2 * time - (alp2-alp)*tfim; // degrees
+			omegaAmp = alp2; // degrees/s
+		}
+		// Sinusoidal
+		if(time > tfim2)
+		{
+			thetaAmp = thetaMax * sin(2.0 * M_PI * (time-tx3)/tDeep); // degrees
+			omegaAmp = thetaMax * 2.0 * M_PI/tDeep * cos(2.0 * M_PI * (time-tx3)/tDeep); // degrees/s
+		}
+		
+		//////////////////////////////
+		thetaAmp = thetaAmp * M_PI/180.0; // degrees -> rad
+		omegaAmp = omegaAmp * M_PI/180.0; // degrees/s -> rad/s
+
+		// // Velocity components
+		// double vx = omegaAmp*sin(thetaAmp);
+		// double vz = omegaAmp*cos(thetaAmp);
+
+		*/
+
+		///////////////////////////////////
+		// Bulian, et al. 2014
+		bool ramp = false;
+		double ksi = time / Tramp - 0.5;
+		double R_ksi = 0.0;
+		double R_ksi_dot = 0.0;
+
+		if(ksi <= 0.5 && ramp)
+		{
+			// Initial ramp
+			double ksi2 = ksi * ksi;
+			double ksi3 = ksi * ksi * ksi;
+			double ksi4 = ksi * ksi * ksi * ksi;
+			double ksi5 = ksi * ksi * ksi * ksi * ksi;
+			double ksi6 = ksi * ksi * ksi * ksi * ksi * ksi;
+			double ksi7 = ksi * ksi * ksi * ksi * ksi * ksi * ksi;
+			R_ksi = 0.5 + 35.0/16.0 * ksi - 35.0/4.0 * ksi3 + 21.0 * ksi5 - 20 * ksi7;
+			R_ksi_dot = (35.0/16.0 - 3.0 * 35.0/4.0 * ksi2 + 5.0 * 21.0 * ksi4 - 7.0 * 20 * ksi6) / Tramp;
+		}
+		else
+		{
+			// Steady state
+			R_ksi = thetaMax;
+			R_ksi_dot = 0.0;
+		}
+
+		thetaAmp = R_ksi * sin(2.0 * M_PI * time/Tmotion); // degrees
+		omegaAmp = R_ksi_dot * sin(2.0 * M_PI * time/Tmotion) + R_ksi * 2.0 * M_PI/Tmotion * cos(2.0 * M_PI * time/Tmotion); // degrees/s
+
+		//////////////////////////////
+		thetaAmp = thetaAmp * M_PI/180.0; // degrees -> rad
+		omegaAmp = omegaAmp * M_PI/180.0; // degrees/s -> rad/s
+
+	}
+	else
+	{
+		velVWall[0] = 0.0;
+		velVWall[1] = 0.0;
+		velVWall[2] = vel;
+
+		dx = 0.0;
+		dy = 0.0;
+		dz = vel * dt;
+	}
+
 
 	int nNodes = NV.rows();
 #pragma omp parallel for
 	for(int nn=0;nn<nNodes;nn++) {
+
+		if(rotation)
+		{
+			double xi = nodeX[nn] - Xcg;
+			double zi = nodeZ[nn] - Zcg;
+			// Velocity components
+			double vx =  omegaAmp * zi;
+			double vz = -omegaAmp * xi;
+			// radius
+			//double rp = sqrt((nodeX[nn]-Xcg)*(nodeX[nn]-Xcg) + (nodeZ[nn]-Zcg)*(nodeZ[nn]-Zcg));
+			dx = vx * dt;
+			dz = vz * dt;
+			//if(nodeX[nn]<Xcg)
+			//{
+			//	dx *= -1.0;
+			//	dz *= -1.0;
+			//}
+		}
+
+		// Add displacement for each node of the mesh
 		nodeX[nn] += dx;
 		nodeY[nn] += dy;
 		nodeZ[nn] += dz;

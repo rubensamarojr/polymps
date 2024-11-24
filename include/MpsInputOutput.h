@@ -158,7 +158,7 @@ public:
 	 * @brief      Convert String to Char Array
 	 * @param      out_char  The Char Array
 	 */
-	void stringToChar(char *out_char);
+	void stringToChar(char **out_char);
 
 	/**
 	 * @brief      Delete all files inside the output folder.

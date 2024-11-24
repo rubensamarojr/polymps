@@ -224,8 +224,8 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 
 	// string -> char
 	char *output_folder_char = nullptr;
-	io->stringToChar(output_folder_char);
-
+	io->stringToChar(&output_folder_char);
+	
 	// Break if simulation reaches the final time
 	while(true) {
 
@@ -234,8 +234,8 @@ void mainLoopOfSimulation(MpsParticleSystem* partSyst, MpsParticle* part, Polygo
 		if(partSyst->numOfIterations%partSyst->iterOutput == 0) {
 			// Write output particle files
 			io->writeOutputFiles(partSyst, part); ///< Write output particle files
+			// Write output mesh files
 			if(partSyst->wallType == boundaryWallType::POLYGON) {
-				// Write output mesh files
 				if(partSyst->femOn == true) {
 					// Write deformable mesh (STL files)
 					mesh[meshType::DEFORMABLE].writePolygonMeshFile(meshType::DEFORMABLE, output_folder_char, partSyst->fileNumber);
@@ -472,7 +472,7 @@ void initMesh(MpsParticleSystem* partSyst, MpsParticle* part, PolygonMesh* mesh,
 	MpsPndNeigh* pndNeigh, MpsInputOutput* io, MpsBucket* buck){
 	
 	printf("Reading STL File... \n");
-	// It is necessary to read the msesh in the following order (maximum of 3 meshs)
+	// It is necessary to read the meshes in the following order (maximum of 3 meshes)
 	// 1st: Rigid mesh file
 	// 2nd: Deformable mesh file
 	// 3rd: Forced mesh file
