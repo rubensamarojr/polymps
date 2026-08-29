@@ -22,6 +22,7 @@ On the [PolyMPS Discussions](https://github.com/rubensamarojr/polymps/discussion
     - [on LINUX](#on-linux)
     - [on WINDOWS](#on-windows)
 - [Json input filename](#json-input-filename)
+- [Examples](#examples)
 - [Output](#output)
 - [Directories](#directories)
 - [License](#license)
@@ -142,6 +143,26 @@ After that, you can [run](#run) PolyMPS at any time, and type the name of the ne
 case_02
 ```
 
+## Examples
+
+The examples bewlo can be found [HERE][input-readme-ref].
+
+<p align="center">
+  <a href="input/README.md"><img src="input/dambreak3D.png" width="20%" alt="Dam break 3D (Lobovsky)"></a>
+  <a href="input/README.md"><img src="input/dam1610_h300_lo0p0050_WC_image.png" width="30%" alt="Dam break 2D (Lobovsky)"></a>
+  <a href="input/dambreak2D_BC.png"><img src="input/dambreak2D_BC.png" width="30%" alt="Periodic Condition"></a>
+</p>
+
+<p align="center">
+  <a href="input/README.md"><img src="input/damErosion3D_WC_image.png" width="30%" alt="Non-Newtonian 3D (Fraccarollo)"></a>
+  <a href="input/README.md"><img src="input/2D_dam_fraccarollo_lo02p50e-03_WC_image.png" width="30%" alt="Non-Newtonian 2D (Fraccarollo)"></a>
+  <a href="input/README.md"><img src="input/subaquatic_2D_lo08p00e-04_WC_image.png" width="30%" alt="Non-Newtonian 2D (Nodoushan)"></a>
+</p>
+
+<p align="center">
+  <a href="input/README.md"><img src="input/brumadinho3D.png" width="50%" alt="Tailings Dam (Brumadinho)"></a>
+</p>
+
 ## Output
 This code writes pvd (header file) and corresponding vtu files as output. Look in the [**output**](https://github.com/rubensamarojr/polymps/tree/master/output) directory.
 You can visualize them by open the pvd file with [Paraview](https://www.paraview.org) :eyes:.
@@ -183,3 +204,6 @@ If you publish work using PolyMPS, please cite the following reference:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+<!-- ================= REFERÊNCIAS DE LINKS ================= -->
+[input-readme-ref]: input/README.md
