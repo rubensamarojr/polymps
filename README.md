@@ -60,11 +60,11 @@ In order to run these examples, please, go to the directory [**input/grid**](htt
 It is necessary to create a file (extension **.json**) and set all parameters.
 
 ### Solid domain
-1. ... using **triangular meshes**. It is necessary to create a file (extension **.stl**) with informations about the initial geometry.
+1. ... using **triangular meshes**. It is necessary to create a file (extension **.stl**) with information about the initial geometry.
 2. ... using **particles**. Necessary to add one layer of wall particles (material ID = 2) and two layers of dummy particles (material ID = 3) in the **.grid** file.
 
 ### Fluid domain
-It is necessary to create a file (extension **.grid**) with informations about the initial geometry and some numerical and physical parameters:
+It is necessary to create a file (extension **.grid**) with information about the initial geometry and some numerical and physical parameters:
 - First line: **0**
 - Second line: **number of particles**
 - Next lines in the columns:
@@ -72,17 +72,17 @@ It is necessary to create a file (extension **.grid**) with informations about t
     - initial coordinates of particles **X** **Y** **Z** 
     - initial fluid velocities **VX** **VY** **VZ** (generally 0.0 0.0 0.0)
     - initial particle pressure **P** (generally 0.0)
-    - initial presure average **PAV** (generally 0.0)
+    - initial pressure average **PAV** (generally 0.0)
 
 ## Compile
 
-Code compiled and tested on Windows 7, and Linux CentOS 7 and Ubuntu64.
+Code compiled and tested on Windows 7, and Linux CentOS 7 and Ubuntu 64-bit.
 
 You can build the project in GNU/Linux using the makefile. Follow these steps (CPU version):
 
 Clone this repository into your system using `terminal in Linux`, and [Git BASH](https://gitforwindows.org) `or command prompt (cmd) in Windows`
 ```bash
-git clone https://github.com/rubensaaj/polymps.git
+git clone https://github.com/rubensamarojr/polymps.git
 ```
 Go to the folder **polymps**
 ```bash
@@ -145,7 +145,7 @@ case_02
 
 ## Examples
 
-The examples bewlo can be found [HERE][input-readme-ref].
+The examples below can be found [HERE][input-readme-ref].
 
 <p align="center">
   <a href="input/README.md"><img src="input/dambreak3D.png" width="20%" alt="Dam break 3D (Lobovsky)"></a>
@@ -178,7 +178,7 @@ The PolyMPS contains several files and directories:
 | [input](https://github.com/rubensamarojr/polymps/tree/master/input) |	simple input examples (json, grid and stl files). Grid files compressed in a folder|
 | libigl | geometry processing library |
 | json | file that uses human-readable text to store and transmit data objects |
-| [output](https://github.com/rubensamarojr/polymps/tree/master/output) |ouput files (pvd, vtu and txt files) |
+| [output](https://github.com/rubensamarojr/polymps/tree/master/output) |output files (pvd, vtu and txt files) |
 | [src](https://github.com/rubensamarojr/polymps/tree/master/src) |	source files |
 | [LICENSE](https://github.com/rubensamarojr/polymps/blob/master/LICENSE) |	MIT License |
 | [Makefile](https://github.com/rubensamarojr/polymps/blob/master/Makefile) | set of tasks to compile the program |
